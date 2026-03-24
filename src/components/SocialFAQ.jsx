@@ -1,0 +1,106 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, ShieldCheck } from 'lucide-react';
+
+const expoOut = [0.19, 1, 0.22, 1];
+
+const SocialFAQ = () => {
+  const [openIndex, setOpenIndex] = useState(null);
+
+  const faqs = [
+    {
+      question: "Ali so moji podatki varni?",
+      answer: "Da. Varnost vaših podatkov je naša prioriteta. Vse podatke šifriramo in smo popolnoma v skladu z GDPR uredbo. Podatkov ne delimo s tretjimi osebami."
+    },
+    {
+      question: "Koliko stane aplikacija?",
+      answer: "Osnovna verzija aplikacije je popolnoma brezplačna. Za napredne funkcije analitike in neomejeno zgodovino ponujamo ugodne naročniške pakete."
+    },
+    {
+      question: "Ali lahko povežem svojo banko?",
+      answer: "Trenutno se osredotočamo na ročno in semi-avtomatizirano beleženje za večjo zasebnost. Bančne integracije pa so na našem razvojnem načrtu."
+    },
+    {
+      question: "Ali deluje brez interneta?",
+      answer: "Da, večino funkcij beleženja lahko uporabljate brez internetne povezave. Podatki se samodejno sinhronizirajo, ko ste spet online."
+    },
+    {
+      question: "Na katerih napravah deluje aplikacija?",
+      answer: "Finance 4P je na voljo za iOS (iPhone) in Android naprave. Podpiramo vse naprave z iOS 15+ in Android 8+."
+    }
+  ];
+
+  return (
+    <section className="social-faq section-padding">
+      <div className="container">
+        
+        {/* GDPR trust badge */}
+        <motion.div
+          className="trust-marker"
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: expoOut }}
+        >
+          <div className="gdpr-badge">
+            <ShieldCheck className="icon-blue" size={22} />
+            <span>Tvoji podatki so varni in skladni z GDPR uredbo.</span>
+          </div>
+        </motion.div>
+
+        {/* FAQ */}
+        <motion.div
+          className="section-header"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: expoOut }}
+        >
+          <span className="section-label">Podpora</span>
+          <h2>Pogosta vprašanja</h2>
+          <p>Odgovori na najpogostejša vprašanja o aplikaciji.</p>
+        </motion.div>
+
+        <div className="faq-list">
+          {faqs.map((faq, index) => (
+            <motion.div
+              key={index}
+              className="faq-item"
+              initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
+              whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.6, delay: index * 0.08, ease: expoOut }}
+            >
+              <button
+                className="faq-question"
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+              >
+                <span>{faq.question}</span>
+                <ChevronDown
+                  className={`chevron ${openIndex === index ? 'rotate' : ''}`}
+                  size={20}
+                  style={{ color: 'var(--text-muted)', flexShrink: 0 }}
+                />
+              </button>
+              <AnimatePresence>
+                {openIndex === index && (
+                  <motion.div
+                    className="faq-answer"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.35, ease: expoOut }}
+                  >
+                    <p>{faq.answer}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default SocialFAQ;
