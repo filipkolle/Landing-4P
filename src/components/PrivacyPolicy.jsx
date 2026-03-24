@@ -1,37 +1,31 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShieldCheck, ArrowLeft } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
-const PrivacyPolicy = ({ onClose }) => {
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+const PrivacyPolicy = () => {
+  const navigate = useNavigate();
 
   return (
     <motion.div
-      className="pp-overlay"
+      className="pp-page-wrapper"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      onClick={onClose}
+      transition={{ duration: 0.5 }}
     >
       <motion.div
-        className="pp-panel"
-        initial={{ opacity: 0, x: '100%' }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: '100%' }}
+        className="pp-panel standalone"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: expoOut }}
-        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="pp-header">
-          <button className="pp-close-btn" onClick={onClose} aria-label="Zapri">
-            <X size={22} />
+          <button className="pp-back-btn" onClick={() => navigate('/')} aria-label="Nazaj">
+            <ArrowLeft size={22} />
+            <span>Nazaj</span>
           </button>
           <div className="pp-header-title">
             <ShieldCheck size={22} className="pp-shield-icon" />

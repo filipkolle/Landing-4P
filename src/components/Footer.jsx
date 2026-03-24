@@ -1,9 +1,10 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import logoImg from '../assets/logo_4p.png';
 
-const Footer = ({ onOpenPrivacy }) => {
+const Footer = () => {
   return (
     <footer className="footer">
       <motion.div 
@@ -28,7 +29,7 @@ const Footer = ({ onOpenPrivacy }) => {
             <div className="link-group">
               <h4>Pravno</h4>
               <a href="#">Pogoji poslovanja</a>
-              <button className="footer-link-btn" onClick={onOpenPrivacy}>Politika zasebnosti</button>
+              <Link to="/politikazasebnosti" className="footer-link-btn">Politika zasebnosti</Link>
             </div>
             <div className="link-group">
               <h4>Kontakt</h4>

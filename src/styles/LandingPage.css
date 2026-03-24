@@ -913,6 +913,14 @@
   justify-content: flex-end;
 }
 
+.pp-page-wrapper {
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
 .pp-panel {
   background: #ffffff;
   width: 100%;
@@ -922,6 +930,14 @@
   display: flex;
   flex-direction: column;
   box-shadow: -20px 0 60px rgba(0,0,0,0.15);
+}
+
+.pp-panel.standalone {
+  height: auto;
+  min-height: calc(100vh - 80px);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+  border: 1px solid #f0f4f8;
 }
 
 .pp-header {
@@ -937,7 +953,7 @@
   z-index: 10;
 }
 
-.pp-close-btn {
+.pp-close-btn, .pp-back-btn {
   background: #f0f4f8;
   border: none;
   border-radius: 50%;
@@ -951,7 +967,17 @@
   transition: background 0.2s, transform 0.2s;
   flex-shrink: 0;
 }
-.pp-close-btn:hover { background: #e2e8f0; transform: scale(1.05); }
+
+.pp-back-btn {
+  border-radius: 100px;
+  width: auto;
+  padding: 0 16px;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.pp-close-btn:hover, .pp-back-btn:hover { background: #e2e8f0; transform: scale(1.05); }
 
 .pp-header-title {
   display: flex;
