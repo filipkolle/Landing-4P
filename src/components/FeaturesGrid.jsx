@@ -1,5 +1,5 @@
 import React from 'react';
-import { Timer, BarChart3, Receipt, Zap, FileText } from 'lucide-react';
+import { Timer, BarChart3, Receipt, Zap, FileText, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const FeaturesGrid = () => {
@@ -7,27 +7,32 @@ const FeaturesGrid = () => {
     {
       icon: <Timer size={32} className="feature-icon" />,
       title: "Hitro beleženje",
-      description: "Vnos delovnih ur v manj kot 10 sekundah. Brez nepotrebnega klikanja."
+      description: "Vnos delovnih ur v manj kot 10 sekundah. Brez nepotrebnega klikanja in kompliciranja."
     },
     {
       icon: <BarChart3 size={32} className="feature-icon" />,
-      title: "Primerjava virov dohodka",
-      description: "Ugotovite, katera dejavnost vam prinaša največ zaslužka na uro."
+      title: "Napredna analitika",
+      description: "Ugotovite, katera dejavnost vam prinaša največ zaslužka na uro in kje lahko prihranite."
     },
     {
       icon: <Receipt size={32} className="feature-icon" />,
       title: "Pregled nad stroški",
-      description: "Spremljajte kam odhaja vaš denar z intuitivnimi grafi in analitiko."
+      description: "Spremljajte kam odhaja vaš denar z intuitivnimi grafi in analitiko v realnem času."
     },
     {
       icon: <Zap size={32} className="feature-icon" />,
-      title: "Avtomatizacija",
-      description: "Avtomatiziran vnos zaslužkov in ponavljajočih se stroškov (naročnine, leasing...)"
+      title: "Popolna avtomatizacija",
+      description: "Avtomatiziran vnos zaslužkov in ponavljajočih se stroškov (naročnine, leasingi, krediti)."
     },
     {
       icon: <FileText size={32} className="feature-icon" />,
-      title: "PDF poročila",
-      description: "Izvoz poročil za delodajalca, računovodstvo ali osebni arhiv z enim klikom."
+      title: "PDF Poročila",
+      description: "Izvoz profesionalnih poročil za delodajalca, računovodstvo ali osebni arhiv z enim klikom."
+    },
+    {
+      icon: <TrendingUp size={32} className="feature-icon" />,
+      title: "Neto vrednost",
+      description: "Edino orodje, ki ti omogoča izračun neto vrednosti na podlagi sredstev in obveznosti."
     }
   ];
 

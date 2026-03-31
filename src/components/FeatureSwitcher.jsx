@@ -12,23 +12,23 @@ const FeatureSwitcher = () => {
   const tabs = [
     {
       id: 'delo',
-      label: 'Delovni asistent',
-      title: 'Popoln nadzor nad delom',
-      description: 'Sledite delovnim uram v realnem času, avtomatsko izračunajte zaslužek glede na vašo postavko in generirajte profesionalna mesečna poročila z enim klikom. Idealno za freelancerje in tiste, ki želijo optimizirati svoj delovni dan.',
+      label: 'Delovni modul',
+      title: 'Optimizacija delovnega procesa',
+      description: 'Sledite delovnim uram v realnem času, avtomatsko izračunajte zaslužek glede na vašo postavko in generirajte profesionalna mesečna poročila z enim klikom. Idealno za freelancerje in vse, ki želijo optimizirati svoj delovni dan.',
       image: workImg
     },
     {
       id: 'finance',
-      label: 'Finančni asistent',
-      title: 'Vaše finance pod kontrolo',
-      description: 'Pridobite celovit pregled nad vsemi prihodki, odhodki in naročninami na enem mestu. Aplikacija vam pomaga razumeti vaše potrošniške navade in vas vodi do boljših finančnih odločitev za prihodnost.',
+      label: 'Finančni modul',
+      title: 'Celovit nadzor nad financami',
+      description: 'Pridobite celovit pregled nad vsemi prihodki, odhodki in naročninami na enem mestu. Aplikacija vam pomaga razumeti vaše potrošniške navade in vas vodi do strateških finančnih odločitev za varno prihodnost.',
       image: financeImg
     },
     {
       id: 'all',
-      label: 'All in one',
-      title: 'Vsa moč v eni aplikaciji',
-      description: 'Zakaj bi uporabljali več orodij, če imate lahko vse na enem mestu? Finance 4P združuje sledenje delu in osebne finance v enotno, intuitivno izkušnjo, ki vam prihrani čas in denar.',
+      label: 'Vse v Enem',
+      title: 'Vsa moč v eni intuitivni aplikaciji',
+      description: 'Poenostavite svoje življenje. Finance 4P združuje sledenje delu in osebne finance v enotno, premium izkušnjo, ki vam prihrani čas, denar in energijo.',
       image: dashboardImg
     }
   ];

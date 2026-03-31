@@ -14,11 +14,11 @@ const ProblemSolution = () => {
   ];
 
   const solutions = [
-    "Avtomatsko spremljanje delovnega časa",
-    "Celovit pregled nad vašimi stroški",
-    "Finančna analitika v realnem času",
-    "Boljše finančne odločitve",
-    "Več denarja za dopust in hobije"
+    { text: "Avtomatsko spremljanje delovnega časa", icon: <Check size={18} /> },
+    { text: "Celovit pregled nad vsemi stroški", icon: <Check size={18} /> },
+    { text: "Napredna finančna analitika v realnem času", icon: <Check size={18} /> },
+    { text: "Brez odvečnih naročnin in skritih stroškov", icon: <Check size={18} /> },
+    { text: "Večja jasnost za hitrejše finančne cilje", icon: <Check size={18} /> }
   ];
 
   const containerVars = {
@@ -52,7 +52,7 @@ const ProblemSolution = () => {
           <h2>Rešite se finančnega stresa</h2>
           <p>Primerjajte, kako Finance 4P poenostavi vaše vsakdanje finančne odločitve.</p>
         </motion.div>
-
+ 
         <div className="comparison-wrapper">
           <div className="comparison-grid">
             <motion.div
@@ -78,7 +78,7 @@ const ProblemSolution = () => {
                 ))}
               </motion.ul>
             </motion.div>
-
+ 
             <motion.div 
               className="vs-separator"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -92,7 +92,7 @@ const ProblemSolution = () => {
               </div>
               <div className="vs-line" />
             </motion.div>
-
+ 
             <motion.div
               className="comparison-card solution"
               initial={{ opacity: 0, x: 30, filter: 'blur(5px)' }}
@@ -110,8 +110,8 @@ const ProblemSolution = () => {
               <motion.ul variants={containerVars} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}>
                 {solutions.map((item, i) => (
                   <motion.li key={i} variants={itemVars}>
-                    <div className="dot green" />
-                    <span>{item}</span>
+                    <Check size={18} className="solution-check-icon" />
+                    <span>{item.text}</span>
                   </motion.li>
                 ))}
               </motion.ul>
