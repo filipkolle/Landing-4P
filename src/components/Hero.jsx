@@ -7,7 +7,7 @@ const expoOut = [0.19, 1, 0.22, 1];
 
 const Hero = () => {
   const containerRef = useRef(null);
-  const title = "Prevzemi nadzor nad denarjem in delom v 10 sekundah.";
+  const title = "Osebni asistent v tvojem žepu.";
   const words = title.split(" ");
 
   // Mouse move effect
@@ -85,15 +85,20 @@ const Hero = () => {
             animate="visible"
             style={{ wordBreak: 'break-word' }}
           >
-            {words.map((word, i) => (
-              <motion.span
-                key={i}
-                variants={wordVars}
-                style={{ display: 'inline-block', marginRight: '0.28em' }}
-              >
-                {word}
-              </motion.span>
-            ))}
+            {words.map((word, i) => {
+              const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+              const isHighlight = ["asistent", "žepu"].includes(cleanWord.toLowerCase());
+              return (
+                <motion.span
+                  key={i}
+                  variants={wordVars}
+                  className={isHighlight ? "highlight" : ""}
+                  style={{ display: 'inline-block', marginRight: '0.28em' }}
+                >
+                  {word}
+                </motion.span>
+              );
+            })}
           </motion.h1>
 
           <motion.p
