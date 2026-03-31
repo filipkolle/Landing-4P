@@ -107,7 +107,7 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             transition={{ duration: 1, delay: 0.8, ease: expoOut }}
           >
-            Imej pregled nad svojo porabo denarja, svojim delom in izračunaj 
+            Imej pregled nad svojo porabo denarja, svojim delom in izračunaj svojo
             neto vrednost, ki ti bo pomagala pri sprejemanju boljših finančnih odločitev.
           </motion.p>
 
