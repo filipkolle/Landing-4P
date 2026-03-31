@@ -432,8 +432,8 @@
    PROBLEM / SOLUTION
    =========================== */
 .problem-solution {
-  background: #fff;
   position: relative;
+  background: radial-gradient(circle at 50% 50%, rgba(94, 141, 178, 0.03), transparent 70%);
 }
 
 .comparison-wrapper {
@@ -455,9 +455,30 @@
   border-radius: 24px;
   display: flex;
   flex-direction: column;
-  transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  border-radius: 28px;
+  padding: 48px 40px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
   height: 100%;
+}
+
+.comparison-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+.comparison-card.problem {
+  background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
+  border-color: rgba(239, 68, 68, 0.1);
+}
+
+.comparison-card.solution {
+  background: linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+  border-color: rgba(34, 197, 94, 0.1);
+  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.05);
 }
 
 .card-glass-glow {
@@ -472,33 +493,12 @@
   opacity: 1;
 }
 
-.comparison-card.problem {
-  background: rgba(254, 242, 242, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(254, 202, 202, 0.4);
-}
-
 .comparison-card.problem .card-glass-glow {
   background: radial-gradient(circle at top right, rgba(239, 68, 68, 0.05), transparent 70%);
 }
 
-.comparison-card.solution {
-  background: rgba(240, 253, 244, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(187, 247, 208, 0.5);
-  box-shadow: 0 20px 60px rgba(22, 163, 74, 0.08);
-}
-
 .comparison-card.solution .card-glass-glow {
   background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 70%);
-}
-
-.comparison-card.solution:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 30px 80px rgba(22, 163, 74, 0.12);
-  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .card-header {
@@ -552,13 +552,15 @@
   flex-shrink: 0;
 }
 
-.dot.red { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
-.dot.green { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+.dot.red { 
+  background: #ef4444; 
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); 
+}
 
 .solution-check-icon {
-  color: #22c55e;
+  color: #16a34a; /* Darker green for better contrast */
   flex-shrink: 0;
-  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.4));
+  filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.2));
 }
 
 /* VS Separator */
@@ -567,28 +569,31 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  padding: 0 20px;
+  gap: 16px;
+  position: relative;
   z-index: 2;
 }
 
 .vs-line {
-  width: 1px;
-  height: 100px;
-  background: linear-gradient(to bottom, transparent, rgba(94, 141, 178, 0.2), transparent);
+  width: 2px;
+  height: 120px;
+  background: linear-gradient(to bottom, transparent, var(--primary), transparent);
+  opacity: 0.3;
 }
 
 .vs-circle {
-  width: 48px;
-  height: 48px;
-  background: #fff;
-  border: 4px solid var(--bg-light);
+  width: 52px;
+  height: 52px;
+  background: #ffffff;
+  border: 2px solid var(--primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  margin: 15px 0;
+  font-weight: 800;
+  color: var(--primary);
+  box-shadow: 0 4px 15px rgba(94, 141, 178, 0.2);
+  z-index: 2;
 }
 
 .vs-circle span {
