@@ -1,13 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Brand Colors - Premium Indigo/Blue */
-  --primary: #4F46E5;
-  --primary-dark: #3730A3;
-  --primary-light: #EEF2FF;
-  --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  /* Brand Colors - Directly from Logo */
+  --primary: #5E8DB2; /* Logo Blue */
+  --primary-dark: #3D6D92;
+  --primary-light: #E1EAF1;
+  --primary-gradient: linear-gradient(135deg, #7FB3D3 0%, #5E8DB2 100%);
   
-  --secondary: #1E293B;
+  --secondary: #333333; /* Logo Gray/Black */
+  --secondary-light: #666666;
   
   /* Semantic Colors */
   --accent-green: #F0FDF4;
@@ -20,19 +21,19 @@
   /* Surfaces */
   --bg-light: #F8FAFC;
   --bg-white: #FFFFFF;
-  --text-main: #0F172A;
-  --text-muted: #64748B;
-  --text-soft: #94A3B8;
+  --text-main: #1F2937;
+  --text-muted: #6B7280;
+  --text-soft: #9CA3AF;
   
   /* Glassmorphism Refined */
   --glass-bg: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
   
   /* Premium Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   
   /* Radii */
