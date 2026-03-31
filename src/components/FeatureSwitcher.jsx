@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 // Triggering rebuild with new mockups v2
 import { motion, AnimatePresence } from 'framer-motion';
-import workImg from '../assets/mockups/work.png';
-import financeImg from '../assets/mockups/finance.png';
-import dashboardImg from '../assets/mockups/dashboard.png';
+import workImg from '../assets/mockups/work_v2.png';
+import financeImg from '../assets/mockups/finance_v2.png';
+import dashboardImg from '../assets/mockups/dashboard_v2.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
 

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { TrendingUp, Sparkles } from 'lucide-react';
-import phone3D from '../assets/mockups/phone_3d.png';
+import phone3D from '../assets/mockups/phone_3d_v2.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
