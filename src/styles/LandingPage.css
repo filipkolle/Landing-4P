@@ -369,9 +369,18 @@
 }
 
 .stat-card-value {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--text-main);
+  line-height: 1;
+}
+
+.text-green-highlight {
+  color: #16a34a !important;
+}
+
+.text-blue-highlight {
+  color: var(--primary) !important;
 }
 
 .stat-1 {

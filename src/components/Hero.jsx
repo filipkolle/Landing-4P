@@ -177,7 +177,7 @@ const Hero = () => {
             </div>
             <div>
               <div className="stat-card-label">Mesečni prihranek</div>
-              <div className="stat-card-value">+320 €</div>
+              <div className="stat-card-value text-green-highlight">+320 €</div>
             </div>
           </motion.div>
 
@@ -193,7 +193,7 @@ const Hero = () => {
             </div>
             <div>
               <div className="stat-card-label">Neto vrednost</div>
-              <div className="stat-card-value">142.980 €</div>
+              <div className="stat-card-value text-blue-highlight">142.980 €</div>
             </div>
           </motion.div>
 
