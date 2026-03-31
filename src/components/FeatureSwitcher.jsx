@@ -12,21 +12,21 @@ const FeatureSwitcher = () => {
   const tabs = [
     {
       id: 'delo',
-      label: 'Delovni modul',
+      label: 'Delovni asistent',
       title: 'Optimizacija delovnega procesa',
       description: 'Sledite delovnim uram v realnem času, avtomatsko izračunajte zaslužek glede na vašo postavko in generirajte profesionalna mesečna poročila z enim klikom. Idealno za freelancerje in vse, ki želijo optimizirati svoj delovni dan.',
       image: workImg
     },
     {
       id: 'finance',
-      label: 'Finančni modul',
+      label: 'Finančni asistent',
       title: 'Celovit nadzor nad financami',
       description: 'Pridobite celovit pregled nad vsemi prihodki, odhodki in naročninami na enem mestu. Aplikacija vam pomaga razumeti vaše potrošniške navade in vas vodi do strateških finančnih odločitev za varno prihodnost.',
       image: financeImg
     },
     {
       id: 'all',
-      label: 'Vse v Enem',
+      label: '4P asistent',
       title: 'Vsa moč v eni intuitivni aplikaciji',
       description: 'Poenostavite svoje življenje. Finance 4P združuje sledenje delu in osebne finance v enotno, premium izkušnjo, ki vam prihrani čas, denar in energijo.',
       image: dashboardImg
