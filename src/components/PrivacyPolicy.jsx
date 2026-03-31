@@ -35,75 +35,150 @@ const PrivacyPolicy = () => {
 
         {/* Content */}
         <div className="pp-body">
-          <h1>POLITIKA ZASEBNOSTI – FINANCE 4P</h1>
+          <h1>POLITIKA ZASEBNOSTI ZA MOBILNO APLIKACIJO FINANCE 4P</h1>
+          <p className="pp-date"><strong>Datum zadnje posodobitve:</strong> 31. marec 2026</p>
+          
           <p className="pp-intro">
-            Pri aplikaciji FINANCE 4P cenimo vašo zasebnost in transparentnost. Ta dokument pojasnjuje, 
-            kako upravljamo z vašimi podatki v skladu s Splošno uredbo o varstvu podatkov (GDPR) in 
-            slovenskim Zakonom o varstvu osebnih podatkov (ZVOP-2).
+            Namen te Politike zasebnosti je seznanitev uporabnikov mobilne aplikacije Finance 4P z nameni 
+            in podlago obdelave osebnih podatkov s strani upravljavca Filipa Kolle. 
+            Vse osebne podatke obdelujemo, hranimo in varujemo v skladu z veljavno zakonodajo, zlasti v 
+            skladu z Uredbo (EU) 2016/679 (GDPR) in Zakonom o varstvu osebnih podatkov (ZVOP-2).
+          </p>
+
+          <p className="pp-intro">
+            S posredovanjem vaših osebnih podatkov izjavljate, da ste prebrali našo Politiko zasebnosti in 
+            se zavedate načinov obdelave ter pravnih podlag obdelave osebnih podatkov. Če ne soglašate z 
+            načini obdelave, vas prosimo, da nam ne posredujete vaših osebnih podatkov in aplikacije ne uporabljate.
           </p>
 
           <section>
-            <h2>1. Upravljavec in narava storitve</h2>
+            <h2>1. UPRAVLJAVEC OSEBNIH PODATKOV</h2>
+            <p>Upravljavec osebnih podatkov je:</p>
             <p>
-              Upravljavec aplikacije in odgovorna oseba je <strong>Filip Kolle</strong>, Vrbovec 37, 
-              1000 Ljubljana (<a href="mailto:info@finance4p.com">info@finance4p.com</a>).
+              <strong>Ime in priimek:</strong> Filip Kolle<br />
+              <strong>E-naslov:</strong> <a href="mailto:info@finance4p.com">info@finance4p.com</a>
             </p>
             <p>
-              Aplikacija FINANCE 4P deluje kot digitalni osebni dnevnik. Vsi podatki so vneseni ročno 
-              in so informativne narave. Ker aplikacija ni povezana z zunanjimi finančnimi institucijami, 
-              se vneseni podatki ne štejejo za uradne finančne evidence.
+              Za vsa vprašanja v zvezi z varstvom vaših osebnih podatkov ali uveljavljanjem vaših pravic 
+              smo vam na voljo na zgoraj navedenem e-naslovu.
             </p>
           </section>
 
           <section>
-            <h2>2. Kategorije podatkov, ki jih obdelujemo</h2>
-            <p>Za zagotavljanje polne funkcionalnosti vašega osebnega asistenta obdelujeme le podatke, ki jih vnesete sami:</p>
+            <h2>2. OSNOVNI POJMI</h2>
             <ul>
-              <li><strong>Uporabniški profil:</strong> Ime za personalizacijo PDF izvozov in e-naslov za varno prijavo.</li>
-              <li><strong>Asistent za delo:</strong> Evidence ur, postavke in tipi zaposlitve za izračun informativnega zaslužka.</li>
-              <li><strong>Finančni pregled:</strong> Ročni vnosi transakcij, kategorij, stanja sredstev (nepremičnine, vozila, investicije) in obveznosti (dolgovi, naročnine) za namen vizualizacije neto vrednosti.</li>
-              <li><strong>Sistemske nastavitve:</strong> Vaše preference glede izgleda in načina prikaza aplikacije.</li>
+              <li><strong>Osebni podatek:</strong> informacija, ki posameznika identificira kot določenega ali določljivega posameznika (ime, e-naslov, IP naslov, podatki o lokaciji, spletni identifikator ipd.).</li>
+              <li><strong>Obdelava:</strong> kakršno koli delovanje v zvezi z osebnimi podatki (zbiranje, shranjevanje, posredovanje, vpogled, izbris).</li>
+              <li><strong>Upravljavec:</strong> oseba, ki določa namene in sredstva obdelave podatkov.</li>
+              <li><strong>Privolitev:</strong> prostovoljna in nedvoumna izjava volje posameznika za obdelavo podatkov.</li>
             </ul>
           </section>
 
           <section>
-            <h2>3. Tehnološka infrastruktura in varnost</h2>
-            <p>Vaši podatki so shranjeni v oblaku pri uveljavljenem svetovnem ponudniku <strong>Supabase</strong>.</p>
+            <h2>3. NAMEN IN PODLAGA ZA OBDELAVO PODATKOV</h2>
+            <h3>a.) Obdelava na podlagi privolitve</h3>
+            <p>Osebne podatke obdelujemo na podlagi vaše privolitve za:</p>
             <ul>
-              <li><strong>Lokacija strežnikov:</strong> Podatki se obdelujejo v regiji Zahodna Evropa (London, UK). Ta prenos je pravno skladen na podlagi Sklepa Evropske komisije o ustreznosti (28. 6. 2021), ločeno pa so vaši podatki varovani po standardih, ki so enakovredni tistim v EU.</li>
-              <li><strong>Varnostni ukrepi:</strong> Uporabljamo standardne protokole za šifriranje prenosov. Ker gre za ročno vnesene, nepreverjene podatke, upravljavec ne prevzema odgovornosti za njihovo resničnost ali morebitno škodo v primeru višje sile ali nepooblaščenega dostopa s strani tretjih oseb.</li>
+              <li>Pošiljanje potisnih obvestil (Push Notifications) za opomnike in novice.</li>
+              <li>Dostop do kamere in galerije za namene nalaganja slik računov ali dokumentov.</li>
+            </ul>
+            
+            <h3>b.) Obdelava na podlagi pogodbe</h3>
+            <p>Obdelava je nujna za izvajanje storitve Finance 4P:</p>
+            <ul>
+              <li>Registracija in prijava (prek Google Sign-In ali Apple ID).</li>
+              <li>Izvajanje plačil in upravljanje naročnin (prek Stripe, RevenueCat, Apple/Google In-App Purchases).</li>
+            </ul>
+
+            <h3>c.) Obdelava na podlagi zakonitega interesa</h3>
+            <ul>
+              <li>Analitika uporabe aplikacije za izboljšanje uporabniške izkušnje.</li>
+              <li>Zagotavljanje varnosti IT sistemov in preprečevanje zlorab.</li>
             </ul>
           </section>
 
           <section>
-            <h2>4. Vaš nadzor in pravice (GDPR)</h2>
-            <p>V skladu z zakonodajo vam zagotavljamo popoln nadzor:</p>
+            <h2>4. PODATKI, KI JIH ZBIRAMO</h2>
+            <p><strong>Prostovoljno posredovani podatki:</strong> Zbiramo osebne podatke, ki jih izrecno sporočite ob registraciji ali uporabi:</p>
             <ul>
-              <li><strong>Pravica do izbrisa:</strong> Svoj račun in vse podatke lahko kadarkoli trajno izbrišete v nastavitvah profila. Po potrditvi se podatki v bazi nepovratno pobrišejo v roku 30 dni.</li>
-              <li><strong>Dostop in prenosljivost:</strong> Kadarkoli lahko izvozite svoje vnose v obliki PDF dokumenta za lastno arhiviranje.</li>
-              <li><strong>Popravek:</strong> Vse vnose lahko ročno urejate neposredno v aplikaciji.</li>
+              <li>Ime in priimek, e-poštni naslov, telefonska številka.</li>
+              <li><strong>Ročni finančni vnosi:</strong> Vsi podatki o prihodkih, odhodkih in finančnih ciljih, ki jih v aplikacijo vnesete ročno. Aplikacija ni povezana z bančnimi računi.</li>
+            </ul>
+            <p><strong>Podatki, ki se generirajo avtomatsko:</strong> Ko uporabljate aplikacijo, pridobivamo tehnične podatke:</p>
+            <ul>
+              <li>IP naslov, Advertising ID (npr. IDFA ali AAID), vrsta naprave in operacijski sistem.</li>
+              <li>Anonimni statistični podatki o uporabi funkcij aplikacije.</li>
             </ul>
           </section>
 
           <section>
-            <h2>5. Hramba podatkov</h2>
+            <h2>5. POSREDOVANJE PODATKOV TRETJIM OSEBAM</h2>
+            <p>Vaših osebnih podatkov ne prodajamo. Delimo jih le s preverjenimi obdelovalci:</p>
+            <ul>
+              <li><strong>Shramba podatkov:</strong> Supabase (regija Zahodna Evropa, London, UK). Prenos je skladen s standardi EU.</li>
+              <li><strong>Analitika in oglasi:</strong> Google Analytics.</li>
+              <li><strong>Plačila in prijava:</strong> Stripe, RevenueCat, Apple Inc., Google LLC.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>6. VARNOST PODATKOV</h2>
+            <p>Vaše zaupanje cenimo, zato izvajamo stroge tehnične in organizacijske ukrepe:</p>
+            <ul>
+              <li>Uporaba šifriranja podatkov (SSL/TLS).</li>
+              <li>Varovanje strežniške infrastrukture ponudnika Supabase.</li>
+              <li>Nadzor nad pooblastili za dostop do informacij.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>7. PIŠKOTKI (COOKIES)</h2>
             <p>
-              Podatke hranimo le dokler imate aktiven račun. Upravljavec ne izvaja nobene avtomatizirane 
-              analitike vaših finančnih navad in vaših podatkov ne posreduje tretjim osebam za 
-              marketinške namene.
+              Mobilna aplikacija Finance 4P ne uporablja piškotkov v tradicionalnem smislu. 
+              Za delovanje aplikacije se uporabljajo lokalne shrambe naprave in identifikatorji (SDK-ji) 
+              tretjih oseb (npr. Google Analytics), ki omogočajo delovanje brez shranjevanja podatkov 
+              v spletnem brskalniku.
             </p>
           </section>
 
           <section>
-            <h2>6. Pritožbeni organ</h2>
+            <h2>8. IZBRIS PODATKOV (PRAVICA DO POZABE)</h2>
             <p>
-              V primeru vprašanj smo vam na voljo na <a href="mailto:info@finance4p.com">info@finance4p.com</a>. 
-              Če menite, da vaši podatki niso obdelani pravilno, se lahko obrnete na nadzorni organ: 
-              <strong>Informacijski pooblaščenec RS</strong>, Dunajska 22, Ljubljana.
+              Uporabnik ima v aplikaciji Finance 4P možnost, da kadarkoli sam izbriše svoj račun. 
+              Po potrditvi izbrisa bodo vsi vaši osebni in finančni podatki trajno odstranjeni iz 
+              naših baz v roku 10 dni, razen tistih, ki jih moramo hraniti po zakonu (npr. davčni podatki).
             </p>
           </section>
 
-          <p className="pp-date"><strong>Veljavnost:</strong> 25. marec 2026</p>
+          <section>
+            <h2>9. POSAMEZNIKOVE PRAVICE</h2>
+            <p>Skladno z GDPR imate pravico do:</p>
+            <ul>
+              <li>Dostopa do vaših podatkov in njihovega popravka.</li>
+              <li>Izbrisa osebnih podatkov (»pozabe«).</li>
+              <li>Prenosljivosti podatkov v strojno berljivi obliki.</li>
+              <li>Ugovora obdelavi za namene neposrednega trženja.</li>
+            </ul>
+            <p>Vse zahteve naslovite na: <a href="mailto:info@finance4p.com">info@finance4p.com</a>.</p>
+          </section>
+
+          <section>
+            <h2>10. PRITOŽBA NADZORNEMU ORGANU</h2>
+            <p>
+              Če menite, da obdelava vaših podatkov krši predpise, lahko vložite pritožbo pri:<br />
+              <strong>Informacijski pooblaščenec Republike Slovenije</strong><br />
+              Dunajska cesta 22, 1000 Ljubljana<br />
+              E-pošta: <a href="mailto:gp.ip@ip-rs.si">gp.ip@ip-rs.si</a>
+            </p>
+          </section>
+
+          <section>
+            <h2>11. KONČNE DOLOČBE</h2>
+            <p>
+              Ta politika zasebnosti se lahko občasno posodobi. O vseh pomembnih spremembah boste 
+              obveščeni znotraj aplikacije ali prek e-pošte.
+            </p>
+          </section>
         </div>
       </motion.div>
     </motion.div>
