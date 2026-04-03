@@ -1,5 +1,5 @@
 import React from 'react';
-import logoImg from '../assets/logo_4p.png';
+import logoImg from '../assets/logo_full_v2.png';
 
 const Navbar = () => {
   return (
@@ -7,9 +7,8 @@ const Navbar = () => {
       <div className="container">
         <div className="navbar-left">
           <a href="/" className="logo-container">
-            <span className="logo-text">Finance</span>
             <div className="logo-img-wrapper">
-              <img src={logoImg} alt="4P Logo" className="navbar-logo-img" />
+              <img src={logoImg} alt="Finance 4P Logo" className="navbar-logo-img" style={{ height: '40px' }} />
             </div>
           </a>
           

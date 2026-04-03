@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import logoImg from '../assets/logo_4p.png';
+import logoImg from '../assets/logo_full_v2.png';
 
 const Footer = () => {
   return (
@@ -17,9 +17,8 @@ const Footer = () => {
         <div className="footer-top">
           <div className="footer-brand">
             <div className="logo-container">
-              <span className="logo-text">Finance</span>
               <div className="logo-img-wrapper">
-                <img src={logoImg} alt="4P Logo" className="logo-img" style={{ height: '30px' }} />
+                <img src={logoImg} alt="Finance 4P Logo" className="logo-img" style={{ height: '40px' }} />
               </div>
             </div>
             <p>Vaš osebni asistent za finance in delo.</p>
