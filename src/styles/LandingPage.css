@@ -191,9 +191,9 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.1fr 0.9fr;
   align-items: center;
-  gap: 60px;
+  gap: 80px;
   min-height: calc(100vh - 76px);
   padding-top: 60px;
   padding-bottom: 60px;
@@ -318,7 +318,7 @@
 .phone-3d-wrapper {
   position: relative;
   width: 100%;
-  max-width: 520px;
+  max-width: 420px;
   animation: phone-float 6s ease-in-out infinite;
 }
 
@@ -693,8 +693,8 @@
 
 .switcher-display-grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 80px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 100px;
   align-items: center;
   width: 100%;
 }
@@ -748,7 +748,7 @@
 .mockup-glass {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 380px;
   z-index: 1;
 }
 
