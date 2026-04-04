@@ -7,7 +7,7 @@ const Navbar = () => {
       <div className="container">
         <a href="/" className="logo-container">
           <div className="logo-img-wrapper">
-            <img src={logoImg} alt="Finance 4P Logo" className="navbar-logo-img" style={{ height: '36px' }} />
+            <img src={logoImg} alt="Finance 4P Logo" className="navbar-logo-img" />
           </div>
         </a>
         
