@@ -6,19 +6,33 @@ import phoneCategories from '../assets/mockups/hero_phone_categories.png';
 
 const Hero = () => {
   const containerRef = useRef(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"]
   });
 
+  // Responsive values
+  const phoneOffset = isMobile ? 80 : 150;
+  const deloLabelX = isMobile ? 380 : 240;
+  const financeLabelX = isMobile ? 1060 : 1200;
+
   // Phases and Transformations - Recalibrated for 300vh scroll lock
-  const leftPhoneX = useTransform(scrollYProgress, [0.1, 0.45], [150, 0]);
+  const leftPhoneX = useTransform(scrollYProgress, [0.1, 0.45], [phoneOffset, 0]);
   const leftPhoneOpacity = useTransform(scrollYProgress, [0.1, 0.25], [0, 1]);
   const leftPhoneRotate = useTransform(scrollYProgress, [0.1, 0.45], [0, -8]);
   const leftLineLength = useTransform(scrollYProgress, [0.2, 0.55], [0, 1]);
   const leftLabelOpacity = useTransform(scrollYProgress, [0.45, 0.55], [0, 1]);
 
-  const rightPhoneX = useTransform(scrollYProgress, [0.55, 0.9], [-150, 0]);
+  const rightPhoneX = useTransform(scrollYProgress, [0.55, 0.9], [-phoneOffset, 0]);
   const rightPhoneOpacity = useTransform(scrollYProgress, [0.55, 0.7], [0, 1]);
   const rightPhoneRotate = useTransform(scrollYProgress, [0.55, 0.9], [0, 8]);
   const rightLineLength = useTransform(scrollYProgress, [0.65, 0.95], [0, 1]);
@@ -50,26 +64,26 @@ const Hero = () => {
             />
 
             <motion.text 
-              x="240" y="550" 
+              x={deloLabelX} y="550" 
               fill="#5E8DB2" 
               fontSize="56" 
               fontWeight="900" 
               letterSpacing="-0.04em"
-              transform="rotate(-20, 240, 550)"
+              transform={`rotate(-20, ${deloLabelX}, 550)`}
               style={{ opacity: leftLabelOpacity }}
             >
               Delo
             </motion.text>
 
             <motion.text 
-              x="1140" y="550" 
+              x={financeLabelX} y="550" 
               fill="#7CB483" 
               fontSize="56" 
               fontWeight="900" 
               letterSpacing="-0.04em"
-              transform="rotate(20, 1140, 550)"
+              transform={`rotate(20, ${financeLabelX}, 550)`}
               style={{ opacity: rightLabelOpacity }}
-              textAnchor="end"
+              textAnchor={isMobile ? "middle" : "end"}
             >
               Finance
             </motion.text>
