@@ -13,19 +13,17 @@ const Navbar = () => {
           </a>
           
           <div className="navbar-menu">
-            <a href="#funkcije" className="nav-link">Funkcije</a>
+            <a href="/" className="nav-link">Domov</a>
             <a href="#o-nas" className="nav-link">O nas</a>
-            <a href="#faq" className="nav-link">FAQ</a>
           </div>
         </div>
 
         <div className="navbar-actions">
-          <a href="/login" className="nav-link login-link">Prijava</a>
           <a
-            href="#prenesi"
+            href="#naroci-se"
             className="navbar-cta-btn"
           >
-            Brezplačen prenos
+            Naroči se
           </a>
         </div>
       </div>
