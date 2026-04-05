@@ -67,12 +67,15 @@
 
 .key-message-box {
   margin-top: 80px;
-  padding: 60px;
+  padding: 48px 60px;
   background: #fff;
   border-radius: 48px;
   border: 1px solid rgba(94, 141, 178, 0.1);
   box-shadow: 0 30px 60px rgba(94, 141, 178, 0.05);
   text-align: center;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .key-message-text {
@@ -86,6 +89,7 @@
 
 .key-message-text strong {
   font-weight: 900;
+  color: var(--primary);
 }
 
 /* 3. Mission */

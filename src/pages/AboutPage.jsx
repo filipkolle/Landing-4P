@@ -93,7 +93,7 @@ const AboutPage = () => {
             <p className="key-message-text">
               <strong>"Finance in delo ne smejo imeti negativen prizvok!</strong> So družbeno orodje, ki človeku pomagajo pri spoznavanju samega sebe in pripomorejo k njegovemu osebnemu razvoju na vseh področjih!"
             </p>
-            <span className="key-message-author">— Filip Kolle, Ustanovitelj</span>
+            <span className="key-message-author">— Filip Kolle, Ustanovitelj projekta</span>
           </motion.div>
         </div>
       </section>
