@@ -34,8 +34,7 @@ const AboutPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.2, ease: expoOut }}
           >
-            <h1>Finance 4P</h1>
-            <span className="hook-sub">Finance ljudem!</span>
+            <h1>Finance ljudem!</h1>
             <p className="hook-desc">
               Zgodba o digitalnem asistentu, ustvarjenem, da povrne nadzor tistim, ki cenijo svoj čas in trdo prislužen denar.
             </p>
