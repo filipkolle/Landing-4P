@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle } from 'lucide-react';
+import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
@@ -139,11 +139,15 @@ const AboutPage = () => {
         <div className="container">
           <motion.div 
             className="vision-container"
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 1, ease: expoOut }}
           >
-            <span className="section-label" style={{ opacity: 0.6, color: '#fff' }}>Pogled naprej!</span>
+            <div className="vision-icon-float">
+               <Users size={32} />
+            </div>
+            <span className="section-label">Pogled naprej!</span>
             <h2>Družbeni doprinos</h2>
             <p className="vision-contribution">
               "Vizija Finance 4P je opolnomočiti posameznika. Verjamem, da organiziranost in finančna pismenost vodita do boljših odločitev, manj stresnega vsakdana in večje povezanosti med ljudmi."
