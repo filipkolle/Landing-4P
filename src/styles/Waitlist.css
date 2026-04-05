@@ -1,0 +1,312 @@
+/* ===========================
+   WAITLIST PAGE STYLES
+   =========================== */
+.waitlist-page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+.waitlist-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.waitlist-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 20%, rgba(94, 141, 178, 0.08) 0%, transparent 40%),
+              radial-gradient(circle at 90% 80%, rgba(124, 180, 131, 0.08) 0%, transparent 40%);
+}
+
+.waitlist-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.03) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.waitlist-nav {
+  position: relative;
+  z-index: 10;
+  height: 100px;
+  display: flex;
+  align-items: center;
+}
+
+.waitlist-nav .container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 10px 18px;
+  border-radius: 100px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  justify-self: start;
+}
+
+.back-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary-light);
+  transform: translateX(-4px);
+}
+
+.waitlist-logo {
+  height: 40px;
+  display: block;
+}
+
+.waitlist-content {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 60px 0;
+}
+
+.waitlist-card-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.waitlist-main-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  padding: 80px 60px;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.06);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.waitlist-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(94, 141, 178, 0.1);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 32px;
+}
+
+.waitlist-main-card h1 {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  margin-bottom: 24px;
+  max-width: 600px;
+}
+
+.highlight-waitlist {
+  background: linear-gradient(135deg, var(--primary) 0%, #7CB483 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.waitlist-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  max-width: 580px;
+  margin-bottom: 48px;
+  line-height: 1.6;
+}
+
+.waitlist-form {
+  width: 100%;
+  max-width: 540px;
+  margin-bottom: 40px;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 10px;
+  border-radius: 24px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+  transition: all 0.3s;
+}
+
+.input-group:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 10px 40px rgba(94, 141, 178, 0.15);
+  transform: scale(1.02);
+}
+
+.input-icon {
+  padding: 0 20px;
+  color: var(--text-soft);
+}
+
+.waitlist-form input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  font-family: inherit;
+  color: var(--text-main);
+  outline: none;
+}
+
+.waitlist-submit {
+  padding: 14px 28px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s;
+}
+
+.waitlist-submit:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(94, 141, 178, 0.3);
+}
+
+.waitlist-submit.success {
+  background: #10b981;
+}
+
+.waitlist-benefits {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.benefit-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.waitlist-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.6);
+  padding: 32px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-icon {
+  color: var(--primary);
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.info-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.info-card p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.form-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-feedback.error { color: #ef4444; }
+.form-feedback.success { color: #10b981; }
+
+.waitlist-footer {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+/* Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .waitlist-main-card { padding: 40px 24px; }
+  .waitlist-main-card h1 { font-size: 2.5rem; }
+  .waitlist-info-grid { grid-template-columns: 1fr; }
+  .input-group { flex-direction: column; padding: 20px; gap: 16px; border-radius: 32px; }
+  .waitlist-submit { width: 100%; justify-content: center; }
+  .input-icon { display: none; }
+  .waitlist-form input { text-align: center; font-size: 1rem; }
+  .waitlist-benefits { gap: 16px; }
+}

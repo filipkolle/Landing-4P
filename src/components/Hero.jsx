@@ -22,8 +22,9 @@ const Hero = () => {
 
   // Responsive values
   const phoneOffset = isMobile ? 80 : 150;
-  const deloLabelX = isMobile ? 280 : 220;
-  const financeLabelX = isMobile ? 1160 : 1240;
+  const deloLabelX = isMobile ? 300 : 240;
+  const financeLabelX = isMobile ? 1140 : 1200;
+  const labelY = isMobile ? 150 : 550;
 
   // Phases and Transformations - Recalibrated for 300vh scroll lock
   const leftPhoneX = useTransform(scrollYProgress, [0.1, 0.45], [phoneOffset, 0]);
@@ -37,9 +38,6 @@ const Hero = () => {
   const rightPhoneRotate = useTransform(scrollYProgress, [0.55, 0.9], [0, 8]);
   const rightLineLength = useTransform(scrollYProgress, [0.65, 0.95], [0, 1]);
   const rightLabelOpacity = useTransform(scrollYProgress, [0.85, 0.95], [0, 1]);
-
-  // Responsive Y to hide side phones better on mobile load
-  const sidePhoneY = isMobile ? -15 : 0;
 
   return (
     <div ref={containerRef} className="hero-scroll-wrapper">
@@ -105,7 +103,6 @@ const Hero = () => {
             strokeLinecap="round" 
             style={{ pathLength: leftLineLength }}
           />
-
           <motion.path 
             id="curve-right"
             d="M1640,600 C1440,600 1290,550 1290,450 C1290,350 1390,350 1390,450 C1390,550 1290,600 720,700" 
@@ -114,26 +111,28 @@ const Hero = () => {
             strokeLinecap="round" 
             style={{ pathLength: rightLineLength }}
           />
+        </svg>
 
+        <svg className="hero-labels" viewBox="0 0 1440 1000" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ zIndex: 100 }}>
           <motion.text 
-            x={deloLabelX} y="260" 
+            x={deloLabelX} y={labelY} 
             fill="#5E8DB2" 
             fontSize="56" 
             fontWeight="900" 
             letterSpacing="-0.04em"
-            transform={`rotate(-20, ${deloLabelX}, 260)`}
+            transform={`rotate(-20, ${deloLabelX}, ${labelY})`}
             style={{ opacity: leftLabelOpacity }}
           >
             Delo
           </motion.text>
 
           <motion.text 
-            x={financeLabelX} y="260" 
+            x={financeLabelX} y={labelY} 
             fill="#7CB483" 
             fontSize="56" 
             fontWeight="900" 
             letterSpacing="-0.04em"
-            transform={`rotate(20, ${financeLabelX}, 260)`}
+            transform={`rotate(20, ${financeLabelX}, ${labelY})`}
             style={{ opacity: rightLabelOpacity }}
             textAnchor={isMobile ? "middle" : "end"}
           >

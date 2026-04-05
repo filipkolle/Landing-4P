@@ -27,7 +27,7 @@ const Footer = () => {
           <div className="footer-links">
             <div className="link-group">
               <h4>Pravno</h4>
-              <a href="#">Pogoji poslovanja</a>
+              <Link to="/pogojiposlovanja" className="footer-link-btn">Pogoji poslovanja</Link>
               <Link to="/politikazasebnosti" className="footer-link-btn">Politika zasebnosti</Link>
             </div>
             <div className="link-group">
