@@ -24,20 +24,25 @@ const Footer = () => {
             <p>Vaš osebni asistent za finance in delo.</p>
           </div>
           
-          <div className="footer-links">
-            <div className="link-group">
-              <h4>Pravno</h4>
-              <Link to="/pogojiposlovanja" className="footer-link-btn">Pogoji poslovanja</Link>
-              <Link to="/politikazasebnosti" className="footer-link-btn">Politika zasebnosti</Link>
+            <div className="footer-links">
+              <div className="link-group">
+                <h4>Podjetje</h4>
+                <Link to="/o-nas" className="footer-link-btn">O nas</Link>
+                <a href="#">Kontakt</a>
+              </div>
+              <div className="link-group">
+                <h4>Pravno</h4>
+                <Link to="/pogojiposlovanja" className="footer-link-btn">Pogoji poslovanja</Link>
+                <Link to="/politikazasebnosti" className="footer-link-btn">Politika zasebnosti</Link>
+              </div>
+              <div className="link-group">
+                <h4>Pisanje</h4>
+                <a href="mailto:info@finance4p.com" className="email-link">
+                  <Mail size={16} />
+                  <span>info@finance4p.com</span>
+                </a>
+              </div>
             </div>
-            <div className="link-group">
-              <h4>Kontakt</h4>
-              <a href="mailto:info@finance4p.com" className="email-link">
-                <Mail size={16} />
-                <span>info@finance4p.com</span>
-              </a>
-            </div>
-          </div>
         </div>
         
         <div className="footer-bottom">
