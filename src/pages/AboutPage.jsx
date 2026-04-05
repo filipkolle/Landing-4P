@@ -234,7 +234,7 @@ const AboutPage = () => {
 
 // Essential Icon Components
 const Eye = ({ size, color }) => (
-  <div className="impact-icon-bg" style={{ background: 'rgba(94,141,178,0.1)', color: color || 'var(--primary)' }}>
+  <div style={{ color: color || 'var(--primary)', marginBottom: '24px' }}>
     <Rocket size={size} />
   </div>
 );
