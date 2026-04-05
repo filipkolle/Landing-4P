@@ -145,24 +145,24 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, ease: expoOut }}
           >
-            <span className="section-label">Pogled naprej!</span>
-            <h2>Vizija in poslanstvo</h2>
-            <p className="vision-contribution">
-              "Vizija Finance 4P je opolnomočiti posameznika. Verjamem, da organiziranost in finančna pismenost vodita do boljših odločitev, manj stresnega vsakdana in večje povezanosti med ljudmi."
-            </p>
+            <span className="section-label">Prihodnost projekta</span>
+            <h2>Pogled naprej!</h2>
             
-            <div className="vision-points-grid">
-              <div className="vision-point">
-                <span className="point-number">01</span>
-                <p>Več kot le beleženje ur – vaš osebni digitalni asistent za celosten nadzor.</p>
+            <div className="vision-main-content">
+              <h3>Družbeni doprinos</h3>
+              <p className="vision-contribution-text">
+                "Vizija Finance 4P je opolnomočiti posameznika. Danes se človek zaradi vseh preglavic težko posveča drugemu kot svojim težavam. Verjamem, da organiziranost in finančna pismenost vodita do boljših življenjskih odločitev, manj stresnega vsakdana in omogoči večjo povezanost med ljudmi, kar privede do srečnejše in bolj stabilne družbe."
+              </p>
+            </div>
+            
+            <div className="vision-secondary-grid">
+              <div className="vision-detail-card">
+                <h4>Vsebina</h4>
+                <p>Finance 4P se ne ustavi pri beleženju ur. Želi postati sinonim za osebnega asistenta, ki posamezniku pomaga rasti – ne le finančno, ampak tudi skozi disciplino in red.</p>
               </div>
-              <div className="vision-point">
-                <span className="point-number">02</span>
-                <p>Osebna rast skozi disciplino, red in premišljene finančne temelje.</p>
-              </div>
-              <div className="vision-point">
-                <span className="point-number">03</span>
-                <p>Prvi korak k aktivnemu in odgovornemu delovanju v sodobni družbi.</p>
+              <div className="vision-detail-card">
+                <h4>Cilj</h4>
+                <p>Finance 4P je prvi korak vsakega posameznika na poti v svet osebnih financ in delovanja v družbi.</p>
               </div>
             </div>
           </motion.div>

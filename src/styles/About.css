@@ -190,46 +190,62 @@
   letter-spacing: -0.04em;
 }
 
-.vision-points-grid {
+.vision-main-content {
+  max-width: 850px;
+  margin: 0 auto 64px;
+}
+
+.vision-main-content h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.vision-contribution-text {
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0c1e21;
+  font-style: italic;
+}
+
+.vision-secondary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 32px;
-  margin-top: 64px;
   text-align: left;
 }
 
-.vision-point {
+.vision-detail-card {
   background: rgba(255, 255, 255, 0.4);
-  padding: 32px;
-  border-radius: 32px;
+  padding: 40px;
+  border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: transform 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-.vision-point:hover {
-  transform: translateY(-5px);
-  background: #fff;
-}
-
-.point-number {
-  font-size: 0.9rem;
-  font-weight: 800;
+.vision-detail-card h4 {
+  font-size: 1.2rem;
+  font-weight: 850;
+  margin-bottom: 16px;
   color: var(--primary);
-  opacity: 0.5;
-  display: block;
-  margin-bottom: 12px;
 }
 
-.vision-point p {
-  font-size: 1rem;
+.vision-detail-card p {
+  font-size: 1.1rem;
   line-height: 1.6;
   color: var(--text-main);
   margin: 0;
-  font-weight: 550;
 }
 
 @media (max-width: 1024px) {
-  .vision-points-grid { grid-template-columns: 1fr; }
+  .vision-main-content h2 { font-size: 3rem; }
+  .vision-contribution-text { font-size: 1.3rem; }
+  .vision-secondary-grid { grid-template-columns: 1fr; }
 }
 
 /* 6. Waitlist */
