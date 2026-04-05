@@ -149,13 +149,25 @@ const AboutPage = () => {
                <Users size={32} />
             </div>
             <span className="section-label">Pogled naprej!</span>
-            <h2>Družbeni doprinos</h2>
+            <h2>Vizija in poslanstvo</h2>
             <p className="vision-contribution">
               "Vizija Finance 4P je opolnomočiti posameznika. Verjamem, da organiziranost in finančna pismenost vodita do boljših odločitev, manj stresnega vsakdana in večje povezanosti med ljudmi."
             </p>
-            <p className="vision-sub-text">
-              Finance 4P se ne ustavi pri beleženju ur. Želi postati sinonim za osebnega asistenta, ki posamezniku pomaga rasti – ne le finančno, ampak tudi skozi disciplino in red. Prvi korak na poti v svet delovanja v družbi.
-            </p>
+            
+            <div className="vision-points-grid">
+              <div className="vision-point">
+                <span className="point-number">01</span>
+                <p>Več kot le beleženje ur – vaš osebni digitalni asistent za celosten nadzor.</p>
+              </div>
+              <div className="vision-point">
+                <span className="point-number">02</span>
+                <p>Osebna rast skozi disciplino, red in premišljene finančne temelje.</p>
+              </div>
+              <div className="vision-point">
+                <span className="point-number">03</span>
+                <p>Prvi korak k aktivnemu in odgovornemu delovanju v sodobni družbi.</p>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>

@@ -190,15 +190,47 @@
   letter-spacing: -0.04em;
 }
 
-.vision-contribution {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--primary);
-  margin-bottom: 32px;
+.vision-points-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-top: 64px;
+  text-align: left;
 }
 
-.vision-sub-text { font-size: 1.2rem; color: var(--text-muted); line-height: 1.8; }
+.vision-point {
+  background: rgba(255, 255, 255, 0.4);
+  padding: 32px;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transition: transform 0.3s ease;
+}
+
+.vision-point:hover {
+  transform: translateY(-5px);
+  background: #fff;
+}
+
+.point-number {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--primary);
+  opacity: 0.5;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.vision-point p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin: 0;
+  font-weight: 550;
+}
+
+@media (max-width: 1024px) {
+  .vision-points-grid { grid-template-columns: 1fr; }
+}
 
 /* 6. Waitlist */
 .about-cta-section {
