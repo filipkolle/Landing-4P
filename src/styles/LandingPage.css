@@ -160,7 +160,7 @@
   height: 100vh;
   top: 0;
   left: 0;
-  z-index: 15;
+  z-index: 2;
   pointer-events: none;
   opacity: 1;
 }
@@ -500,7 +500,11 @@
   transition: background 1s ease;
 }
 
-/* switcher-tabs-centered removed as tabs are now inline */
+.switcher-tabs-centered {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 60px;
+}
 
 .tabs-capsule {
   display: flex;
@@ -562,13 +566,27 @@
 .switcher-display-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-areas: 
+    "header mockup"
+    "body mockup";
   gap: 80px;
   align-items: center;
   width: 100%;
 }
 
-.display-text {
+.display-header { 
+  grid-area: header;
   text-align: left;
+}
+
+.display-body { 
+  grid-area: body;
+  text-align: left;
+  align-self: start;
+}
+
+.display-mockup-wrapper { 
+  grid-area: mockup; 
 }
 
 .display-title {
@@ -1060,10 +1078,14 @@
   
   .switcher-display-grid {
     grid-template-columns: 1fr;
+    grid-template-areas: 
+      "header"
+      "mockup"
+      "body";
     gap: 40px;
     text-align: center;
   }
-  .display-text { 
+  .display-header, .display-body { 
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1081,20 +1103,25 @@
     line-height: 1.2;
   }
 
+  .hero-curves {
+    top: -80px;
+    z-index: 2;
+  }
+  
   .hero-phones-container { 
-    height: 380px; 
-    margin-top: 40px;
+    height: 300px; 
+    margin-top: 30px;
     display: flex;
     justify-content: center;
     align-items: flex-end;
     overflow: visible;
   }
   .hero-phone { 
-    width: 140px; 
-    margin: 0 -45px; /* Tighter stack for mobile */
+    width: 110px; 
+    margin: 0 -35px; /* Tighter stack for mobile */
   }
   .phone-center { 
-    width: 180px; 
+    width: 150px; 
     z-index: 10;
   }
   .phone-left, .phone-right {
@@ -1135,10 +1162,10 @@
 }
 
 @media (max-width: 480px) {
-  .hero-content-centered h1 { font-size: 2.2rem; }
-  .hero-phone { width: 140px; margin: 0 -30px; }
-  .phone-center { width: 180px; }
-  .hero-phones-container { height: 320px; }
+  .hero-content-centered h1 { font-size: 2.1rem; }
+  .hero-phone { width: 90px; margin: 0 -25px; }
+  .phone-center { width: 130px; }
+  .hero-phones-container { height: 260px; }
   
   .navbar-menu { display: none; }
   .navbar { height: 60px; }

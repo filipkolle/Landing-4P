@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 // Triggering rebuild with new mockups v2
 import { motion, AnimatePresence } from 'framer-motion';
-import workImg from '../assets/mockups/work_v3.png';
-import financeImg from '../assets/mockups/finance_v3.png';
+import workImg from '../assets/mockups/work_v5.png';
+import financeImg from '../assets/mockups/finance_v4.png';
 import dashboardImg from '../assets/mockups/dashboard_v3.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
@@ -57,58 +57,48 @@ const FeatureSwitcher = () => {
           <p>Izberite način, ki najbolje ustreza vašemu delovnemu ritmu in osebnim financam.</p>
         </motion.div>
 
-        <div className="switcher-display-grid">
-          <div className="display-text">
-            {/* Static Toggle */}
-            <motion.div 
-              className="tabs-capsule" 
-              style={{ marginBottom: '40px' }}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: expoOut }}
-            >
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`tab-capsule-btn ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{ color: activeTab === tab.id ? activeColor : 'inherit' }}
-                >
-                  {activeTab === tab.id && (
-                    <motion.div 
-                      layoutId="activeTabBg"
-                      className="active-bg"
-                      transition={{ type: 'spring', duration: 0.8, bounce: 0.2 }}
-                    />
-                  )}
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </motion.div>
+        <div className="switcher-tabs-centered">
+          <motion.div 
+            className="tabs-capsule" 
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: expoOut }}
+          >
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`tab-capsule-btn ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                style={{ color: activeTab === tab.id ? activeColor : 'inherit' }}
+              >
+                {activeTab === tab.id && (
+                  <motion.div 
+                    layoutId="activeTabBg"
+                    className="active-bg"
+                    transition={{ type: 'spring', duration: 0.8, bounce: 0.2 }}
+                  />
+                )}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </motion.div>
+        </div>
 
+        <div className="switcher-display-grid">
+          <div className="display-header">
             <AnimatePresence mode="wait">
-              <motion.div
+              <motion.h3 
                 key={activeTab}
-                initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                className="display-title" 
+                style={{ color: activeColor }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.5, ease: expoOut }}
               >
-                <h3 className="display-title" style={{ color: activeColor }}>{activeContent.title}</h3>
-                <p className="display-desc">{activeContent.description}</p>
-                
-                <div className="display-features">
-                  <div className="display-feature-item">
-                    <div className="feature-dot" style={{ background: activeColor }} />
-                    <span>Intuitiven vmesnik</span>
-                  </div>
-                  <div className="display-feature-item">
-                    <div className="feature-dot" style={{ background: activeColor }} />
-                    <span>Varni podatki</span>
-                  </div>
-                </div>
-              </motion.div>
+                {activeContent.title}
+              </motion.h3>
             </AnimatePresence>
           </div>
 
@@ -129,6 +119,31 @@ const FeatureSwitcher = () => {
                     background: `radial-gradient(ellipse at center, ${activeColor}20 0%, transparent 70%)` 
                   }} 
                 />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="display-body">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                transition={{ duration: 0.5, ease: expoOut }}
+              >
+                <p className="display-desc">{activeContent.description}</p>
+                
+                <div className="display-features">
+                  <div className="display-feature-item">
+                    <div className="feature-dot" style={{ background: activeColor }} />
+                    <span>Intuitiven vmesnik</span>
+                  </div>
+                  <div className="display-feature-item">
+                    <div className="feature-dot" style={{ background: activeColor }} />
+                    <span>Varni podatki</span>
+                  </div>
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>
