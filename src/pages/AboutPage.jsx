@@ -90,7 +90,7 @@ const AboutPage = () => {
             transition={{ duration: 1, ease: expoOut }}
           >
             <p className="key-message-text">
-              "Finance in delo ne smejo imeti negativen prizvok! So družbeno orodje, ki človeku pomagajo pri spoznavanju samega sebe in pripomorejo k njegovemu osebnemu razvoju na vseh področjih!"
+              <strong>"Finance in delo ne smejo imeti negativen prizvok!</strong> So družbeno orodje, ki človeku pomagajo pri spoznavanju samega sebe in pripomorejo k njegovemu osebnemu razvoju na vseh področjih!"
             </p>
             <span className="key-message-author">— Filip Kolle, Ustanovitelj</span>
           </motion.div>
