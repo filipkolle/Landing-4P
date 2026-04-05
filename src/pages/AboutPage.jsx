@@ -4,6 +4,7 @@ import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Us
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
+import signatureImg from '../assets/signature.png';
 import '../styles/About.css';
 
 const expoOut = [0.19, 1, 0.22, 1];
@@ -216,6 +217,9 @@ const AboutPage = () => {
             <p>Hvala vsem, ki skupaj z nami začenjate graditi zdrave delovne in finančne navade in pomagate pri ustvarjanju boljše družbe!</p>
             <div className="sig-block">
               <span className="sig-intro">Hvala, ker zaupate Finance 4P.</span>
+              <div className="sig-image-container">
+                <img src={signatureImg} alt="Podpis Filip Kolle" className="sig-actual-img" />
+              </div>
               <span className="digital-sig">Filip Kolle</span>
               <span className="sig-title">idejni vodja in razvijalec</span>
             </div>
