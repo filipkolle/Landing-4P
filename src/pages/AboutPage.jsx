@@ -145,9 +145,6 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, ease: expoOut }}
           >
-            <div className="vision-icon-float">
-               <Users size={32} />
-            </div>
             <span className="section-label">Pogled naprej!</span>
             <h2>Vizija in poslanstvo</h2>
             <p className="vision-contribution">
