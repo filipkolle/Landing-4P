@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import founderImg from '../assets/founder.png';
+import founderImg from '../assets/founder.jpg';
 import '../styles/About.css';
 
 const expoOut = [0.19, 1, 0.22, 1];
