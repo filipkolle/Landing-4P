@@ -177,21 +177,48 @@
   text-align: center;
 }
 
+.sig-content p { 
+  font-size: 1.25rem; 
+  font-weight: 600; 
+  color: var(--text-muted); 
+  margin-bottom: 80px; 
+  line-height: 1.6;
+}
+
 .sig-block {
-  margin-top: 60px;
-  padding-top: 40px;
-  border-top: 1px solid rgba(0,0,0,0.05);
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sig-intro {
+  font-size: 1.1rem;
+  color: var(--text-soft);
+  margin-bottom: 8px;
 }
 
 .digital-sig {
   font-family: 'Georgia', serif;
   font-style: italic;
-  font-size: 4rem;
+  font-size: 5rem;
+  font-weight: 400;
   background: linear-gradient(135deg, var(--primary) 0%, #7CB483 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 10px;
+  margin: 0;
+  line-height: 1;
+}
+
+.sig-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 10px;
 }
 
 @media (max-width: 1024px) {
@@ -201,5 +228,5 @@
   .mission-cards { grid-template-columns: 1fr; }
   .vision-container { padding: 40px 24px; border-radius: 40px; }
   .about-cta-card { padding: 60px 24px; border-radius: 40px; }
-  .digital-sig { font-size: 3rem; }
+  .digital-sig { font-size: 3.5rem; }
 }
