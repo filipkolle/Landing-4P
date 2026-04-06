@@ -94,14 +94,14 @@
    =========================== */
 .navbar-cta-btn {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #4daebb, #6098bc);
+  background: linear-gradient(135deg, #0a2e4d 0%, #8bc6e3 100%);
   color: #fff;
   border-radius: 16px;
   font-size: 1.05rem;
   font-weight: 700;
   text-decoration: none;
   transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-  box-shadow: 0 10px 20px rgba(77, 174, 187, 0.2);
+  box-shadow: 0 10px 20px rgba(10, 46, 77, 0.2);
   display: inline-block;
 }
 
@@ -144,16 +144,63 @@
   mask-image: linear-gradient(to bottom, black 40%, transparent 95%);
 }
 
-.hero-gradient-overlay {
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(circle at 32% 62%, rgba(0, 243, 255, 0.45) 0%, transparent 65%),
-    radial-gradient(circle at 68% 62%, rgba(0, 255, 136, 0.45) 0%, transparent 65%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 80%);
-  z-index: 1;
+.hero-phone {
+  position: relative;
+  width: 280px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  overflow: visible !important; 
+  z-index: 5; /* Ensure above background */
 }
 
+.phone-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200%;
+  height: 120%;
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.glow-blue {
+  background: radial-gradient(circle, rgba(94, 141, 178, 0.9) 0%, transparent 75%);
+}
+
+.glow-green {
+  background: radial-gradient(circle, rgba(124, 180, 131, 0.9) 0%, transparent 75%);
+}
+
+.hero-curves {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.hero-labels {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.curve-text {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  opacity: 0.6;
+}
 
 .highlight-blue {
   color: #4daebb;

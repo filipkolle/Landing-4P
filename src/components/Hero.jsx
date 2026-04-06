@@ -22,15 +22,22 @@ const Hero = () => {
 
   // Responsive values
   const phoneOffset = isMobile ? 80 : 150;
+  const deloLabelX = isMobile ? 300 : 240;
+  const financeLabelX = isMobile ? 1140 : 1200;
+  const labelY = isMobile ? 150 : 550;
 
-  // Phases and Transformations
+  // Phases and Transformations - Recalibrated for 300vh scroll lock
   const leftPhoneX = useTransform(scrollYProgress, [0.1, 0.45], [phoneOffset, 0]);
   const leftPhoneOpacity = useTransform(scrollYProgress, [0.1, 0.25], [0, 1]);
   const leftPhoneRotate = useTransform(scrollYProgress, [0.1, 0.45], [0, -8]);
+  const leftLineLength = useTransform(scrollYProgress, [0.2, 0.55], [0, 1]);
+  const leftLabelOpacity = useTransform(scrollYProgress, [0.45, 0.55], [0, 1]);
 
   const rightPhoneX = useTransform(scrollYProgress, [0.55, 0.9], [-phoneOffset, 0]);
   const rightPhoneOpacity = useTransform(scrollYProgress, [0.55, 0.7], [0, 1]);
   const rightPhoneRotate = useTransform(scrollYProgress, [0.55, 0.9], [0, 8]);
+  const rightLineLength = useTransform(scrollYProgress, [0.65, 0.95], [0, 1]);
+  const rightLabelOpacity = useTransform(scrollYProgress, [0.85, 0.95], [0, 1]);
 
   return (
     <div ref={containerRef} className="hero-scroll-wrapper">
@@ -61,6 +68,10 @@ const Hero = () => {
                 y: isMobile ? 0 : 40 
               }}
             >
+              <motion.div 
+                className="phone-glow glow-blue" 
+                style={{ opacity: leftPhoneOpacity, scale: leftPhoneOpacity }}
+              />
               <img src={phoneDelo} alt="Phone Delo" />
             </motion.div>
 
@@ -82,10 +93,60 @@ const Hero = () => {
                 y: isMobile ? 0 : 40 
               }}
             >
+              <motion.div 
+                className="phone-glow glow-green" 
+                style={{ opacity: rightPhoneOpacity, scale: rightPhoneOpacity }}
+              />
               <img src={phoneCategories} alt="Phone Categories" />
             </motion.div>
           </div>
         </div>
+
+        <svg className="hero-curves" viewBox="0 0 1440 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <motion.path 
+            id="curve-left"
+            d="M-200,600 C0,600 150,550 150,450 C150,350 50,350 50,450 C50,550 150,600 720,700" 
+            stroke="#5E8DB2" 
+            strokeWidth="24" 
+            strokeLinecap="round" 
+            style={{ pathLength: leftLineLength }}
+          />
+          <motion.path 
+            id="curve-right"
+            d="M1640,600 C1440,600 1290,550 1290,450 C1290,350 1390,350 1390,450 C1390,550 1290,600 720,700" 
+            stroke="#7CB483" 
+            strokeWidth="24" 
+            strokeLinecap="round" 
+            style={{ pathLength: rightLineLength }}
+          />
+        </svg>
+
+        <svg className="hero-labels" viewBox="0 0 1440 1000" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ zIndex: 100 }}>
+          <motion.text 
+            x={deloLabelX} y={labelY} 
+            fill="#5E8DB2" 
+            fontSize="56" 
+            fontWeight="900" 
+            letterSpacing="-0.04em"
+            transform={`rotate(-20, ${deloLabelX}, ${labelY})`}
+            style={{ opacity: leftLabelOpacity }}
+          >
+            Delo
+          </motion.text>
+
+          <motion.text 
+            x={financeLabelX} y={labelY} 
+            fill="#7CB483" 
+            fontSize="56" 
+            fontWeight="900" 
+            letterSpacing="-0.04em"
+            transform={`rotate(20, ${financeLabelX}, ${labelY})`}
+            style={{ opacity: rightLabelOpacity }}
+            textAnchor={isMobile ? "middle" : "end"}
+          >
+            Finance
+          </motion.text>
+        </svg>
       </header>
     </div>
   );
