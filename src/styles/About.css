@@ -17,12 +17,13 @@
   font-size: 5.5rem;
   font-weight: 950;
   margin-bottom: 24px;
-  background: linear-gradient(135deg, var(--primary) 0%, #7CB483 100%);
+  background: linear-gradient(135deg, #5E8DB2 0%, #7CB483 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.06em;
-  line-height: 1;
+  line-height: 1.2;
+  padding-bottom: 0.1em; /* Extra insurance for descenders */
 }
 
 .about-hero .hook-desc {
