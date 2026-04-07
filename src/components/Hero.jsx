@@ -26,18 +26,18 @@ const Hero = () => {
   const financeLabelX = isMobile ? 1140 : 1200;
   const labelY = isMobile ? 150 : 550;
 
-  // Phases and Transformations - Recalibrated for 250vh scroll lock
-  const leftPhoneX = useTransform(scrollYProgress, [0.15, 0.45], [phoneOffset, 0]);
-  const leftPhoneOpacity = useTransform(scrollYProgress, [0.15, 0.3], [0, 1]);
-  const leftPhoneRotate = useTransform(scrollYProgress, [0.15, 0.45], [0, -8]);
-  const leftLineLength = useTransform(scrollYProgress, [0.25, 0.55], [0, 1]);
-  const leftLabelOpacity = useTransform(scrollYProgress, [0.45, 0.55], [0, 1]);
+  // Phases and Transformations - Significantly delayed side phones to ensure center priority
+  const leftPhoneX = useTransform(scrollYProgress, [0.3, 0.55], [phoneOffset, 0]);
+  const leftPhoneOpacity = useTransform(scrollYProgress, [0, 0.3, 0.45], [0, 0, 1]);
+  const leftPhoneRotate = useTransform(scrollYProgress, [0.3, 0.55], [0, -8]);
+  const leftLineLength = useTransform(scrollYProgress, [0.4, 0.65], [0, 1]);
+  const leftLabelOpacity = useTransform(scrollYProgress, [0.55, 0.65], [0, 1]);
 
-  const rightPhoneX = useTransform(scrollYProgress, [0.6, 0.9], [-phoneOffset, 0]);
-  const rightPhoneOpacity = useTransform(scrollYProgress, [0.6, 0.75], [0, 1]);
-  const rightPhoneRotate = useTransform(scrollYProgress, [0.6, 0.9], [0, 8]);
-  const rightLineLength = useTransform(scrollYProgress, [0.7, 0.95], [0, 1]);
-  const rightLabelOpacity = useTransform(scrollYProgress, [0.85, 0.95], [0, 1]);
+  const rightPhoneX = useTransform(scrollYProgress, [0.7, 0.95], [-phoneOffset, 0]);
+  const rightPhoneOpacity = useTransform(scrollYProgress, [0, 0.7, 0.85], [0, 0, 1]);
+  const rightPhoneRotate = useTransform(scrollYProgress, [0.7, 0.95], [0, 8]);
+  const rightLineLength = useTransform(scrollYProgress, [0.8, 0.98], [0, 1]);
+  const rightLabelOpacity = useTransform(scrollYProgress, [0.9, 0.98], [0, 1]);
 
   return (
     <div ref={containerRef} className="hero-scroll-wrapper">
@@ -51,7 +51,7 @@ const Hero = () => {
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.2 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
             >
               Osebni <span className="highlight-blue">asistent</span> v<br />
               tvojem <span className="highlight-green">žepu</span>
@@ -61,6 +61,7 @@ const Hero = () => {
           <div className="hero-phones-container">
             <motion.div 
               className="hero-phone phone-left"
+              initial={{ opacity: 0 }}
               style={{ 
                 opacity: leftPhoneOpacity, 
                 x: leftPhoneX, 
@@ -80,9 +81,9 @@ const Hero = () => {
               initial={{ opacity: 0, y: isMobile ? 120 : 180, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ 
-                duration: 1.2, 
-                delay: 0.1,
-                ease: "linear" // Constant velocity throughout the duration
+                duration: 0.8, 
+                delay: 0,
+                ease: "linear"
               }}
             >
               <img src={phoneFinance} alt="Phone Finance" />
@@ -90,6 +91,7 @@ const Hero = () => {
 
             <motion.div 
               className="hero-phone phone-right"
+              initial={{ opacity: 0 }}
               style={{ 
                 opacity: rightPhoneOpacity, 
                 x: rightPhoneX, 

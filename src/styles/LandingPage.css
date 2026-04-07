@@ -250,7 +250,6 @@
   position: relative;
   width: 280px;
   flex-shrink: 0;
-  transition: transform 0.3s ease;
 }
 
 .hero-phone img {
