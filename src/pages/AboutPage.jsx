@@ -145,8 +145,8 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, ease: expoOut }}
           >
-            <span className="section-label">Prihodnost projekta</span>
-            <h2>Pogled naprej!</h2>
+            <span className="section-label">Pogled naprej!</span>
+            <h2>Vizija in poslanstvo</h2>
             
             <div className="vision-main-content">
               <h3>Družbeni doprinos</h3>

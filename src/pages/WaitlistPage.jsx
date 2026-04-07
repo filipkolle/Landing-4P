@@ -70,11 +70,11 @@ const WaitlistPage = () => {
           >
             <div className="waitlist-main-card">
               <motion.h1 variants={itemVars}>
-                Postani del <span className="highlight-waitlist">prihodnosti</span> svojih financ.
+                Bodi med <span className="highlight-waitlist">prvimi</span>, ki <br /> uporabljajo <span className="highlight-waitlist">Finance 4P</span>
               </motion.h1>
               
               <motion.p className="waitlist-subtitle" variants={itemVars}>
-                Pridruži se čakalni vrsti in bodi med prvimi, ki bodo imeli možnost uporabljati Finance 4P aplikacijo še preden bo dostopna širši javnosti. Zagotovi si ekskluzivni zgodnji dostop in posebne ugodnosti.
+                Pridruži se čakalni vrsti in bodi med prvimi, ki bodo imeli možnost uporabljati Finance 4P aplikacijo še preden bo dostopna širši javnosti.
               </motion.p>
 
               <motion.form 
