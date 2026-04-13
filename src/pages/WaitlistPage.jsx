@@ -9,7 +9,7 @@ const WaitlistPage = () => {
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
       setStatus('error');
@@ -18,11 +18,26 @@ const WaitlistPage = () => {
     
     setStatus('loading');
     
-    // Simulate API call
-    setTimeout(() => {
-      setStatus('success');
-      setEmail('');
-    }, 2000);
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus('success');
+        setEmail('');
+      } else {
+        console.error('Waitlist error:', data.error);
+        setStatus('error');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      setStatus('error');
+    }
   };
 
   const containerVars = {

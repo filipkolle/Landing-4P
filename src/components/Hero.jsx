@@ -26,27 +26,21 @@ const Hero = () => {
     restDelta: 0.001
   });
 
+  // Responsive values
+  const phoneOffset = isMobile ? 70 : 150;
+
   // Desktop scroll animations
-  const phoneOffset = 150;
-  const leftPhoneXAnim = useTransform(smoothProgress, [0.1, 0.35], [phoneOffset, 0]);
-  const leftPhoneOpacityAnim = useTransform(smoothProgress, [0, 0.1, 0.25], [0, 0, 1]);
-  const leftPhoneRotateAnim = useTransform(smoothProgress, [0.1, 0.35], [0, -8]);
+  const leftPhoneX = useTransform(smoothProgress, [0.1, 0.35], [phoneOffset, 0]);
+  const leftPhoneOpacity = useTransform(smoothProgress, [0, 0.1, 0.25], [0, 0, 1]);
+  const leftPhoneRotate = useTransform(smoothProgress, [0.1, 0.35], [0, isMobile ? -5 : -8]);
   
-  const rightPhoneXAnim = useTransform(smoothProgress, [0.3, 0.55], [-phoneOffset, 0]);
-  const rightPhoneOpacityAnim = useTransform(smoothProgress, [0, 0.3, 0.45], [0, 0, 1]);
-  const rightPhoneRotateAnim = useTransform(smoothProgress, [0.3, 0.55], [0, 8]);
+  const rightPhoneX = useTransform(smoothProgress, [0.3, 0.55], [-phoneOffset, 0]);
+  const rightPhoneOpacity = useTransform(smoothProgress, [0, 0.3, 0.45], [0, 0, 1]);
+  const rightPhoneRotate = useTransform(smoothProgress, [0.3, 0.55], [0, isMobile ? 5 : 8]);
 
-  const centerPhoneScale = useTransform(smoothProgress, [0, 0.3], [0.92, 1]);
-  const centerPhoneOpacity = useTransform(smoothProgress, [0, 0.2], [0, 1]);
-
-  // On mobile: static values (no scroll animation)
-  const leftPhoneX      = isMobile ? 0 : leftPhoneXAnim;
-  const leftPhoneOpacity= isMobile ? 1 : leftPhoneOpacityAnim;
-  const leftPhoneRotate = isMobile ? 0 : leftPhoneRotateAnim;
-
-  const rightPhoneX      = isMobile ? 0 : rightPhoneXAnim;
-  const rightPhoneOpacity= isMobile ? 1 : rightPhoneOpacityAnim;
-  const rightPhoneRotate = isMobile ? 0 : rightPhoneRotateAnim;
+  // Central phone (now persistent)
+  const centerPhoneScale = 1;
+  const centerPhoneOpacity = 1;
 
   return (
     <div ref={containerRef} className="hero-scroll-wrapper">
@@ -83,33 +77,27 @@ const Hero = () => {
             <motion.div 
               style={{ rotate: leftPhoneRotate }}
             >
-              {!isMobile && (
-                <motion.div 
-                  className="phone-glow glow-blue" 
-                  style={{ 
-                    opacity: leftPhoneOpacityAnim, 
-                    scale: leftPhoneOpacityAnim,
-                    x: "-50%",
-                    y: "-50%"
-                  }}
-                />
-              )}
+              <motion.div 
+                className="phone-glow glow-blue" 
+                style={{ 
+                  opacity: leftPhoneOpacity, 
+                  scale: leftPhoneOpacity,
+                  x: "-50%",
+                  y: "-50%"
+                }}
+              />
               <img src={phoneDelo} alt="Phone Delo" />
             </motion.div>
           </motion.div>
 
           <motion.div 
             className="hero-phone phone-center"
-            initial={isMobile ? false : { opacity: 0, y: 120 }}
-            animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              scale: isMobile ? 1 : centerPhoneScale,
-              opacity: isMobile ? 1 : centerPhoneOpacity,
-            }}
-            transition={{ 
-              duration: isMobile ? 0.01 : 1.2, 
-              delay: 0,
-              ease: [0.22, 1, 0.36, 1] 
+              scale: centerPhoneScale,
+              opacity: centerPhoneOpacity,
             }}
           >
             <img src={phoneFinance} alt="Phone Finance" />
@@ -129,17 +117,15 @@ const Hero = () => {
             <motion.div 
               style={{ rotate: rightPhoneRotate }}
             >
-              {!isMobile && (
-                <motion.div 
-                  className="phone-glow glow-green" 
-                  style={{ 
-                    opacity: rightPhoneOpacityAnim, 
-                    scale: rightPhoneOpacityAnim,
-                    x: "-50%",
-                    y: "-50%"
-                  }}
-                />
-              )}
+              <motion.div 
+                className="phone-glow glow-green" 
+                style={{ 
+                  opacity: rightPhoneOpacity, 
+                  scale: rightPhoneOpacity,
+                  x: "-50%",
+                  y: "-50%"
+                }}
+              />
               <img src={phoneCategories} alt="Phone Categories" />
             </motion.div>
           </motion.div>
