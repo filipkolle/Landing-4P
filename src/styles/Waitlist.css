@@ -131,10 +131,7 @@
 }
 
 .highlight-waitlist {
-  background: linear-gradient(135deg, #0a2e4d 0%, #8bc6e3 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--primary);
 }
 
 .waitlist-subtitle {
@@ -302,11 +299,20 @@
 
 @media (max-width: 768px) {
   .waitlist-main-card { padding: 40px 24px; }
-  .waitlist-main-card h1 { font-size: 2.5rem; }
+  .waitlist-main-card h1 { font-size: 2.2rem; }
   .waitlist-info-grid { grid-template-columns: 1fr; }
   .input-group { flex-direction: column; padding: 20px; gap: 16px; border-radius: 32px; }
   .waitlist-submit { width: 100%; justify-content: center; }
   .input-icon { display: none; }
   .waitlist-form input { text-align: center; font-size: 1rem; }
   .waitlist-benefits { gap: 16px; }
+}
+
+@media (max-width: 480px) {
+  .waitlist-main-card { padding: 32px 16px; border-radius: 32px; }
+  .waitlist-main-card h1 { font-size: 1.75rem; }
+  .waitlist-subtitle { font-size: 1.05rem; margin-bottom: 32px; }
+  .input-group { padding: 12px; }
+  .waitlist-benefits { gap: 12px; }
+  .benefit-item { font-size: 0.8rem; }
 }

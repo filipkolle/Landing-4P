@@ -22,21 +22,36 @@ const FeatureSwitcher = () => {
       label: 'Delovni asistent',
       title: 'Optimizacija delovnega procesa',
       description: 'Sledite delovnim uram v realnem času, avtomatsko izračunajte zaslužek glede na vašo postavko in generirajte profesionalna mesečna poročila z enim klikom.',
-      image: workImg
+      image: workImg,
+      features: [
+        'Spremljanje delovnega časa',
+        'Izračun in primerjanje zaslužka',
+        'Izvoz delovnih ur v pdf dokument'
+      ]
     },
     {
       id: 'finance',
       label: 'Finančni asistent',
       title: 'Celovit nadzor nad financami',
       description: 'Pridobite celovit pregled nad vsemi prihodki, odhodki in naročninami na enem mestu. Aplikacija vam pomaga razumeti vaše potrošniške navade.',
-      image: financeImg
+      image: financeImg,
+      features: [
+        'Spremljanje prihodka in stroškov',
+        'Izračun denarnega toka',
+        'Finančna analitika'
+      ]
     },
     {
       id: 'all',
       label: '4P asistent',
       title: 'Vsa moč v eni intuitivni aplikaciji',
       description: 'Poenostavite svoje življenje. Finance 4P združuje sledenje delu in osebne finance v enotno, premium izkušnjo, ki vam prihrani čas.',
-      image: dashboardImg
+      image: dashboardImg,
+      features: [
+        'Popoln pregled nad delom in financami',
+        'Napredna finančna analitika',
+        'Izračun vaše neto vrednosti'
+      ]
     }
   ];
 
@@ -86,20 +101,45 @@ const FeatureSwitcher = () => {
         </div>
 
         <div className="switcher-display-grid">
-          <div className="display-header">
-            <AnimatePresence mode="wait">
-              <motion.h3 
-                key={activeTab}
-                className="display-title" 
-                style={{ color: activeColor }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.5, ease: expoOut }}
-              >
-                {activeContent.title}
-              </motion.h3>
-            </AnimatePresence>
+          <div className="display-content-wrapper">
+            <div className="display-header">
+              <AnimatePresence mode="wait">
+                <motion.h3 
+                  key={activeTab}
+                  className="display-title" 
+                  style={{ color: activeColor }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.5, ease: expoOut }}
+                >
+                  {activeContent.title}
+                </motion.h3>
+              </AnimatePresence>
+            </div>
+
+            <div className="display-body">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                  transition={{ duration: 0.5, ease: expoOut }}
+                >
+                  <p className="display-desc">{activeContent.description}</p>
+                  
+                  <div className="display-features">
+                    {activeContent.features.map((feature, idx) => (
+                      <div key={idx} className="display-feature-item">
+                        <div className="feature-dot" style={{ background: activeColor }} />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className="display-mockup-wrapper">
@@ -119,31 +159,6 @@ const FeatureSwitcher = () => {
                     background: `radial-gradient(ellipse at center, ${activeColor}20 0%, transparent 70%)` 
                   }} 
                 />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          <div className="display-body">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: -10 }}
-                transition={{ duration: 0.5, ease: expoOut }}
-              >
-                <p className="display-desc">{activeContent.description}</p>
-                
-                <div className="display-features">
-                  <div className="display-feature-item">
-                    <div className="feature-dot" style={{ background: activeColor }} />
-                    <span>Intuitiven vmesnik</span>
-                  </div>
-                  <div className="display-feature-item">
-                    <div className="feature-dot" style={{ background: activeColor }} />
-                    <span>Varni podatki</span>
-                  </div>
-                </div>
               </motion.div>
             </AnimatePresence>
           </div>

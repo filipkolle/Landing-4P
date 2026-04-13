@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import SubscribeCTA from '../components/SubscribeCTA';
 import ProblemSolution from '../components/ProblemSolution';
 import FeatureSwitcher from '../components/FeatureSwitcher';
 import FeaturesGrid from '../components/FeaturesGrid';
@@ -13,6 +14,7 @@ function LandingPage() {
       <Navbar />
       <main>
         <Hero />
+        <SubscribeCTA />
         <ProblemSolution />
         <FeatureSwitcher />
         <FeaturesGrid />

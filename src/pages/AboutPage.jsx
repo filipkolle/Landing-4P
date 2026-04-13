@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users, ArrowRight } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import logoImg from '../assets/logo_full_v2.png';
+import ctaWomanImg from '../assets/cta_woman_v2.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
@@ -9,8 +12,16 @@ import '../styles/About.css';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
+// Essential Icon Components
+const Eye = ({ size, color }) => (
+  <div style={{ color: color || 'var(--primary)', display: 'flex', alignItems: 'center' }}>
+    <Rocket size={size} />
+  </div>
+);
+
 const AboutPage = () => {
   const [email, setEmail] = useState('');
+  const navigate = useNavigate();
   const [status, setStatus] = useState('idle');
 
   const handleWaitlist = (e) => {
@@ -35,7 +46,7 @@ const AboutPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.2, ease: expoOut }}
           >
-            <h1>Finance ljudem!</h1>
+            <h1>Finance za <span className="blue-text">ljudi!</span></h1>
             <p className="hook-desc">
               Zgodba o digitalnem asistentu, ustvarjenem, da povrne nadzor tistim, ki cenijo svoj čas in trdo prislužen denar.
             </p>
@@ -57,6 +68,19 @@ const AboutPage = () => {
               <div className="story-image">
                 <img src={founderImg} alt="Filip Kolle" />
               </div>
+
+              <motion.div 
+                className="key-message-box-side"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, ease: expoOut, delay: 0.3 }}
+              >
+                <p className="key-message-text-side">
+                  "<span className="blue-text">Finance in delo ne smejo imeti negativen prizvok!</span> So orodje za osebni razvoj."
+                </p>
+                <span className="key-message-author-side">— Filip Kolle</span>
+              </motion.div>
             </motion.div>
 
             <motion.div 
@@ -68,33 +92,25 @@ const AboutPage = () => {
             >
               <span className="section-label">Iskra, ki je zanetila Finance 4P</span>
               <h2>Moja zgodba</h2>
-              <p>
-                Odraščanje v družini, ki se je nenehno srečevala s finančnimi ovirami, je povzročilo, da sem svojo delovno pot začel zelo zgodaj, pri 15 letih. Kljub temu, da sem služil denar in doprinesel družini, se naše finančno stanje ni kaj prida izboljšalo.
+              <p className="p-lead">
+                Odraščanje v družini, ki se je nenehno srečevala s finančnimi ovirami, je povzročilo, da sem svojo delovno pot začel zelo zgodaj, pri 15 letih.
               </p>
               <p>
-                Hitro sem dojel, da moram postaviti jasne prioritete, če želim, da moj trud sploh obrodi sadove in ne preobremenim svojih finančnih zmožnosti.
+                Kljub temu, da sem služil denar in doprinesel družini, se naše finančno stanje ni kaj prida izboljšalo. Hitro sem dojel, da moram postaviti jasne prioritete, če želim, da moj trud sploh obrodi sadove in ne preobremenim svojih finančnih zmožnosti.
+              </p>
+              <div className="accent-border">
+                <p style={{marginBottom: 0}}>
+                  "Tako sem začel voditi evidenco osebnih financ že pri 17-ih letih in s časom razvil rutino, ki mi pomaga izbrati prave finančne odločitve v kritičnih situacijah."
+                </p>
+              </div>
+              <p>
+                Ta proces je pri meni igral ključno vlogo, da sem popolnoma spremenil svoj pogled na finance, prepoznal svoje potrošniške navade in na koncu postal bolj samozavesten ter odgovoren posameznik.
               </p>
               <p>
-                Tako sem začel voditi evidenco osebnih financ že pri 17-ih letih, in s časom razvil rutino, ki mi pomaga izbrati prave finančne odločitev v kritičnih situacijah. Ta proces je pri meni igral ključno vlogo, da sem popolnoma spremenil svoj pogled na finance, prepoznal svoje potrošniške navade in na koncu postal bolj samozavesten ter odgovoren posameznik.
-              </p>
-              <p>
-                Zato sem ustvaril projekt Finance 4P s katerim želim ljudem omogočiti, da prevzamejo stvari v svoje roke in postanejo boljša verzija sebe.
+                Zato sem ustvaril projekt <strong>Finance 4P</strong>, s katerim želim ljudem omogočiti, da prevzamejo stvari v svoje roke in postanejo boljša verzija sebe.
               </p>
             </motion.div>
           </div>
-
-          <motion.div 
-            className="key-message-box"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: expoOut }}
-          >
-            <p className="key-message-text">
-              <strong>"Finance in delo ne smejo imeti negativen prizvok!</strong> So družbeno orodje, ki človeku pomagajo pri spoznavanju samega sebe in pripomorejo k njegovemu osebnemu razvoju na vseh področjih!"
-            </p>
-            <span className="key-message-author">— Filip Kolle, Ustanovitelj projekta</span>
-          </motion.div>
         </div>
       </section>
 
@@ -108,30 +124,62 @@ const AboutPage = () => {
           </div>
 
           <div className="mission-intro">
-            <span className="section-label">Finance niso samo številke – So način življenja</span>
-            <h2>Odgovor na kaos vsakdana</h2>
+            <h2><span className="blue-text">Družbeni</span> kaos</h2>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>
               Sistem v katerem živimo, predstavlja vse večje preglavice za posameznika - tako časovne kot tudi finančne. Zato je posvečanje svojega časa pravilnim dejavnostim in spremljanje osebnih financ ključnega pomena za boj proti finančni in časovni stiski, ki sta produkt kapitalističnega sistema.
             </p>
           </div>
 
+          <motion.div 
+            className="mission-statement"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: expoOut }}
+          >
+            <img src={logoImg} alt="Finance 4P" className="statement-logo" />
+            <p className="statement-sub">je naš odgovor na ta kaos</p>
+          </motion.div>
+
           <div className="mission-cards">
-            <div className="mission-card">
-              <Eye size={32} color="var(--primary)" />
-              <h3>Prepoznaj tokove</h3>
-              <p>Finance 4P je moj odgovor na ta kaos. Je orodje, s katerim prepoznaš, kam odtekata tvoja energija in denar.</p>
-            </div>
-            <div className="mission-card">
-              <Target size={32} color="var(--primary)" />
-              <h3>Usmeri energijo</h3>
-              <p>Svoja sredstva in čas usmeriš tja, kjer štejeta – družino, prosti čas in VASE.</p>
-            </div>
-            <div className="mission-card">
-              <Award size={32} color="var(--primary)" />
-              <h3>Postani gospodar</h3>
-              <p>Postali boste gospodar svojega časa in denarja. Nič več pasivnega opazovanja, čas je za akcijo.</p>
-            </div>
+            {[
+              { icon: Eye, title: "Prepoznaj tokove", text: "Je orodje, s katerim prepoznaš, kam odtekata tvoja energija in denar." },
+              { icon: Target, title: "Usmeri energijo", text: "Svoja sredstva in čas usmeriš tja, kjer štejeta – družino, prosti čas in VASE." },
+              { icon: Award, title: "Imej popoln nadzor", text: "Postali boste gospodar svojega časa in denarja. Nič več pasivnega opazovanja, vzemite stvari v svoje roke." }
+            ].map((card, index) => (
+              <motion.div 
+                key={index}
+                className="mission-card"
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ 
+                  duration: 0.8, 
+                  ease: expoOut, 
+                  delay: index * 0.2 
+                }}
+              >
+                <div className="card-header">
+                  <card.icon size={28} color="var(--primary)" />
+                  <h3>{card.title}</h3>
+                </div>
+                <p>{card.text}</p>
+              </motion.div>
+            ))}
           </div>
+
+          <motion.div 
+            className="step-highlight"
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, ease: expoOut, delay: 0.2 }}
+          >
+            <h3 className="step-title">Je <span className="blue-text">prvi korak</span> k časovni in finančni razbremenitvi</h3>
+            <p className="step-text">
+              Finance 4P ne predstavlja le beleženja številk, ampak je odskočna deska za vsakega posameznika na poti v svet osebnih financ in bolj odgovornega delovanja v družbi.
+            </p>
+          </motion.div>
         </div>
       </section>
 
@@ -145,25 +193,57 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, ease: expoOut }}
           >
-            <span className="section-label">Pogled naprej!</span>
             <h2>Vizija in poslanstvo</h2>
             
             <div className="vision-main-content">
               <h3>Družbeni doprinos</h3>
-              <p className="vision-contribution-text">
-                "Vizija Finance 4P je opolnomočiti posameznika. Danes se človek zaradi vseh preglavic težko posveča drugemu kot svojim težavam. Verjamem, da organiziranost in finančna pismenost vodita do boljših življenjskih odločitev, manj stresnega vsakdana in omogoči večjo povezanost med ljudmi, kar privede do srečnejše in bolj stabilne družbe."
-              </p>
+              <div className="vision-contribution-content">
+                <motion.p 
+                  className="vision-lead"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                >
+                  Vizija Finance 4P je <strong>opolnomočiti posameznika.</strong>
+                </motion.p>
+                
+                <motion.p 
+                  className="vision-context"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.4 }}
+                >
+                  Danes se človek zaradi vsakodnevnih preglavic težko posveča drugemu kot le svojim težavam.
+                </motion.p>
+
+                <motion.p 
+                  className="vision-solution"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                >
+                  Verjamem, da organiziranost in finančna pismenost vodita do boljših življenjskih odločitev in manj stresnega vsakdana. To omogoča večjo povezanost med ljudmi, kar privede do <strong>srečnejše in bolj stabilne družbe.</strong>
+                </motion.p>
+              </div>
             </div>
             
             <div className="vision-secondary-grid">
-              <div className="vision-detail-card">
-                <h4>Vsebina</h4>
+              <motion.div 
+                className="vision-detail-card"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+              >
+                <div className="vision-card-header">
+                  <Target size={24} color="var(--primary)" />
+                  <h4>CILJ</h4>
+                </div>
                 <p>Finance 4P se ne ustavi pri beleženju ur. Želi postati sinonim za osebnega asistenta, ki posamezniku pomaga rasti – ne le finančno, ampak tudi skozi disciplino in red.</p>
-              </div>
-              <div className="vision-detail-card">
-                <h4>Cilj</h4>
-                <p>Finance 4P je prvi korak vsakega posameznika na poti v svet osebnih financ in delovanja v družbi.</p>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
@@ -173,48 +253,29 @@ const AboutPage = () => {
       <section className="about-cta-section">
         <div className="container">
           <motion.div 
-            className="about-cta-card"
-            initial={{ opacity: 0, y: 30 }}
+            className="about-hybrid-cta"
+            initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 1.2, ease: expoOut }}
           >
-            <h2>Prevzemi vajeti v svoje roke</h2>
-            <p style={{ marginBottom: '32px', color: 'var(--text-muted)' }}>
-              Pridruži se čakalni vrsti in bodi med prvimi, ki bodo gradili zdrave finančne navade še pred izidom aplikacije.
-            </p>
+            <div className="cta-left">
+              <h2>Prevzemi vajeti v svoje roke</h2>
+              <p>
+                Pridruži se tisočem posameznikov, ki že gradijo svojo finančno neodvisnost. Naš osebni asistent vam pomaga prepoznati priložnosti tam, kjer jih drugi ne vidijo.
+              </p>
+              <button 
+                className="cta-primary-btn"
+                onClick={() => navigate('/waitlist')}
+              >
+                Pridruži se zdaj
+                <ArrowRight size={20} />
+              </button>
+            </div>
             
-            <form onSubmit={handleWaitlist} className="about-waitlist-form">
-              <div className="input-group">
-                <Mail size={20} style={{ margin: '0 15px', color: 'var(--text-soft)' }} />
-                <input 
-                  type="email" 
-                  placeholder="Vnesi svoj e-naslov..." 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: '1rem' }}
-                />
-                <button 
-                  type="submit" 
-                  className={`waitlist-submit ${status === 'success' ? 'success' : ''}`}
-                  disabled={status !== 'idle'}
-                  style={{ borderRadius: '14px', padding: '12px 24px' }}
-                >
-                  <AnimatePresence mode="wait">
-                    {status === 'idle' && (
-                        <motion.span key="idle">Naroči se</motion.span>
-                    )}
-                    {status === 'loading' && (
-                        <motion.div key="loading" className="spinner" />
-                    )}
-                    {status === 'success' && (
-                        <motion.div key="success" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                        <Check size={20} />
-                        </motion.div>
-                    )}
-                  </AnimatePresence>
-                </button>
-              </div>
-            </form>
+            <div className="cta-right">
+              <img src={ctaWomanImg} alt="Finance 4P" className="cta-featured-image" />
+            </div>
           </motion.div>
         </div>
       </section>
@@ -241,11 +302,5 @@ const AboutPage = () => {
   );
 };
 
-// Essential Icon Components
-const Eye = ({ size, color }) => (
-  <div style={{ color: color || 'var(--primary)', marginBottom: '24px' }}>
-    <Rocket size={size} />
-  </div>
-);
 
 export default AboutPage;

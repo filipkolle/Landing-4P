@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import logoImg from '../assets/logo_full_v2.png';
@@ -26,9 +26,8 @@ const Footer = () => {
           
             <div className="footer-links">
               <div className="link-group">
-                <h4>Podjetje</h4>
+                <h4>Projekt</h4>
                 <Link to="/o-nas" className="footer-link-btn">O nas</Link>
-                <a href="#">Kontakt</a>
               </div>
               <div className="link-group">
                 <h4>Pravno</h4>
@@ -36,10 +35,14 @@ const Footer = () => {
                 <Link to="/politikazasebnosti" className="footer-link-btn">Politika zasebnosti</Link>
               </div>
               <div className="link-group">
-                <h4>Pisanje</h4>
+                <h4>Kontakt</h4>
                 <a href="mailto:info@finance4p.com" className="email-link">
                   <Mail size={16} />
                   <span>info@finance4p.com</span>
+                </a>
+                <a href="tel:070736947" className="email-link">
+                  <Phone size={16} />
+                  <span>070 736 947</span>
                 </a>
               </div>
             </div>

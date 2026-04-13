@@ -21,7 +21,7 @@ const Navbar = () => {
             to="/cakalna-vrsta"
             className="navbar-cta-btn"
           >
-            Naroči se
+            Pridruži se
           </Link>
         </div>
       </div>
