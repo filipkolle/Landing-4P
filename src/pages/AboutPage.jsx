@@ -260,15 +260,15 @@ const AboutPage = () => {
             transition={{ duration: 1.2, ease: expoOut }}
           >
             <div className="cta-left">
-              <h2>Prevzemi vajeti v svoje roke</h2>
+              <h2>Začni svojo pot</h2>
               <p>
-                Pridruži se tisočem posameznikov, ki že gradijo svojo finančno neodvisnost. Naš osebni asistent vam pomaga prepoznati priložnosti tam, kjer jih drugi ne vidijo.
+                Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
               </p>
               <button 
                 className="cta-primary-btn"
                 onClick={() => navigate('/waitlist')}
               >
-                Pridruži se zdaj
+                Pridruži se zdaj!
                 <ArrowRight size={20} />
               </button>
             </div>
