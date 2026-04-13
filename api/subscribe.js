@@ -28,8 +28,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         email: email,
-        updateEnabled: true,
-        // Optional: you can add listIds: [2] here if you have a specific list
+        listIds: [2],
+        updateEnabled: true
       }),
     });
 
