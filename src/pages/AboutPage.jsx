@@ -90,8 +90,7 @@ const AboutPage = () => {
               viewport={{ once: true }}
               transition={{ duration: 1.2, ease: expoOut }}
             >
-              <span className="section-label">Iskra, ki je zanetila Finance 4P</span>
-              <h2>Moja zgodba</h2>
+              <h2><span className="blue-text">Moja</span> zgodba</h2>
               <p className="p-lead">
                 Odraščanje v družini, ki se je nenehno srečevala s finančnimi ovirami, je povzročilo, da sem svojo delovno pot začel zelo zgodaj, pri 15 letih.
               </p>
