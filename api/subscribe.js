@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   }
 
   const { email, name, marketing } = req.body;
+  const isMarketingChecked = marketing === true || marketing === 1 || marketing === '1';
 
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Valid email is required' });
@@ -28,12 +29,11 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         email: email,
-        listIds: [2],
-        updateEnabled: true,
         attributes: {
-          FIRSTNAME: name || '',
-          MARKETING_CONSENT: marketing ? 'TRUE' : 'FALSE'
-        }
+          MARKETING_CONSENT: isMarketingChecked
+        },
+        listIds: [2],
+        updateEnabled: true
       }),
     });
 

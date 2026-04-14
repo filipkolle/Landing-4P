@@ -37,7 +37,7 @@ const WaitlistPage = () => {
         setStatus('success');
         setEmail('');
         setName('');
-        setMarketing(false);
+        // setMarketing(false);
       } else {
         console.error('Waitlist error:', data.error);
         setStatus('error');
