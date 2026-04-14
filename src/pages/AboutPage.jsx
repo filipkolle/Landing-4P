@@ -194,17 +194,18 @@ const AboutPage = () => {
           >
             
             <div className="vision-main-content">
+              <motion.h2 
+                className="vision-lead-heading"
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                <strong>Vizija Finance 4P je <br /><span className="blue-text">opolnomočiti posameznika.</span></strong>
+              </motion.h2>
+
               <h3>Družbeni doprinos</h3>
               <div className="vision-contribution-content">
-                <motion.p 
-                  className="vision-lead"
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  <strong>Vizija Finance 4P je <span className="blue-text">opolnomočiti posameznika.</span></strong>
-                </motion.p>
                 
                 <motion.p 
                   className="vision-context"
