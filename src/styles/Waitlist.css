@@ -247,36 +247,33 @@
 }
 
 .waitlist-submit {
-  padding: 16px 36px;
-  background: var(--primary);
+  padding: 16px 40px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #fff;
   border: none;
-  border-radius: 16px;
-  font-size: 1.1rem;
-  font-weight: 700;
+  border-radius: 18px;
+  font-size: 1.15rem;
+  font-weight: 750;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition: all 0.3s;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  box-shadow: 0 8px 20px rgba(94, 141, 178, 0.2);
 }
 
 .waitlist-submit:hover:not(:disabled) {
-  background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(94, 141, 178, 0.3);
+  box-shadow: 0 12px 28px rgba(94, 141, 178, 0.35);
+  filter: brightness(1.1);
 }
 
 .waitlist-submit.success {
   background: #10b981;
 }
 
-.waitlist-benefits {
-  display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
+/* Benefits removed */
 
 .benefit-item {
   display: flex;
@@ -374,7 +371,7 @@
   .input-group { padding: 10px; border-radius: 20px; }
   .input-icon { padding: 0 15px; }
   
-  .waitlist-submit { width: 100%; justify-content: center; padding: 14px 24px; font-size: 1rem; }
+  .waitlist-submit { width: auto; min-width: 200px; justify-content: center; padding: 14px 32px; font-size: 1rem; }
   .waitlist-form input { font-size: 1rem; }
   
   .waitlist-benefits { gap: 12px; flex-direction: column; align-items: flex-start; margin-top: 24px; }

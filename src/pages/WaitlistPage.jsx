@@ -186,21 +186,6 @@ const WaitlistPage = () => {
                   )}
                 </AnimatePresence>
               </motion.form>
-
-              <motion.div className="waitlist-benefits" variants={itemVars}>
-                <div className="benefit-item">
-                  <div className="benefit-dot" />
-                  <span>Zgodnji dostop</span>
-                </div>
-                <div className="benefit-item">
-                  <div className="benefit-dot" />
-                  <span>Doživljenjske ugodnosti</span>
-                </div>
-                <div className="benefit-item">
-                  <div className="benefit-dot" />
-                  <span>Osebna pomoč pri nastavitvi</span>
-                </div>
-              </motion.div>
             </div>
 
             <motion.div className="waitlist-info-grid" variants={itemVars}>
