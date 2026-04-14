@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Check, AlertCircle, ArrowLeft, ArrowRight, Shield, Rocket, Clock } from 'lucide-react';
+import { Mail, Check, AlertCircle, ArrowLeft, ArrowRight, Shield, Rocket, Clock, User } from 'lucide-react';
 import logoImg from '../assets/logo_full_v2.png';
 import { useNavigate } from 'react-router-dom';
 
 const WaitlistPage = () => {
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [marketing, setMarketing] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const navigate = useNavigate();
 
@@ -22,7 +24,11 @@ const WaitlistPage = () => {
       const response = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email, 
+          name, 
+          marketing 
+        }),
       });
 
       const data = await response.json();
@@ -30,6 +36,8 @@ const WaitlistPage = () => {
       if (response.ok) {
         setStatus('success');
         setEmail('');
+        setName('');
+        setMarketing(false);
       } else {
         console.error('Waitlist error:', data.error);
         setStatus('error');
@@ -84,7 +92,7 @@ const WaitlistPage = () => {
               </motion.h1>
               
               <motion.p className="waitlist-subtitle" variants={itemVars}>
-                Pridruži se čakalni vrsti in bodi med prvimi, ki bodo imeli možnost uporabljati Finance 4P aplikacijo še preden bo dostopna širši javnosti.
+                Pridruži se čakalni vrsti in si zagotovi dostop do Finance 4P aplikacije še pred tem, ko bo na voljo širši javnosti.
               </motion.p>
 
               <motion.form 
@@ -92,18 +100,50 @@ const WaitlistPage = () => {
                 onSubmit={handleSubmit}
                 variants={itemVars}
               >
-                <div className="input-group">
-                  <div className="input-icon">
-                    <Mail size={20} />
+                <div className="form-inputs-stack">
+                  <div className="input-group">
+                    <div className="input-icon">
+                      <User size={20} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Ime in priimek" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={status === 'loading' || status === 'success'}
+                      required
+                    />
                   </div>
-                  <input 
-                    type="email" 
-                    placeholder="Vnesi svoj e-poštni naslov" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={status === 'loading' || status === 'success'}
-                    required
-                  />
+
+                  <div className="input-group">
+                    <div className="input-icon">
+                      <Mail size={20} />
+                    </div>
+                    <input 
+                      type="email" 
+                      placeholder="E-poštni naslov" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={status === 'loading' || status === 'success'}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-actions-row">
+                  <div className="consent-wrapper">
+                    <label className="checkbox-container">
+                      <input 
+                        type="checkbox" 
+                        checked={marketing}
+                        onChange={(e) => setMarketing(e.target.checked)}
+                        disabled={status === 'loading' || status === 'success'}
+                      />
+                      <span className="checkmark"></span>
+                      <span className="consent-text">Želim prejemati obvestila o finančnih dogodkih in poučnih vsebinah</span>
+                    </label>
+                  </div>
+
                   <button 
                     type="submit" 
                     className={`waitlist-submit ${status}`}

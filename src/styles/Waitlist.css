@@ -142,6 +142,95 @@
   transform: scale(1.02);
 }
 
+.form-inputs-stack {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.form-inputs-stack .input-group {
+  flex: 1;
+}
+
+.form-actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.consent-wrapper {
+  width: 100%;
+  padding: 0 8px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  user-select: none;
+  text-align: left;
+}
+
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: relative;
+  height: 22px;
+  width: 22px;
+  background-color: #fff;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 2px;
+}
+
+.checkbox-container:hover input ~ .checkmark {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(94, 141, 178, 0.25);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.consent-text {
+  line-height: 1.5;
+  font-weight: 500;
+}
+
 .input-icon {
   padding: 0 20px;
   color: var(--text-soft);
@@ -280,21 +369,26 @@
   .waitlist-main-card h1 { font-size: 1.8rem; line-height: 1.2; }
   .waitlist-subtitle { font-size: 1rem; margin-bottom: 32px; }
   .waitlist-info-grid { grid-template-columns: 1fr; gap: 20px; }
-  .input-group { flex-direction: column; padding: 12px; gap: 12px; border-radius: 24px; }
-  .waitlist-submit { width: 100%; justify-content: center; padding: 12px 24px; font-size: 1rem; }
-  .input-icon { display: none; }
-  .waitlist-form input { text-align: center; font-size: 0.95rem; }
+  
+  .form-inputs-stack { flex-direction: column; gap: 12px; }
+  .input-group { padding: 10px; border-radius: 20px; }
+  .input-icon { padding: 0 15px; }
+  
+  .waitlist-submit { width: 100%; justify-content: center; padding: 14px 24px; font-size: 1rem; }
+  .waitlist-form input { font-size: 1rem; }
+  
   .waitlist-benefits { gap: 12px; flex-direction: column; align-items: flex-start; margin-top: 24px; }
   .info-card { padding: 24px; }
   .info-card h3 { font-size: 1.1rem; }
   .info-card p { font-size: 0.88rem; }
+  
+  .checkbox-container { font-size: 0.88rem; }
 }
 
 @media (max-width: 480px) {
   .waitlist-main-card { padding: 28px 16px; border-radius: 24px; }
   .waitlist-main-card h1 { font-size: 1.6rem; }
   .waitlist-subtitle { font-size: 0.95rem; margin-bottom: 24px; }
-  .input-group { padding: 10px; border-radius: 20px; }
   .waitlist-benefits { gap: 10px; }
   .benefit-item { font-size: 0.75rem; }
 }

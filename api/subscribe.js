@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email } = req.body;
+  const { email, name, marketing } = req.body;
 
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Valid email is required' });
@@ -29,7 +29,11 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         email: email,
         listIds: [2],
-        updateEnabled: true
+        updateEnabled: true,
+        attributes: {
+          FIRSTNAME: name || '',
+          MARKETING_CONSENT: marketing ? 'TRUE' : 'FALSE'
+        }
       }),
     });
 
