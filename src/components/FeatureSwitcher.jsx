@@ -68,7 +68,7 @@ const FeatureSwitcher = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: expoOut }}
         >
-          <h2>Uporabi samo to, kar potrebuješ</h2>
+          <h2>Uporabi samo to, kar <span className="highlight-blue">potrebuješ</span></h2>
           <p>Izberite način, ki najbolje ustreza vašemu delovnemu ritmu in osebnim financam.</p>
         </motion.div>
 

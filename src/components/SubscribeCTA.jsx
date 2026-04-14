@@ -1,41 +1,10 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Check, AlertCircle, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ArrowRight, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SubscribeCTA = () => {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // idle, loading, success, error
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !email.includes('@')) {
-      setStatus('error');
-      return;
-    }
-    
-    setStatus('loading');
-    
-    try {
-      const response = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStatus('success');
-        setEmail('');
-      } else {
-        console.error('Subscription error:', data.error);
-        setStatus('error');
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-      setStatus('error');
-    }
-  };
+  const navigate = useNavigate();
 
   return (
     <section className="subscribe-cta-section">
@@ -49,65 +18,23 @@ const SubscribeCTA = () => {
         >
           <div className="subscribe-grid">
             <div className="subscribe-content">
-              <h3>Bodi med prvimi v vrsti</h3>
+              <div className="cta-badge animated-badge">
+                <span>⭐ Ekskluziven dostop</span>
+              </div>
+              <h3><span className="highlight-blue">Omejen</span> dostop</h3>
               <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo preizkusili našo aplikacijo.</p>
             </div>
             
-            <form className={`subscribe-form ${status === 'success' ? 'success' : ''}`} onSubmit={handleSubmit}>
-              <div className="subscribe-input-wrapper">
-                <div className="subscribe-input-icon">
-                  <Mail size={18} />
-                </div>
-                <input 
-                  type="email" 
-                  placeholder="Vnesi svoj e-poštni naslov" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={status === 'loading' || status === 'success'}
-                  required
-                />
-                <button 
-                  type="submit" 
-                  className={`subscribe-submit-btn ${status}`}
-                  disabled={status === 'loading' || status === 'success'}
-                >
-                  {status === 'loading' ? (
-                    <div className="subscribe-spinner" />
-                  ) : status === 'success' ? (
-                    <Check size={18} />
-                  ) : (
-                    <>
-                      <span>Pridruži se</span>
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {status === 'error' && (
-                  <motion.div 
-                    className="subscribe-feedback error"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
-                    <AlertCircle size={14} />
-                    <span>Vnesi veljaven e-poštni naslov.</span>
-                  </motion.div>
-                )}
-                {status === 'success' && (
-                  <motion.div 
-                    className="subscribe-feedback success"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                  >
-                    <Check size={14} />
-                    <span>Odlično! Uspešno dodan.</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </form>
+            <div className="subscribe-actions">
+              <button 
+                onClick={() => navigate('/cakalna-vrsta')}
+                className="professional-cta-btn"
+              >
+                <span>Pridruži se!</span>
+                <ArrowRight size={20} />
+              </button>
+              <p className="cta-info-text">Ekskluzivni dostop je omejen na 250 oseb.</p>
+            </div>
           </div>
         </motion.div>
       </div>

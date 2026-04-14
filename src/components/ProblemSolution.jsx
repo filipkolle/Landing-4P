@@ -48,9 +48,9 @@ const ProblemSolution = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: expoOut }}
         >
-          <span className="section-label">Preobrazba</span>
-          <h2>Rešite se finančnega stresa</h2>
-          <p>Primerjajte, kako Finance 4P poenostavi vaše vsakdanje finančne odločitve.</p>
+
+          <h2>Rešite se finančnega <br /> <span className="highlight-blue">stresa</span></h2>
+
         </motion.div>
  
         <div className="comparison-wrapper">
