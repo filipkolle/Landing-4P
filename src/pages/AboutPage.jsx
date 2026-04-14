@@ -192,7 +192,6 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, ease: expoOut }}
           >
-            <h2>Vizija in poslanstvo</h2>
             
             <div className="vision-main-content">
               <h3>Družbeni doprinos</h3>
