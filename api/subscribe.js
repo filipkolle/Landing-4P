@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     } else {
       // Handle specific Brevo error codes
       if (data.code === 'duplicate_parameter') {
-        return res.status(200).json({ message: 'Already subscribed' });
+        return res.status(409).json({ error: 'duplicate' });
       }
       return res.status(response.status).json({ error: data.message || 'Error from CRM' });
     }

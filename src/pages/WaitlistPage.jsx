@@ -9,11 +9,13 @@ const WaitlistPage = () => {
   const [name, setName] = useState('');
   const [marketing, setMarketing] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
+      setErrorMessage('Vnesi veljaven e-poštni naslov.');
       setStatus('error');
       return;
     }
@@ -39,11 +41,15 @@ const WaitlistPage = () => {
         setName('');
         // setMarketing(false);
       } else {
-        console.error('Waitlist error:', data.error);
+        if (response.status === 409) {
+          setErrorMessage('Ta naslov je že v čakalni vrsti!');
+        } else {
+          setErrorMessage('Prišlo je do napake. Poskusi znova.');
+        }
         setStatus('error');
       }
     } catch (error) {
-      console.error('Network error:', error);
+      setErrorMessage('Težava s povezavo. Preveri internet.');
       setStatus('error');
     }
   };
@@ -95,97 +101,106 @@ const WaitlistPage = () => {
                 Pridruži se čakalni vrsti in si zagotovi dostop do Finance 4P aplikacije še pred tem, ko bo na voljo širši javnosti.
               </motion.p>
 
-              <motion.form 
-                className={`waitlist-form ${status === 'success' ? 'success-mode' : ''}`}
-                onSubmit={handleSubmit}
-                variants={itemVars}
-              >
-                <div className="form-inputs-stack">
-                  <div className="input-group">
-                    <div className="input-icon">
-                      <User size={20} />
-                    </div>
-                    <input 
-                      type="text" 
-                      placeholder="Ime in priimek" 
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={status === 'loading' || status === 'success'}
-                      required
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <div className="input-icon">
-                      <Mail size={20} />
-                    </div>
-                    <input 
-                      type="email" 
-                      placeholder="E-poštni naslov" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={status === 'loading' || status === 'success'}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-actions-row">
-                  <div className="consent-wrapper">
-                    <label className="checkbox-container">
-                      <input 
-                        type="checkbox" 
-                        checked={marketing}
-                        onChange={(e) => setMarketing(e.target.checked)}
-                        disabled={status === 'loading' || status === 'success'}
-                      />
-                      <span className="checkmark"></span>
-                      <span className="consent-text">Želim prejemati obvestila o finančnih dogodkih in poučnih vsebinah</span>
-                    </label>
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    className={`waitlist-submit ${status}`}
-                    disabled={status === 'loading' || status === 'success'}
+              <AnimatePresence mode="wait">
+                {status !== 'success' ? (
+                  <motion.form 
+                    key="waitlist-form"
+                    className="waitlist-form"
+                    onSubmit={handleSubmit}
+                    initial={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4 }}
                   >
-                    {status === 'loading' ? (
-                      <div className="spinner" />
-                    ) : status === 'success' ? (
-                      <Check size={20} />
-                    ) : (
-                      <>
-                        <span>Pridruži se</span>
-                        <ArrowRight size={18} />
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <div className="form-inputs-stack">
+                      <div className="input-group">
+                        <div className="input-icon">
+                          <User size={20} />
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="Ime in priimek" 
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          disabled={status === 'loading'}
+                          required
+                        />
+                      </div>
 
-                <AnimatePresence>
-                  {status === 'error' && (
-                    <motion.div 
-                      className="form-feedback error"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                    >
-                      <AlertCircle size={16} />
-                      <span>Vnesi veljaven e-poštni naslov.</span>
-                    </motion.div>
-                  )}
-                  {status === 'success' && (
-                    <motion.div 
-                      className="form-feedback success"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                    >
-                      <Check size={16} />
-                      <span>Odlično! Uspešno si se pridružil čakalni vrsti.</span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.form>
+                      <div className="input-group">
+                        <div className="input-icon">
+                          <Mail size={20} />
+                        </div>
+                        <input 
+                          type="email" 
+                          placeholder="E-poštni naslov" 
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={status === 'loading'}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-actions-row">
+                      <div className="consent-wrapper">
+                        <label className="checkbox-container">
+                          <input 
+                            type="checkbox" 
+                            checked={marketing}
+                            onChange={(e) => setMarketing(e.target.checked)}
+                            disabled={status === 'loading'}
+                          />
+                          <span className="checkmark"></span>
+                          <span className="consent-text">Želim prejemati obvestila o finančnih dogodkih in poučnih vsebinah</span>
+                        </label>
+                      </div>
+
+                      <button 
+                        type="submit" 
+                        className={`waitlist-submit ${status}`}
+                        disabled={status === 'loading'}
+                      >
+                        {status === 'loading' ? (
+                          <div className="spinner" />
+                        ) : (
+                          <>
+                            <span>Pridruži se</span>
+                            <ArrowRight size={18} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {status === 'error' && (
+                        <motion.div 
+                          className="form-feedback error"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                        >
+                          <AlertCircle size={16} />
+                          <span>{errorMessage}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.form>
+                ) : (
+                  <motion.div 
+                    key="success-message"
+                    className="waitlist-success-state"
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+                  >
+                    <div className="success-icon-circle">
+                      <Check size={40} strokeWidth={3} />
+                    </div>
+                    <h2>Uspešno si se pridružil čakalni vrsti!</h2>
+                    <p>Kmalu boš prejel več informacij na svoj e-poštni naslov.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <motion.div className="waitlist-info-grid" variants={itemVars}>
