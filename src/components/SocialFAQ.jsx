@@ -10,7 +10,7 @@ const SocialFAQ = () => {
   const faqs = [
     {
       question: "Ali so moji podatki varni?",
-      answer: "Da. Varnost vaših podatkov je naša prioriteta. Vse podatke šifriramo in smo popolnoma v skladu z GDPR uredbo. Podatkov ne delimo s tretjimi osebami."
+      answer: "Da. Varnost vaših podatkov je naša prioriteta. Vse podatke šifriramo in smo popolnoma v skladu z GDPR uredbo."
     },
     {
       question: "Koliko stane aplikacija?",
