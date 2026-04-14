@@ -765,13 +765,26 @@
 
 @media (max-width: 640px) {
   .tabs-capsule {
-    flex-wrap: wrap;
-    justify-content: center;
-    border-radius: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 30px;
+    width: 100%;
+    max-width: 450px;
+    margin: 0 auto;
   }
   .tab-capsule-btn {
-    padding: 10px 20px;
+    padding: 12px 10px;
     font-size: 0.85rem;
+    width: 100%;
+    text-align: center;
+  }
+  .tab-capsule-btn:last-child {
+    grid-column: span 2;
+  }
+  .active-bg {
+    border-radius: 20px;
   }
 }
 
