@@ -56,7 +56,6 @@ const SocialFAQ = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease: expoOut }}
         >
-          <span className="section-label">Podpora</span>
           <h2>Pogosta vprašanja</h2>
           <p>Odgovori na najpogostejša vprašanja o aplikaciji.</p>
         </motion.div>
