@@ -518,8 +518,13 @@
   .mission-card { padding: 32px 24px; border-radius: 32px; }
   
   .vision-social-section { padding: 60px 0; }
-  .vision-container { padding: 40px 24px; border-radius: 40px; }
-  .vision-container h2 { font-size: 2.25rem; }
+  .vision-container { padding: 48px 24px; border-radius: 40px; text-align: left; }
+  .vision-container h2 { font-size: 2.25rem; text-align: left; }
+  .vision-main-content { margin-bottom: 40px; }
+  .vision-lead { font-size: 1.6rem; text-align: left; line-height: 1.3; }
+  .vision-context { font-size: 1.1rem; text-align: left; margin-bottom: 20px; }
+  .vision-solution { font-size: 1.2rem; text-align: left; }
+  .vision-main-content h3 { text-align: left; margin-bottom: 16px; }
   
   .about-cta-section { padding: 60px 0; }
   
@@ -532,6 +537,8 @@
   .about-hero h1 { font-size: 2.1rem; }
   .key-message-text { font-size: 1.25rem; }
   .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.65rem; }
+  .vision-lead { font-size: 1.4rem; }
+  .vision-solution { font-size: 1.1rem; }
   .about-hero-p { font-size: 0.95rem; }
   .cta-left h2 { font-size: 1.8rem; }
   .statement-sub { font-size: 1.35rem; }
