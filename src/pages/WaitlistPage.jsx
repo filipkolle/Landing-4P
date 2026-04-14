@@ -33,7 +33,7 @@ const WaitlistPage = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
         setStatus('success');
@@ -41,9 +41,7 @@ const WaitlistPage = () => {
         setName('');
         // setMarketing(false);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 409 || errorData.error === 'duplicate') {
+        if (response.status === 409 || data.error === 'duplicate') {
           setErrorMessage('Ta naslov je že v čakalni vrsti!');
         } else if (response.status === 400) {
           setErrorMessage('Vnesi veljaven e-poštni naslov.');
