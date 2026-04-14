@@ -21,7 +21,7 @@ const FeatureSwitcher = () => {
       id: 'delo',
       label: 'Delovni asistent',
       title: 'Optimizacija delovnega procesa',
-      description: 'Sledite delovnim uram v realnem času, avtomatsko izračunajte zaslužek glede na vašo postavko in generirajte profesionalna mesečna poročila z enim klikom.',
+      description: '',
       image: workImg,
       features: [
         'Spremljanje delovnega časa',
@@ -33,7 +33,7 @@ const FeatureSwitcher = () => {
       id: 'finance',
       label: 'Finančni asistent',
       title: 'Celovit nadzor nad financami',
-      description: 'Pridobite celovit pregled nad vsemi prihodki, odhodki in naročninami na enem mestu. Aplikacija vam pomaga razumeti vaše potrošniške navade.',
+      description: '',
       image: financeImg,
       features: [
         'Spremljanje prihodka in stroškov',
@@ -45,7 +45,7 @@ const FeatureSwitcher = () => {
       id: 'all',
       label: '4P asistent',
       title: 'Vsa moč v eni intuitivni aplikaciji',
-      description: 'Poenostavite svoje življenje. Finance 4P združuje sledenje delu in osebne finance v enotno, premium izkušnjo, ki vam prihrani čas.',
+      description: '',
       image: dashboardImg,
       features: [
         'Popoln pregled nad delom in financami',
