@@ -251,6 +251,10 @@
   color: #000;
 }
 
+.vision-lead-heading span.blue-text {
+  white-space: nowrap;
+}
+
 .vision-context {
   font-size: 1.3rem;
   color: var(--text-muted);
