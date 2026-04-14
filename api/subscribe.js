@@ -43,8 +43,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'Success' });
     } else {
       // Handle specific Brevo error codes
-      if (data.code === 'duplicate_parameter') {
+      if (data.code === 'duplicate_parameter' || (data.message && data.message.includes('already exists'))) {
         return res.status(409).json({ error: 'duplicate' });
+      }
+      
+      if (response.status === 400) {
+        return res.status(400).json({ error: 'invalid_request', message: data.message });
       }
       return res.status(response.status).json({ error: data.message || 'Error from CRM' });
     }
