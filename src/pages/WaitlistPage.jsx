@@ -40,19 +40,18 @@ const WaitlistPage = () => {
         setEmail('');
         setName('');
       } else {
-        if (response.status === 409 || data.error === 'duplicate') {
+        const errorType = data.error || '';
+        const errorMsg = (data.message || '').toLowerCase();
+        
+        if (response.status === 409 || errorType === 'duplicate' || errorMsg.includes('already exists')) {
           setErrorMessage('Ta naslov je že v čakalni vrsti!');
-        } else if (response.status === 400) {
-          // Check if Brevo or our API specifically says it's an invalid domain
-          if (data.message && data.message.includes('not exist')) {
-            setErrorMessage('Email naslov ne obstaja. Preveri vnos.');
-          } else {
-            setErrorMessage('Vnesi veljaven e-poštni naslov.');
-          }
+        } else if (response.status === 400 || errorType.includes('invalid')) {
+          setErrorMessage('Vnesi veljaven e-poštni naslov.');
         } else if (response.status === 429) {
           setErrorMessage('Preveč poskusov. Poskusi kasneje.');
         } else {
-          setErrorMessage('Email naslov ne obstaja. Preveri vnos.');
+          // Fallback with visual code for debugging
+          setErrorMessage(`Email naslov ne obstaja ali je prišlo do napake (${data.error || response.status}).`);
         }
         setStatus('error');
       }

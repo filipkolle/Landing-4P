@@ -42,15 +42,23 @@ export default async function handler(req, res) {
     if (response.ok) {
       return res.status(200).json({ message: 'Success' });
     } else {
-      // Handle specific Brevo error codes
-      if (data.code === 'duplicate_parameter' || (data.message && data.message.includes('already exists'))) {
-        return res.status(409).json({ error: 'duplicate' });
+      // Handle various duplicate error formats from Brevo
+      const isDuplicate = 
+        data.code === 'duplicate_parameter' || 
+        data.code === 'contact_already_exists' ||
+        (data.message && (
+          data.message.toLowerCase().includes('already exists') || 
+          data.message.toLowerCase().includes('duplicate')
+        ));
+
+      if (isDuplicate) {
+        return res.status(409).json({ error: 'duplicate', message: data.message });
       }
       
-      if (response.status === 400) {
-        return res.status(400).json({ error: 'invalid_request', message: data.message });
-      }
-      return res.status(response.status).json({ error: 'server_error', message: data.message });
+      return res.status(response.status).json({ 
+        error: data.code || 'api_error', 
+        message: data.message || 'Unknown error from CRM' 
+      });
     }
   } catch (error) {
     console.error('Fetch error:', error);
