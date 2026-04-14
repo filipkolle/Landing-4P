@@ -377,11 +377,16 @@
   align-items: center;
   gap: 8px;
   margin-top: 16px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 8px 0;
 }
 
-.form-feedback.error { color: #ef4444; }
+.form-feedback.error { 
+  color: #ff0000 !important; 
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 .form-feedback.success { color: #10b981; }
 
 .waitlist-footer {
