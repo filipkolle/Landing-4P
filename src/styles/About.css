@@ -119,6 +119,12 @@
   font-weight: 700;
   color: #ef4444; 
   border: 1px solid rgba(239, 68, 68, 0.15);
+  width: 360px;
+  max-width: 100%;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mission-intro {
