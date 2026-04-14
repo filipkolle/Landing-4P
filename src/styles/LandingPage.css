@@ -53,6 +53,7 @@
 
 .logo-img-wrapper img.navbar-logo-img {
   height: 32px;
+  transform: translateY(2px);
 }
 
 .navbar-actions {
