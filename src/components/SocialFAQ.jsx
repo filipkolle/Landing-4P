@@ -14,7 +14,7 @@ const SocialFAQ = () => {
     },
     {
       question: "Koliko stane aplikacija?",
-      answer: "Osnovna verzija aplikacije je popolnoma brezplačna. Za napredne funkcije analitike in neomejeno zgodovino ponujamo ugodne naročniške pakete."
+      answer: "Aplikacija Finance 4P je popolnoma brezplačna za vse uporabnike, saj si želimo omogočiti boljši finančni nadzor čim širšemu krogu ljudi."
     },
     {
       question: "Ali lahko povežem svojo banko?",
