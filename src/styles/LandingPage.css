@@ -360,7 +360,7 @@
 }
 
 .section-header h2 {
-  font-size: 2.6rem;
+  font-size: 3.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   margin-bottom: 16px;
@@ -1312,7 +1312,7 @@
   /* Sections */
   .section-padding { padding: 48px 0; }
   .section-header { margin-bottom: 24px; }
-  .section-header h2 { font-size: 1.6rem; }
+  .section-header h2 { font-size: 1.85rem; }
   .section-header p { font-size: 0.9rem; }
   .section-label { font-size: 0.65rem; }
 
@@ -1397,7 +1397,7 @@
   .hero-phone-label { font-size: 0.7rem; top: -30px; }
 
   /* Sections */
-  .section-header h2 { font-size: 1.5rem; }
+  .section-header h2 { font-size: 1.75rem; }
   .section-padding { padding: 40px 0; }
 
   /* Subscribe CTA */
