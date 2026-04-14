@@ -542,7 +542,8 @@
   .about-hero h1 { font-size: 2.1rem; }
   .key-message-text { font-size: 1.25rem; }
   .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.65rem; }
-  .vision-lead-heading { font-size: 1.2rem; }
+  .vision-container { padding: 48px 16px; }
+  .vision-lead-heading { font-size: 1.1rem; }
   .vision-solution { font-size: 1.1rem; }
   .about-hero-p { font-size: 0.95rem; }
   .cta-left h2 { font-size: 1.8rem; }
