@@ -1,3 +1,4 @@
+// Waitlist Page for Finance 4P - Registration funnel
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Check, AlertCircle, ArrowLeft, ArrowRight, Shield, Rocket, Clock, User } from 'lucide-react';
