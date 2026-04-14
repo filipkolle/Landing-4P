@@ -241,6 +241,8 @@
   margin-bottom: 32px;
   text-align: center;
   line-height: 1.2;
+  width: 100%;
+  display: block;
 }
 
 .vision-lead-heading strong {
