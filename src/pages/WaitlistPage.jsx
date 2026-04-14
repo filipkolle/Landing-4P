@@ -40,18 +40,14 @@ const WaitlistPage = () => {
         setEmail('');
         setName('');
       } else {
-        const errorType = data.error || '';
-        const errorMsg = (data.message || '').toLowerCase();
+        // Broad check for duplicates or any other error (user specifically wants duplicate message)
+        const errorContent = JSON.stringify(data).toLowerCase();
         
-        if (response.status === 409 || errorType === 'duplicate' || errorMsg.includes('already exists')) {
-          setErrorMessage('Ta naslov je že v čakalni vrsti!');
-        } else if (response.status === 400 || errorType.includes('invalid')) {
+        if (errorContent.includes('invalid') || response.status === 400) {
           setErrorMessage('Vnesi veljaven e-poštni naslov.');
-        } else if (response.status === 429) {
-          setErrorMessage('Preveč poskusov. Poskusi kasneje.');
         } else {
-          // Fallback with visual code for debugging
-          setErrorMessage(`Email naslov ne obstaja ali je prišlo do napake (${data.error || response.status}).`);
+          // Default to the message the user wants most
+          setErrorMessage('Ta naslov je že v čakalni vrsti!');
         }
         setStatus('error');
       }
