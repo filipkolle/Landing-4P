@@ -49,8 +49,6 @@ const WaitlistPage = () => {
           setErrorMessage('Vnesi veljaven e-poštni naslov.');
         } else if (response.status === 429) {
           setErrorMessage('Preveč poskusov. Poskusi kasneje.');
-        } else {
-          setErrorMessage('Prišlo je do napake. Poskusi znova.');
         }
         setStatus('error');
       }

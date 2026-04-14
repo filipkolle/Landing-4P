@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       if (response.status === 400) {
         return res.status(400).json({ error: 'invalid_request', message: data.message });
       }
-      return res.status(response.status).json({ error: data.message || 'Error from CRM' });
+      return res.status(response.status).json({ error: 'server_error', message: data.message });
     }
   } catch (error) {
     console.error('Fetch error:', error);
