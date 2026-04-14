@@ -39,14 +39,20 @@ const WaitlistPage = () => {
         setStatus('success');
         setEmail('');
         setName('');
-        // setMarketing(false);
       } else {
         if (response.status === 409 || data.error === 'duplicate') {
           setErrorMessage('Ta naslov je že v čakalni vrsti!');
         } else if (response.status === 400) {
-          setErrorMessage('Vnesi veljaven e-poštni naslov.');
+          // Check if Brevo or our API specifically says it's an invalid domain
+          if (data.message && data.message.includes('not exist')) {
+            setErrorMessage('Email naslov ne obstaja. Preveri vnos.');
+          } else {
+            setErrorMessage('Vnesi veljaven e-poštni naslov.');
+          }
         } else if (response.status === 429) {
           setErrorMessage('Preveč poskusov. Poskusi kasneje.');
+        } else {
+          setErrorMessage('Email naslov ne obstaja. Preveri vnos.');
         }
         setStatus('error');
       }
