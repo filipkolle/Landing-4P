@@ -40,39 +40,15 @@
   align-items: center;
 }
 
-.waitlist-nav .container {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.waitlist-nav .container.centered-nav {
+  display: flex;
+  justify-content: center;
   align-items: center;
   width: 100%;
 }
 
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  padding: 10px 18px;
-  border-radius: 100px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-  justify-self: start;
-}
-
-.back-btn:hover {
-  background: var(--primary-light);
-  color: var(--primary);
-  border-color: var(--primary-light);
-  transform: translateX(-4px);
-}
-
 .waitlist-logo {
-  height: 40px;
+  height: 32px;
   display: block;
 }
 
@@ -298,14 +274,17 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {
-  .waitlist-main-card { padding: 32px 20px; border-radius: 28px; }
-  .waitlist-main-card h1 { font-size: 1.9rem; }
+  .waitlist-nav { height: 80px; }
+  .waitlist-content { padding: 40px 0; }
+  .waitlist-main-card { padding: 40px 24px; border-radius: 28px; }
+  .waitlist-main-card h1 { font-size: 1.8rem; line-height: 1.2; }
+  .waitlist-subtitle { font-size: 1rem; margin-bottom: 32px; }
   .waitlist-info-grid { grid-template-columns: 1fr; gap: 20px; }
   .input-group { flex-direction: column; padding: 12px; gap: 12px; border-radius: 24px; }
   .waitlist-submit { width: 100%; justify-content: center; padding: 12px 24px; font-size: 1rem; }
   .input-icon { display: none; }
   .waitlist-form input { text-align: center; font-size: 0.95rem; }
-  .waitlist-benefits { gap: 12px; }
+  .waitlist-benefits { gap: 12px; flex-direction: column; align-items: flex-start; margin-top: 24px; }
   .info-card { padding: 24px; }
   .info-card h3 { font-size: 1.1rem; }
   .info-card p { font-size: 0.88rem; }

@@ -65,13 +65,8 @@ const WaitlistPage = () => {
       </div>
 
       <nav className="waitlist-nav">
-        <div className="container">
-          <button onClick={() => navigate('/')} className="back-btn">
-            <ArrowLeft size={20} />
-            <span>Nazaj na stran</span>
-          </button>
-          <img src={logoImg} alt="Finance 4P Logo" className="waitlist-logo" />
-          <div className="nav-spacer" />
+        <div className="container centered-nav">
+          <img src={logoImg} alt="Finance 4P Logo" className="waitlist-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} />
         </div>
       </nav>
 
