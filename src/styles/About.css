@@ -239,10 +239,12 @@
   font-weight: 800;
   color: #000;
   margin-bottom: 32px;
-  text-align: center;
+  text-align: center !important;
   line-height: 1.2;
   width: 100%;
   display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .vision-lead-heading strong {
