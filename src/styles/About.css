@@ -499,7 +499,8 @@
   
   .story-section { padding: 60px 0; }
   .story-grid { grid-template-columns: 1fr; text-align: center; gap: 40px; }
-  .story-visual { max-width: 280px; }
+  .story-visual { max-width: 500px; width: 100%; }
+  .story-image { max-width: 280px; margin: 0 auto; }
   .story-text h2 { font-size: 2.25rem; margin-bottom: 20px; }
   
   .key-message-box { padding: 32px 20px; border-radius: 32px; margin-top: 40px; }
