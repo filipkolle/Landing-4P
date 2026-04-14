@@ -65,7 +65,7 @@ const FeaturesGrid = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
           >
-            <h2>Ključne funkcionalnosti</h2>
+            <h2>Ključne <span className="highlight-blue">funkcionalnosti</span></h2>
             <p>Vse, kar potrebujete za popoln finančni pregled v enem orodju.</p>
           </motion.div>
         </div>
