@@ -214,6 +214,11 @@ const WaitlistPage = () => {
                 <p>Uporabniki na čakalni vrsti bodo aplikacijo prejeli 2 tedna pred uradnim izidom.</p>
               </div>
               <div className="info-card">
+                <Rocket className="info-icon" />
+                <h3>Brezplačna uporaba</h3>
+                <p>Osnovna verzija aplikacije je popolnoma brezplačna za vse uporabnike.</p>
+              </div>
+              <div className="info-card">
                 <Shield className="info-icon" />
                 <h3>Varnost podatkov</h3>
                 <p>Tvoji podatki so pri nas varni. Pošiljali ti bomo le pomembne novice o izidu.</p>
