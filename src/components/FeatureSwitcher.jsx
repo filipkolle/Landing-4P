@@ -91,10 +91,14 @@ const FeatureSwitcher = () => {
                   <motion.div 
                     layoutId="activeTabBg"
                     className="active-bg"
+                    style={{ 
+                      backgroundColor: `${activeColor}15`,
+                      border: `1px solid ${activeColor}30`
+                    }}
                     transition={{ type: 'spring', duration: 0.8, bounce: 0.2 }}
                   />
                 )}
-                <span>{tab.label}</span>
+                <span style={{ position: 'relative', zIndex: 2 }}>{tab.label}</span>
               </button>
             ))}
           </motion.div>
