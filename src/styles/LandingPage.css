@@ -120,7 +120,7 @@
    =========================== */
 .hero-scroll-wrapper {
   position: relative;
-  height: 500vh;
+  height: 300vh;
   width: 100%;
   max-width: 100%;
   overflow-x: clip; /* clip doesn't break sticky */
@@ -655,6 +655,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-height: 480px; /* Stabilizes layout during switch */
 }
 
 .display-header { 
@@ -667,6 +668,10 @@
 
 .display-mockup-wrapper { 
   grid-area: mockup; 
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-height: 580px;
 }
 
 .display-title {
@@ -707,11 +712,7 @@
   background: var(--primary);
 }
 
-.display-mockup-wrapper {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
+
 
 .mockup-glass {
   position: relative;

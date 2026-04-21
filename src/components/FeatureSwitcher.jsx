@@ -106,33 +106,22 @@ const FeatureSwitcher = () => {
 
         <div className="switcher-display-grid">
           <div className="display-content-wrapper">
-            <div className="display-header">
-              <AnimatePresence mode="wait">
-                <motion.h3 
-                  key={activeTab}
-                  className="display-title" 
-                  style={{ color: activeColor }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.5, ease: expoOut }}
-                >
-                  {activeContent.title}
-                </motion.h3>
-              </AnimatePresence>
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30 }}
+                transition={{ duration: 0.6, ease: expoOut }}
+              >
+                <div className="display-header">
+                  <h3 className="display-title" style={{ color: activeColor }}>
+                    {activeContent.title}
+                  </h3>
+                </div>
 
-            <div className="display-body">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98, y: -10 }}
-                  transition={{ duration: 0.5, ease: expoOut }}
-                >
+                <div className="display-body">
                   <p className="display-desc">{activeContent.description}</p>
-                  
                   <div className="display-features">
                     {activeContent.features.map((feature, idx) => (
                       <div key={idx} className="display-feature-item">
@@ -141,9 +130,9 @@ const FeatureSwitcher = () => {
                       </div>
                     ))}
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="display-mockup-wrapper">
@@ -151,10 +140,10 @@ const FeatureSwitcher = () => {
               <motion.div
                 key={activeTab}
                 className="mockup-glass"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 60 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.5, ease: expoOut }}
+                exit={{ opacity: 0, x: -60 }}
+                transition={{ duration: 0.7, ease: expoOut }}
               >
                 <img src={activeContent.image} alt={activeContent.label} />
                 <div 
