@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users, ArrowRight } from 'lucide-react';
+import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users, ArrowRight, Clock, Wallet } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
@@ -50,6 +50,41 @@ const AboutPage = () => {
             <p className="hook-desc">
               Zgodba o digitalnem asistentu, ustvarjenem, da povrne nadzor tistim, ki cenijo svoj čas in trdo prislužen denar.
             </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 1.5. Glavna ideja */}
+      <section className="idea-section">
+        <div className="container">
+          <motion.div 
+            className="idea-card"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: expoOut }}
+          >
+            <div className="idea-content">
+              <h2>Če že spremljaš svoj delovni čas, <br/><span className="blue-text">zakaj ne bi še financ?</span></h2>
+              <p>
+                Gre se za idejo, da se spremljanje delovnega časa prilagodi na način, da se mu spremljanje osebnih financ enostavno pridruži in skupaj tvorita močno orodje za osebni razvoj.
+              </p>
+            </div>
+            <div className="idea-visual">
+              <div className="idea-icon-box blue-box">
+                <Clock size={36} />
+                <span>Delo</span>
+              </div>
+              <div className="idea-connector">
+                <div className="conn-line"></div>
+                <div className="conn-plus">+</div>
+                <div className="conn-line"></div>
+              </div>
+              <div className="idea-icon-box green-box">
+                <Wallet size={36} />
+                <span>Finance</span>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
