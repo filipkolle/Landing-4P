@@ -18,7 +18,7 @@ const SocialFAQ = () => {
     },
     {
       question: "Koliko časa mi bo vzelo dnevno beleženje?",
-      answer: "Zelo malo. Aplikacija je zasnovana tako, da vnos traja manj kot 5 sekund. Cilj je, da beleženje postane tvoja najlažja dnevna navada."
+      answer: "Zelo malo. Aplikacija je zasnovana tako, da vnos traja manj kot 10 sekund. Cilj je, da beleženje postane tvoja najlažja dnevna navada."
     },
     {
       question: "Ali mi bo aplikacija dejansko pomagala prihraniti denar?",
