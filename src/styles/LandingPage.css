@@ -1438,10 +1438,10 @@
    SUBSCRIBE CTA (MID-PAGE)
    =========================== */
 .subscribe-cta-section {
-  padding: 40px 0 80px;
+  padding: 60px 0 100px;
   position: relative;
   z-index: 40;
-  margin-top: -60px; /* Pull into hero transition */
+  margin-top: 20px; /* Moved lower to balance space between hero and problem section */
 }
 
 .subscribe-cta-card {
