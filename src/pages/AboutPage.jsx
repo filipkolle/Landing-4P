@@ -54,66 +54,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* 2. Moja zgodba: Kako se je vse začelo */}
-      <section className="story-section">
-        <div className="container">
-          <div className="story-grid">
-            <motion.div 
-              className="story-visual"
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, ease: expoOut }}
-            >
-              <div className="story-image">
-                <img src={founderImg} alt="Filip Kolle" />
-              </div>
-
-              <motion.div 
-                className="key-message-box-side"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: expoOut, delay: 0.3 }}
-              >
-                <p className="key-message-text-side">
-                  "<span className="blue-text">Finance in delo ne smejo imeti negativen prizvok!</span> So orodje za osebni razvoj."
-                </p>
-                <span className="key-message-author-side">— Filip Kolle</span>
-              </motion.div>
-            </motion.div>
-
-            <motion.div 
-              className="story-text"
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, ease: expoOut }}
-            >
-              <h2><span className="blue-text">Moja</span> zgodba</h2>
-              <p className="p-lead">
-                Odraščanje v družini, ki se je nenehno srečevala s finančnimi ovirami, je povzročilo, da sem svojo delovno pot začel zelo zgodaj, pri 15 letih.
-              </p>
-              <p>
-                Kljub temu, da sem služil denar in doprinesel družini, se naše finančno stanje ni kaj prida izboljšalo. Hitro sem dojel, da moram postaviti jasne prioritete, če želim, da moj trud sploh obrodi sadove in ne preobremenim svojih finančnih zmožnosti.
-              </p>
-              <div className="accent-border">
-                <p style={{marginBottom: 0}}>
-                  "Tako sem začel voditi evidenco osebnih financ že pri 17-ih letih in s časom razvil rutino, ki mi pomaga izbrati prave finančne odločitve v kritičnih situacijah."
-                </p>
-              </div>
-              <p>
-                Ta proces je pri meni igral ključno vlogo, da sem popolnoma spremenil svoj pogled na finance, prepoznal svoje potrošniške navade in na koncu postal bolj samozavesten ter odgovoren posameznik.
-              </p>
-              <p>
-                Zato sem ustvaril projekt <strong>Finance 4P</strong>, s katerim želim ljudem omogočiti, da prevzamejo stvari v svoje roke in postanejo boljša verzija sebe.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Poslanstvo: Zakaj Finance 4P ni le "še ena aplikacija" */}
+      {/* 2. Poslanstvo: Zakaj Finance 4P ni le "še ena aplikacija" */}
       <section className="mission-section">
         <div className="container">
           <div className="mission-quotes">
@@ -182,7 +123,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* 5. Vizija za prihodnost */}
+      {/* 3. Vizija za prihodnost */}
       <section className="vision-social-section">
         <div className="container">
           <motion.div 
@@ -248,7 +189,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* 6. Poziv na Waitlist */}
+      {/* 4. Poziv na Waitlist */}
       <section className="about-cta-section">
         <div className="container">
           <motion.div 
@@ -279,7 +220,66 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* 7. Zaključek in osebni podpis */}
+      {/* 5. Moja zgodba: Kako se je vse začelo */}
+      <section className="story-section">
+        <div className="container">
+          <div className="story-grid">
+            <motion.div 
+              className="story-visual"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: expoOut }}
+            >
+              <div className="story-image">
+                <img src={founderImg} alt="Filip Kolle" />
+              </div>
+
+              <motion.div 
+                className="key-message-box-side"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, ease: expoOut, delay: 0.3 }}
+              >
+                <p className="key-message-text-side">
+                  "<span className="blue-text">Finance in delo ne smejo imeti negativen prizvok!</span> So orodje za osebni razvoj."
+                </p>
+                <span className="key-message-author-side">— Filip Kolle</span>
+              </motion.div>
+            </motion.div>
+
+            <motion.div 
+              className="story-text"
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: expoOut }}
+            >
+              <h2><span className="blue-text">Moja</span> zgodba</h2>
+              <p className="p-lead">
+                Odraščanje v družini, ki se je nenehno srečevala s finančnimi ovirami, je povzročilo, da sem svojo delovno pot začel zelo zgodaj, pri 15 letih.
+              </p>
+              <p>
+                Kljub temu, da sem služil denar in doprinesel družini, se naše finančno stanje ni kaj prida izboljšalo. Hitro sem dojel, da moram postaviti jasne prioritete, če želim, da moj trud sploh obrodi sadove in ne preobremenim svojih finančnih zmožnosti.
+              </p>
+              <div className="accent-border">
+                <p style={{marginBottom: 0}}>
+                  "Tako sem začel voditi evidenco osebnih financ že pri 17-ih letih in s časom razvil rutino, ki mi pomaga izbrati prave finančne odločitve v kritičnih situacijah."
+                </p>
+              </div>
+              <p>
+                Ta proces je pri meni igral ključno vlogo, da sem popolnoma spremenil svoj pogled na finance, prepoznal svoje potrošniške navade in na koncu postal bolj samozavesten ter odgovoren posameznik.
+              </p>
+              <p>
+                Zato sem ustvaril projekt <strong>Finance 4P</strong>, s katerim želim ljudem omogočiti, da prevzamejo stvari v svoje roke in postanejo boljša verzija sebe.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Zaključek in osebni podpis */}
       <section className="about-footer-sig">
         <div className="container">
           <div className="sig-content">
