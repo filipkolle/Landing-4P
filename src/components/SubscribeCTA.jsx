@@ -18,10 +18,7 @@ const SubscribeCTA = () => {
         >
           <div className="subscribe-grid">
             <div className="subscribe-content">
-              <div className="cta-badge animated-badge">
-                <span>⭐ Ekskluziven dostop</span>
-              </div>
-              <h3><span className="highlight-blue">Omejen</span> dostop</h3>
+              <h3><span className="highlight-blue">Postani</span> del zgodbe</h3>
               <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo preizkusili našo aplikacijo.</p>
             </div>
             
@@ -33,7 +30,6 @@ const SubscribeCTA = () => {
                 <span>Pridruži se!</span>
                 <ArrowRight size={20} />
               </button>
-              <p className="cta-info-text">Ekskluzivni dostop je omejen na 250 oseb.</p>
             </div>
           </div>
         </motion.div>
