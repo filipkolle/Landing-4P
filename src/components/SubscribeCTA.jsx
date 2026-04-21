@@ -18,7 +18,10 @@ const SubscribeCTA = () => {
         >
           <div className="subscribe-grid">
             <div className="subscribe-content">
-              <h3><span className="highlight-blue">Postani</span> del zgodbe</h3>
+              <div className="cta-badge animated-badge" style={{ width: 'fit-content' }}>
+                <Star size={16} fill="currentColor" style={{ marginRight: '8px' }} />
+                <span>Postani del zgodbe</span>
+              </div>
               <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo preizkusili našo aplikacijo.</p>
             </div>
             
