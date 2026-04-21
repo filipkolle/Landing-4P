@@ -65,25 +65,58 @@ const AboutPage = () => {
             transition={{ duration: 1, ease: expoOut }}
           >
             <div className="idea-content">
-              <h2>Če že spremljaš svoj delovni čas, <br/><span className="blue-text">zakaj ne bi še financ?</span></h2>
+              <h2>Ena navada. <br/><span className="blue-text">Dva rezultata.</span></h2>
               <p>
-                Gre se za idejo, da se spremljanje delovnega časa prilagodi na način, da se mu spremljanje osebnih financ enostavno pridruži in skupaj tvorita močno orodje za osebni razvoj.
+                Ker vaš čas neposredno ustvarja denar, postane ločeno spremljanje nesmiselno. Če že beležite ure, zakaj ne bi v istem koraku prevzeli nadzora še nad financami?
               </p>
             </div>
             <div className="idea-visual">
-              <div className="idea-icon-box blue-box">
+              <motion.div 
+                className="idea-icon-box blue-box"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+              >
                 <Clock size={36} />
-                <span>Delo</span>
-              </div>
+                <span>Čas</span>
+              </motion.div>
+              
               <div className="idea-connector">
-                <div className="conn-line"></div>
-                <div className="conn-plus">+</div>
-                <div className="conn-line"></div>
+                <motion.div 
+                  className="conn-line"
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  whileInView={{ scaleX: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.4 }}
+                  style={{ transformOrigin: "left center" }}
+                />
+                <motion.div 
+                  className="conn-plus"
+                  initial={{ scale: 0, rotate: -90 }}
+                  whileInView={{ scale: 1, rotate: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                >
+                  +
+                </motion.div>
+                <motion.div 
+                  className="conn-line"
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  whileInView={{ scaleX: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                  style={{ transformOrigin: "right center" }}
+                />
               </div>
-              <div className="idea-icon-box green-box">
+              
+              <motion.div 
+                className="idea-icon-box green-box"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 1.75 }}
+              >
                 <Wallet size={36} />
-                <span>Finance</span>
-              </div>
+                <span>Denar</span>
+              </motion.div>
             </div>
           </motion.div>
         </div>
