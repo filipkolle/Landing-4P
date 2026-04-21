@@ -29,8 +29,8 @@ const SocialFAQ = () => {
       answer: "Seveda. Finance 4P omogočajo poljubno kategorizacijo prihodkov, kar je idealno za vse, ki imajo več različnih virov zaslužka (npr. študentsko delo, s.p., redna zaposlitev)."
     },
     {
-      question: "Ali je aplikacija primerna tudi za finančne začetnike?",
-      answer: "Absolutno. Brev kompliciranih računovodskih izrazov. Aplikacija te vodi korak za korakom, da dobiš takojšen občutek nadzora in varnosti."
+      question: "Ali je aplikacija primerna tudi za začetnike?",
+      answer: "Absolutno. Brez kompliciranih računovodskih izrazov. Aplikacija te vodi korak za korakom, da dobiš takojšen občutek nadzora in varnosti."
     },
     {
       question: "Zakaj bi uporabil Finance 4P namesto Excela ali beležke?",
