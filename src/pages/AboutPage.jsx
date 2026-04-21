@@ -57,17 +57,17 @@ const AboutPage = () => {
       {/* 2. Poslanstvo: Zakaj Finance 4P ni le "še ena aplikacija" */}
       <section className="mission-section">
         <div className="container">
-          <div className="mission-quotes">
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.1 }} className="quote-bubble">"Ponovno so nam zvišali stroške!"</motion.div>
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.3 }} className="quote-bubble">"Zakaj so cene tako visoke?!"</motion.div>
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.5 }} className="quote-bubble">"Ali bom sposoben vzdrževati svojega otroka?"</motion.div>
-          </div>
-
           <div className="mission-intro">
             <h2><span className="blue-text">Družbeni</span> kaos</h2>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>
               Sistem v katerem živimo, predstavlja vse večje preglavice za posameznika - tako časovne kot tudi finančne. Zato je posvečanje svojega časa pravilnim dejavnostim in spremljanje osebnih financ ključnega pomena za boj proti finančni in časovni stiski, ki sta produkt kapitalističnega sistema.
             </p>
+          </div>
+
+          <div className="mission-quotes">
+            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.1 }} className="quote-bubble">"Ponovno so nam zvišali stroške!"</motion.div>
+            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.3 }} className="quote-bubble">"Zakaj so cene tako visoke?!"</motion.div>
+            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.5 }} className="quote-bubble">"Ali bom sposoben vzdrževati svojega otroka?"</motion.div>
           </div>
 
           <motion.div 
