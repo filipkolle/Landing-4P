@@ -319,7 +319,6 @@ const AboutPage = () => {
                 <p className="key-message-text-side">
                   "<span className="blue-text">Finance in delo ne smejo imeti negativen prizvok!</span> So orodje za osebni razvoj."
                 </p>
-                <span className="key-message-author-side">— Filip Kolle</span>
               </motion.div>
             </motion.div>
 
