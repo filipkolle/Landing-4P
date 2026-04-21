@@ -103,21 +103,21 @@
 }
 
 .idea-card {
-  max-width: 1000px;
+  max-width: 1050px;
   margin: 0 auto;
   background: #ffffff;
   border-radius: 40px;
-  padding: 60px;
-  border: 1px solid rgba(94, 141, 178, 0.15);
-  box-shadow: 0 40px 100px rgba(94, 141, 178, 0.08);
+  padding: 80px 100px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 30px 80px rgba(94, 141, 178, 0.04);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 1fr;
   align-items: center;
-  gap: 60px;
+  gap: 80px;
 }
 
 .idea-content h2 {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: 850;
   color: #0c1e21;
   line-height: 1.15;
@@ -128,44 +128,44 @@
 .idea-content p {
   font-size: 1.15rem;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .idea-visual {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  background: rgba(248, 250, 252, 0.8);
-  padding: 40px;
+  gap: 12px;
+  background: #f8fafc;
+  padding: 50px 40px;
   border-radius: 32px;
-  border: 1px solid rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.02);
 }
 
 .idea-icon-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 24px 32px;
+  gap: 16px;
+  padding: 32px 36px;
   background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border-radius: 28px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
 }
 
 .idea-icon-box span {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.1rem;
   color: #0c1e21;
 }
 
 .blue-box {
-  border: 2px solid rgba(94, 141, 178, 0.2);
+  border: 1px solid rgba(94, 141, 178, 0.25);
   color: var(--primary);
 }
 
 .green-box {
-  border: 2px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.25);
   color: #22c55e;
 }
 
@@ -177,35 +177,35 @@
 }
 
 .conn-line {
-  width: 24px;
-  height: 2px;
+  width: 20px;
+  height: 1.5px;
   background: #cbd5e1;
-  border-radius: 2px;
 }
 
 .conn-plus {
-  background: var(--primary);
+  background: #6a8fb1;
   color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 1.2rem;
-  box-shadow: 0 4px 12px rgba(94, 141, 178, 0.3);
+  box-shadow: 0 4px 10px rgba(106, 143, 177, 0.25);
+  line-height: 1;
 }
 
 @media (max-width: 900px) {
   .idea-card {
     grid-template-columns: 1fr;
-    padding: 40px 24px;
+    padding: 50px 32px;
     text-align: center;
-    gap: 40px;
+    gap: 48px;
   }
   .idea-visual {
-    padding: 24px;
+    padding: 32px 16px;
     flex-wrap: wrap;
   }
 }
