@@ -138,7 +138,7 @@ const PrivacyPolicy = () => {
             <h2>5. PODROBEN SEZNAM OBDELOVALCEV IN LOKACIJA PODATKOV</h2>
             <p>Vaših osebnih podatkov ne prodajamo ali nepooblaščeno razkrivamo. Za zagotavljanje vrhunske storitve sodelujemo s preverjenimi partnerji:</p>
             <ol>
-              <li><strong>Supabase:</strong> Uporablja se izključno za bazo podatkov mobilne aplikacije in avtentikacijo. Podatki se hranijo na strežnikih v regiji London, kar zagotavlja skladnost z GDPR.</li>
+              <li><strong>Supabase:</strong> Uporablja se izključno za bazo podatkov mobilne aplikacije in avtentikacijo. Podatki se hranijo na strežnikih v regiji London (UK). Prenos podatkov v Združeno kraljestvo temelji na sklepu Evropske komisije o ustreznosti, ki zagotavlja, da London nudi raven varstva podatkov, primerljivo tisti v EU.</li>
               <li><strong>Brevo:</strong> Uporablja se za shranjevanje e-naslovov in imen, zbranih na landing pagu. Brevo je podjetje s sedežem v EU, ki zagotavlja najvišje standarde varnosti e-poštnega marketinga.</li>
               <li><strong>Google Ireland Ltd.:</strong> Uporablja se za Google Analytics (analitika spletne strani in aplikacije) ter Google Sign-In.</li>
               <li><strong>Apple Inc.:</strong> Uporablja se za Apple ID prijavo in In-App nakupne procese.</li>
