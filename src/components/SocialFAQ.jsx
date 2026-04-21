@@ -21,6 +21,26 @@ const SocialFAQ = () => {
       answer: "Trenutno se osredotočamo na ročno in semi-avtomatizirano beleženje za večjo zasebnost. Bančne integracije pa so na našem razvojnem načrtu."
     },
     {
+      question: "Koliko časa mi bo vzelo dnevno beleženje?",
+      answer: "Zelo malo. Aplikacija je zasnovana tako, da vnos traja manj kot 5 sekund. Cilj je, da beleženje postane tvoja najlažja dnevna navada."
+    },
+    {
+      question: "Ali mi bo aplikacija dejansko pomagala prihraniti denar?",
+      answer: "Da. S pregledno vizualizacijo tvojih stroškov boš hitro opazil nepotrebne odlive in dobil jasen načrt, kako denar usmeriti v tisto, kar ti je zares pomembno."
+    },
+    {
+      question: "Ali lahko spremljam prihodke iz različnih virov?",
+      answer: "Seveda. Finance 4P omogočajo poljubno kategorizacijo prihodkov, kar je idealno za vse, ki imajo več različnih virov zaslužka (npr. študentsko delo, s.p., redna zaposlitev)."
+    },
+    {
+      question: "Ali je aplikacija primerna tudi za finančne začetnike?",
+      answer: "Absolutno. Brez kompliciranih računovodskih izrazov. Aplikacija te vodi korak za korakom, da dobiš takojšen občutek nadzora in varnosti."
+    },
+    {
+      question: "Zakaj bi uporabil Finance 4P namesto Excela ali beležke?",
+      answer: "Ker je tvoj telefon vedno s tabo. Poleg tega Finance 4P avtomatsko generira analitike in grafikone, ki bi ti v Excelu vzeli ure ročnega dela."
+    },
+    {
       question: "Ali deluje brez interneta?",
       answer: "Da, večino funkcij beleženja lahko uporabljate brez internetne povezave. Podatki se samodejno sinhronizirajo, ko ste spet online."
     },
