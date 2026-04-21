@@ -125,17 +125,23 @@ const AboutPage = () => {
       {/* 2. Poslanstvo: Zakaj Finance 4P ni le "še ena aplikacija" */}
       <section className="mission-section">
         <div className="container">
-          <div className="mission-intro">
+          <motion.div 
+            className="mission-intro"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 1.2, ease: expoOut }}
+          >
             <h2><span className="blue-text">Družbeni</span> kaos</h2>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>
               Sistem v katerem živimo, predstavlja vse večje preglavice za posameznika - tako časovne kot tudi finančne. Zato je posvečanje svojega časa pravilnim dejavnostim in spremljanje osebnih financ ključnega pomena za boj proti finančni in časovni stiski, ki sta produkt kapitalističnega sistema.
             </p>
-          </div>
+          </motion.div>
 
           <div className="mission-quotes">
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.1 }} className="quote-bubble">"Ponovno so nam zvišali stroške!"</motion.div>
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.3 }} className="quote-bubble">"Zakaj so cene tako visoke?!"</motion.div>
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.5 }} className="quote-bubble">"Ali bom sposoben vzdrževati svojega otroka?"</motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 1.2, ease: expoOut, delay: 0.1 }} className="quote-bubble">"Ponovno so nam zvišali stroške!"</motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 1.2, ease: expoOut, delay: 0.3 }} className="quote-bubble">"Zakaj so cene tako visoke?!"</motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 1.2, ease: expoOut, delay: 0.5 }} className="quote-bubble">"Ali bom sposoben vzdrževati svojega otroka?"</motion.div>
           </div>
 
           <motion.div 
@@ -350,7 +356,13 @@ const AboutPage = () => {
       {/* 6. Zaključek in osebni podpis */}
       <section className="about-footer-sig">
         <div className="container">
-          <div className="sig-content">
+          <motion.div 
+            className="sig-content"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 1.4, ease: expoOut }}
+          >
             <p>Hvala vsem, ki skupaj z nami začenjate graditi zdrave delovne in finančne navade in pomagate pri ustvarjanju boljše družbe!</p>
             <div className="sig-block">
               <span className="sig-intro">Hvala, ker zaupate Finance 4P.</span>
@@ -360,7 +372,7 @@ const AboutPage = () => {
               <span className="digital-sig">Filip Kolle</span>
               <span className="sig-title">idejni vodja in razvijalec</span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
