@@ -20,7 +20,7 @@ const SubscribeCTA = () => {
             <div className="subscribe-content">
               <div className="cta-badge animated-badge" style={{ width: 'fit-content' }}>
                 <Star size={16} fill="currentColor" style={{ marginRight: '8px' }} />
-                <span>Postani del zgodbe</span>
+                <span>Omejen dostop</span>
               </div>
               <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo preizkusili našo aplikacijo.</p>
             </div>
