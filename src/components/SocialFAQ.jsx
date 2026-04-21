@@ -17,10 +17,6 @@ const SocialFAQ = () => {
       answer: "Aplikacija Finance 4P je popolnoma brezplačna za vse uporabnike, saj si želimo omogočiti boljši finančni nadzor čim širšemu krogu ljudi."
     },
     {
-      question: "Ali lahko povežem svojo banko?",
-      answer: "Trenutno se osredotočamo na ročno in semi-avtomatizirano beleženje za večjo zasebnost. Bančne integracije pa so na našem razvojnem načrtu."
-    },
-    {
       question: "Koliko časa mi bo vzelo dnevno beleženje?",
       answer: "Zelo malo. Aplikacija je zasnovana tako, da vnos traja manj kot 5 sekund. Cilj je, da beleženje postane tvoja najlažja dnevna navada."
     },
@@ -34,15 +30,11 @@ const SocialFAQ = () => {
     },
     {
       question: "Ali je aplikacija primerna tudi za finančne začetnike?",
-      answer: "Absolutno. Brez kompliciranih računovodskih izrazov. Aplikacija te vodi korak za korakom, da dobiš takojšen občutek nadzora in varnosti."
+      answer: "Absolutno. Brev kompliciranih računovodskih izrazov. Aplikacija te vodi korak za korakom, da dobiš takojšen občutek nadzora in varnosti."
     },
     {
       question: "Zakaj bi uporabil Finance 4P namesto Excela ali beležke?",
       answer: "Ker je tvoj telefon vedno s tabo. Poleg tega Finance 4P avtomatsko generira analitike in grafikone, ki bi ti v Excelu vzeli ure ročnega dela."
-    },
-    {
-      question: "Ali deluje brez interneta?",
-      answer: "Da, večino funkcij beleženja lahko uporabljate brez internetne povezave. Podatki se samodejno sinhronizirajo, ko ste spet online."
     },
     {
       question: "Na katerih napravah deluje aplikacija?",
