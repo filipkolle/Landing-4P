@@ -22,7 +22,7 @@ const SubscribeCTA = () => {
                 <Star size={16} fill="currentColor" style={{ marginRight: '8px' }} />
                 <span>Omejen dostop</span>
               </div>
-              <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo preizkusili aplikacijo.</p>
+              <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo uporabljali aplikacijo.</p>
             </div>
             
             <div className="subscribe-actions">
