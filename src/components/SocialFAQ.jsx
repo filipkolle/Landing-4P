@@ -22,7 +22,7 @@ const SocialFAQ = () => {
     },
     {
       question: "Ali mi bo aplikacija dejansko pomagala prihraniti denar?",
-      answer: "Da. S pregledno vizualizacijo tvojih stroškov boš hitro opazil nepotrebne odlive in dobil jasen načrt, kako denar usmeriti v tisto, kar ti je zares pomembno."
+      answer: "Aplikacija sama po sebi ne varčuje namesto tebe, ti pa omogoča jasen vpogled v tvoje potrošniške navade. Ko enkrat vidiš, kam točno polzi tvoj denar, lahko svoje navade prilagodiš in začneš načrtno varčevati za tisto, kar ti je zares pomembno."
     },
     {
       question: "Ali lahko spremljam prihodke iz različnih virov?",
