@@ -30,13 +30,13 @@ const Hero = () => {
   const phoneOffset = isMobile ? 70 : 150;
 
   // Desktop scroll animations
-  const leftPhoneX = useTransform(smoothProgress, [0.15, 0.5], [phoneOffset, 0]);
-  const leftPhoneOpacity = useTransform(smoothProgress, [0, 0.15, 0.35], [0, 0, 1]);
-  const leftPhoneRotate = useTransform(smoothProgress, [0.15, 0.5], [0, isMobile ? -5 : -8]);
+  const leftPhoneX = useTransform(smoothProgress, [0.05, 0.3], [phoneOffset, 0]);
+  const leftPhoneOpacity = useTransform(smoothProgress, [0, 0.05, 0.25], [0, 0, 1]);
+  const leftPhoneRotate = useTransform(smoothProgress, [0.05, 0.3], [0, isMobile ? -5 : -8]);
   
-  const rightPhoneX = useTransform(smoothProgress, [0.55, 0.9], [-phoneOffset, 0]);
-  const rightPhoneOpacity = useTransform(smoothProgress, [0, 0.55, 0.8], [0, 0, 1]);
-  const rightPhoneRotate = useTransform(smoothProgress, [0.55, 0.9], [0, isMobile ? 5 : 8]);
+  const rightPhoneX = useTransform(smoothProgress, [0.35, 0.6], [-phoneOffset, 0]);
+  const rightPhoneOpacity = useTransform(smoothProgress, [0, 0.35, 0.55], [0, 0, 1]);
+  const rightPhoneRotate = useTransform(smoothProgress, [0.35, 0.6], [0, isMobile ? 5 : 8]);
 
   // Central phone (now persistent)
   const centerPhoneScale = 1;

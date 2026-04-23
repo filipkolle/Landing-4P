@@ -120,14 +120,14 @@
    =========================== */
 .hero-scroll-wrapper {
   position: relative;
-  height: 300vh;
+  height: 500vh;
   width: 100%;
   max-width: 100%;
   overflow-x: clip; /* clip doesn't break sticky */
 }
 
 .hero-section {
-  min-height: 110vh; /* Increased to provide more vertical space */
+  min-height: 100vh;
   height: auto;
   position: -webkit-sticky; /* Safari Support */
   position: sticky;
