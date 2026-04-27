@@ -153,7 +153,7 @@ const AboutPage = () => {
             transition={{ duration: 1, ease: expoOut }}
           >
             <img src={logoImg} alt="Finance 4P" className="statement-logo" />
-            <p className="statement-sub">je naš odgovor na ta kaos</p>
+            <p className="statement-sub">je naš odgovor!</p>
           </motion.div>
 
           <div className="mission-cards">
