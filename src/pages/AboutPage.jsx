@@ -190,7 +190,7 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: expoOut, delay: 0.2 }}
           >
-            <h3 className="step-title">Je <span className="blue-text">prvi korak</span> k časovni in finančni razbremenitvi</h3>
+            <h3 className="step-title">Je <span className="blue-text">prvi korak</span> k <span className="nowrap">časovni in finančni</span> razbremenitvi</h3>
             <p className="step-text">
               Finance 4P ne predstavlja le beleženja številk, ampak je odskočna deska za vsakega posameznika na poti v svet osebnih financ in bolj odgovornega delovanja v družbi.
             </p>
