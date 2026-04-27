@@ -749,8 +749,8 @@
   .switcher-display-grid {
     grid-template-columns: 1fr;
     grid-template-areas: 
-      "content"
-      "mockup";
+      "mockup"
+      "content";
     gap: 60px;
     text-align: center;
   }
@@ -1191,8 +1191,8 @@
   .switcher-display-grid {
     grid-template-columns: 1fr;
     grid-template-areas: 
-      "content"
-      "mockup";
+      "mockup"
+      "content";
     gap: 24px;
     text-align: center;
   }
