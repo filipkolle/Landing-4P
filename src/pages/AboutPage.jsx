@@ -67,7 +67,8 @@ const AboutPage = () => {
             <div className="idea-content">
               <h2>Ena navada <br/><span className="blue-text">Dva rezultata</span></h2>
               <p>
-                Ker vaš čas neposredno ustvarja denar, postane ločeno spremljanje nesmiselno. Če že beležite ure, zakaj ne bi v istem koraku prevzeli nadzora še nad financami?
+                Vi beležite ure, aplikacija vodi finance.<br/>
+                Zakaj si ne bi poenostavili spremljanja osebnih financ in ubili dve muhi na en mah?
               </p>
             </div>
             <div className="idea-visual">
