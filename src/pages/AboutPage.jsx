@@ -210,7 +210,7 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <strong>Vizija Finance 4P je <br /><span className="blue-text">opolnomočiti posameznika.</span></strong>
+            <strong>Vizija Finance 4P je <br /><span className="blue-text nowrap">opolnomočiti posameznika.</span></strong>
           </motion.h2>
 
           <motion.div 
