@@ -648,77 +648,6 @@
   text-align: center;
 }
 
-@media (max-width: 1024px) {
-  .about-hero { padding: 140px 0 60px; }
-  .about-hero h1 { font-size: 3.25rem; }
-  .about-hero .hook-desc { font-size: 1.15rem; }
-  
-  .story-section { padding: 60px 0; }
-  .story-grid { grid-template-columns: 1fr; text-align: center; gap: 40px; }
-  .story-visual { max-width: 500px; width: 100%; }
-  .story-image { max-width: 280px; margin: 0 auto; }
-  .story-text h2 { font-size: 2.25rem; margin-bottom: 20px; }
-  
-  .key-message-box { padding: 32px 20px; border-radius: 32px; margin-top: 40px; }
-  .key-message-text { font-size: 1.65rem; }
-  
-  .mission-section { padding: 60px 0; }
-  .mission-intro h2 { font-size: 2.25rem; }
-  .mission-cards { grid-template-columns: 1fr; }
-  .mission-card { 
-    padding: 32px 24px; 
-    border-radius: 32px; 
-    text-align: center; 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .card-header {
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  
-  .vision-social-section { padding: 60px 0; }
-  .vision-container { padding: 48px 24px; border-radius: 40px; text-align: left; }
-  .vision-container h2 { font-size: 2.25rem; text-align: left; }
-  .vision-main-content { margin-bottom: 40px; }
-  .vision-lead-heading { font-size: 1.6rem; text-align: center; margin-bottom: 24px; }
-  .vision-context { font-size: 1.1rem; text-align: left; margin-bottom: 20px; }
-  .vision-solution { font-size: 1.2rem; text-align: left; }
-  .vision-main-content h3 { text-align: left; margin-bottom: 16px; }
-  
-  .about-cta-section { padding: 60px 0; }
-  
-  .digital-sig { font-size: 1.8rem; }
-  .sig-actual-img { max-width: 180px; }
-  .statement-sub { font-size: 1.5rem; }
-  .step-highlight { 
-    max-width: 100%; 
-    padding: 32px 16px; 
-    margin-top: 40px; 
-    border-radius: 32px; 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .step-title { 
-    font-size: 1.1rem; 
-    text-align: center;
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .about-hero { padding: 100px 16px 40px; }
-  .about-hero h1 { font-size: 2.2rem; margin-bottom: 16px; }
-  .about-hero .hook-desc { font-size: 1.05rem; padding: 0 8px; }
-  .key-message-text { font-size: 1.35rem; }
-  .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.8rem; }
-  .story-text .p-lead { font-size: 1.15rem; margin-bottom: 24px; }
-  .story-text p { font-size: 1rem; }
-  .idea-content h2 { font-size: 1.8rem; margin-bottom: 16px; }
   .idea-content p { font-size: 1rem; }
   .vision-container { padding: 48px 16px; }
   .vision-lead-heading { font-size: 1.15rem !important; margin-bottom: 16px; }
@@ -727,11 +656,15 @@
   .cta-left h2 { font-size: 1.8rem; }
   .statement-sub { font-size: 1.15rem; }
   .idea-card { padding: 40px 24px; gap: 32px; }
-  .step-title { font-size: 0.95rem; }
+  .step-title { 
+    font-size: 0.9rem !important;
+    line-height: 1.4;
+    white-space: normal; /* Allow overall wrap */
+  }
 }
 
 .nowrap {
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 /* Story Text Refinement */
@@ -866,3 +799,74 @@
   letter-spacing: 0.1em;
   font-weight: 900;
 }
+@media (max-width: 1024px) {
+  .about-hero { padding: 140px 0 60px; }
+  .about-hero h1 { font-size: 3.25rem; }
+  .about-hero .hook-desc { font-size: 1.15rem; }
+  
+  .story-section { padding: 60px 0; }
+  .story-grid { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+  .story-visual { max-width: 500px; width: 100%; }
+  .story-image { max-width: 280px; margin: 0 auto; }
+  .story-text h2 { font-size: 2.25rem; margin-bottom: 20px; }
+  
+  .key-message-box { padding: 32px 20px; border-radius: 32px; margin-top: 40px; }
+  .key-message-text { font-size: 1.65rem; }
+  
+  .mission-section { padding: 60px 0; }
+  .mission-intro h2 { font-size: 2.25rem; }
+  .mission-cards { grid-template-columns: 1fr; }
+  .mission-card { 
+    padding: 32px 24px; 
+    border-radius: 32px; 
+    text-align: center; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .vision-social-section { padding: 60px 0; }
+  .vision-container { padding: 48px 24px; border-radius: 40px; text-align: left; }
+  .vision-container h2 { font-size: 2.25rem; text-align: left; }
+  .vision-main-content { margin-bottom: 40px; }
+  .vision-lead-heading { font-size: 1.6rem; text-align: center; margin-bottom: 24px; }
+  .vision-context { font-size: 1.1rem; text-align: left; margin-bottom: 20px; }
+  .vision-solution { font-size: 1.2rem; text-align: left; }
+  .vision-main-content h3 { text-align: left; margin-bottom: 16px; }
+  
+  .about-cta-section { padding: 60px 0; }
+  
+  .digital-sig { font-size: 1.8rem; }
+  .sig-actual-img { max-width: 180px; }
+  .statement-sub { font-size: 1.5rem; }
+  .step-highlight { 
+    max-width: 100%; 
+    padding: 32px 16px; 
+    margin-top: 40px; 
+    border-radius: 32px; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-title { 
+    font-size: 1.1rem; 
+    text-align: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-hero { padding: 100px 16px 40px; }
+  .about-hero h1 { font-size: 2.2rem; margin-bottom: 16px; }
+  .about-hero .hook-desc { font-size: 1.05rem; padding: 0 8px; }
+  .key-message-text { font-size: 1.35rem; }
+  .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.8rem; }
+  .story-text .p-lead { font-size: 1.15rem; margin-bottom: 24px; }
+  .story-text p { font-size: 1rem; }
+  .idea-content h2 { font-size: 1.8rem; margin-bottom: 16px; }
