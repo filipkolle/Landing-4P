@@ -725,8 +725,8 @@
   .idea-content h2 { font-size: 1.8rem; margin-bottom: 16px; }
   .idea-content p { font-size: 1rem; }
   .vision-container { padding: 48px 16px; }
-  .vision-lead-heading { font-size: 1.8rem !important; margin-bottom: 24px; }
-  .vision-lead-heading span.blue-text { white-space: normal !important; display: inline; }
+  .vision-lead-heading { font-size: 1.5rem !important; margin-bottom: 24px; }
+  .vision-lead-heading span.blue-text { white-space: nowrap !important; display: inline; }
   .vision-solution { font-size: 1.1rem; }
   .cta-left h2 { font-size: 1.8rem; }
   .statement-sub { font-size: 1.15rem; }
