@@ -1342,7 +1342,7 @@
 
   /* Feature Switcher */
   .feature-switcher .section-padding { padding: 40px 0; }
-  .switcher-tabs-centered { margin-bottom: 36px; }
+  .switcher-tabs-centered { margin-bottom: 20px; }
   .tabs-capsule { padding: 4px; gap: 2px; }
   .tab-capsule-btn { padding: 8px 12px; font-size: 0.8rem; }
   .display-title { font-size: 1.75rem; }
