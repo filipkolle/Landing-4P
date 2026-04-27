@@ -665,7 +665,19 @@
   .mission-section { padding: 60px 0; }
   .mission-intro h2 { font-size: 2.25rem; }
   .mission-cards { grid-template-columns: 1fr; }
-  .mission-card { padding: 32px 24px; border-radius: 32px; }
+  .mission-card { 
+    padding: 32px 24px; 
+    border-radius: 32px; 
+    text-align: center; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
   
   .vision-social-section { padding: 60px 0; }
   .vision-container { padding: 48px 24px; border-radius: 40px; text-align: left; }
