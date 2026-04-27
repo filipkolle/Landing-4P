@@ -136,7 +136,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 160px; /* Restored some space to navbar */
+  padding-top: 130px; /* Shifted higher */
   overflow: visible;
   background: transparent;
   z-index: 20;
@@ -1396,12 +1396,12 @@
     position: sticky;
     top: 0;
     min-height: 100vh;
-    padding-top: 60px;
+    padding-top: 80px;
     padding-bottom: 40px; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     background: transparent;
   }
 
