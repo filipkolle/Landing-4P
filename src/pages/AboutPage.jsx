@@ -203,6 +203,16 @@ const AboutPage = () => {
       {/* 3. Vizija za prihodnost */}
       <section className="vision-social-section">
         <div className="container">
+          <motion.h2 
+            className="vision-lead-heading"
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <strong>Vizija Finance 4P je <br /><span className="blue-text">opolnomočiti posameznika.</span></strong>
+          </motion.h2>
+
           <motion.div 
             className="vision-container"
             initial={{ opacity: 0, y: 30 }}
@@ -212,16 +222,6 @@ const AboutPage = () => {
           >
             
             <div className="vision-main-content">
-              <motion.h2 
-                className="vision-lead-heading"
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <strong>Vizija Finance 4P je <br /><span className="blue-text">opolnomočiti posameznika.</span></strong>
-              </motion.h2>
-
               <h3>Družbeni doprinos</h3>
               <div className="vision-contribution-content">
                 
