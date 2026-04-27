@@ -1341,14 +1341,18 @@
   .comparison-card li { font-size: 0.9rem; margin-bottom: 14px; }
 
   /* Feature Switcher */
-  .feature-switcher .section-padding { padding: 40px 0; }
-  .switcher-tabs-centered { margin-bottom: 20px; }
+  .feature-switcher .section-padding { padding: 24px 0; }
+  .feature-switcher .section-header { margin-bottom: 16px; }
+  .switcher-tabs-centered { margin-bottom: 12px; }
   .tabs-capsule { padding: 4px; gap: 2px; }
   .tab-capsule-btn { padding: 8px 12px; font-size: 0.8rem; }
-  .display-title { font-size: 1.75rem; }
-  .display-desc { font-size: 1rem; }
+  .switcher-display-grid { gap: 12px; }
+  .display-title { font-size: 1.4rem; margin-bottom: 8px; }
+  .display-desc { margin: 0 auto 10px; font-size: 0.95rem; }
+  .display-features { gap: 8px; }
+  .display-feature-item { gap: 8px; font-size: 0.9rem; }
   .mockup-glass {
-    max-width: 240px;
+    max-width: 180px;
     margin: 0 auto;
   }
 
