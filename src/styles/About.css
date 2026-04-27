@@ -693,10 +693,14 @@
   .digital-sig { font-size: 1.8rem; }
   .sig-actual-img { max-width: 180px; }
   .statement-sub { font-size: 1.5rem; }
+  .step-highlight-wrapper {
+    margin-top: 60px;
+    max-width: 100%;
+    text-align: center;
+  }
   .step-highlight { 
     max-width: 100%; 
     padding: 32px 16px; 
-    margin-top: 40px; 
     border-radius: 32px; 
     display: flex;
     flex-direction: column;
@@ -811,14 +815,17 @@
   margin: 0;
 }
 
-/* Step Highlight Style */
-.step-highlight {
+/* Step Highlight Wrapper and Box Style */
+.step-highlight-wrapper {
   margin-top: 80px;
   text-align: center;
   max-width: 850px;
   margin-left: auto;
   margin-right: auto;
-  padding: 60px 40px;
+}
+
+.step-highlight {
+  padding: 40px;
   background: #ffffff;
   border-radius: 48px;
   border: 1px solid rgba(94, 141, 178, 0.1);
