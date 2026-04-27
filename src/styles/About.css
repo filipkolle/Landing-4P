@@ -204,6 +204,9 @@
     text-align: center;
     gap: 48px;
   }
+  .idea-content h2 {
+    font-size: 2.2rem;
+  }
   .idea-visual {
     padding: 32px 16px;
     flex-wrap: wrap;
@@ -656,16 +659,22 @@
 }
 
 @media (max-width: 480px) {
-  .about-hero h1 { font-size: 2.1rem; }
-  .key-message-text { font-size: 1.25rem; }
-  .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.65rem; }
-  .vision-container { padding: 48px 12px; }
-  .vision-lead-heading { font-size: 1rem !important; }
-  .vision-lead-heading span.blue-text { white-space: nowrap !important; display: inline-block; }
+  .about-hero { padding: 100px 16px 40px; }
+  .about-hero h1 { font-size: 2.2rem; margin-bottom: 16px; }
+  .about-hero .hook-desc { font-size: 1.05rem; padding: 0 8px; }
+  .key-message-text { font-size: 1.35rem; }
+  .mission-intro h2, .vision-container h2, .story-text h2 { font-size: 1.8rem; }
+  .story-text .p-lead { font-size: 1.15rem; margin-bottom: 24px; }
+  .story-text p { font-size: 1rem; }
+  .idea-content h2 { font-size: 1.8rem; margin-bottom: 16px; }
+  .idea-content p { font-size: 1rem; }
+  .vision-container { padding: 48px 16px; }
+  .vision-lead-heading { font-size: 1.15rem !important; margin-bottom: 16px; }
+  .vision-lead-heading span.blue-text { white-space: normal !important; display: inline; }
   .vision-solution { font-size: 1.1rem; }
-  .about-hero-p { font-size: 0.95rem; }
   .cta-left h2 { font-size: 1.8rem; }
-  .statement-sub { font-size: 1.35rem; }
+  .statement-sub { font-size: 1.4rem; }
+  .idea-card { padding: 40px 24px; gap: 32px; }
 }
 
 /* Story Text Refinement */
