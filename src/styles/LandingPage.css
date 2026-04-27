@@ -1396,12 +1396,12 @@
     position: sticky;
     top: 0;
     min-height: 100vh;
-    padding-top: 100px;
-    padding-bottom: 40px; 
+    padding-top: 0;
+    padding-bottom: 0; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     background: transparent;
   }
 
