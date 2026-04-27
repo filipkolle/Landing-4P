@@ -1345,18 +1345,18 @@
   .comparison-card li { font-size: 0.9rem; margin-bottom: 14px; }
 
   /* Feature Switcher */
-  .feature-switcher .section-padding { padding: 24px 0; }
-  .feature-switcher .section-header { margin-bottom: 16px; }
-  .switcher-tabs-centered { margin-bottom: 12px; }
-  .tabs-capsule { padding: 4px; gap: 2px; }
-  .tab-capsule-btn { padding: 8px 12px; font-size: 0.8rem; }
-  .switcher-display-grid { gap: 12px; }
-  .display-title { font-size: 1.4rem; margin-bottom: 8px; }
-  .display-desc { margin: 0 auto 10px; font-size: 0.95rem; }
-  .display-features { gap: 8px; }
-  .display-feature-item { gap: 8px; font-size: 0.9rem; }
+  .feature-switcher .section-padding { padding: 40px 0; }
+  .feature-switcher .section-header { margin-bottom: 24px; }
+  .switcher-tabs-centered { margin-bottom: 32px; }
+  .tabs-capsule { padding: 4px; gap: 4px; }
+  .tab-capsule-btn { padding: 8px 16px; font-size: 0.85rem; }
+  .switcher-display-grid { gap: 32px; }
+  .display-title { font-size: 1.55rem; margin-bottom: 12px; }
+  .display-desc { margin: 0 auto 15px; font-size: 1rem; }
+  .display-features { gap: 12px; }
+  .display-feature-item { gap: 10px; font-size: 0.95rem; }
   .mockup-glass {
-    max-width: 180px;
+    max-width: 220px;
     margin: 0 auto;
   }
 
