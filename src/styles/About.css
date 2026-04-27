@@ -680,7 +680,7 @@
   
   .digital-sig { font-size: 1.8rem; }
   .sig-actual-img { max-width: 180px; }
-  .statement-sub { font-size: 1.7rem; }
+  .statement-sub { font-size: 1.5rem; }
 }
 
 @media (max-width: 480px) {
@@ -698,7 +698,7 @@
   .vision-lead-heading span.blue-text { white-space: normal !important; display: inline; }
   .vision-solution { font-size: 1.1rem; }
   .cta-left h2 { font-size: 1.8rem; }
-  .statement-sub { font-size: 1.4rem; }
+  .statement-sub { font-size: 1.15rem; }
   .idea-card { padding: 40px 24px; gap: 32px; }
 }
 
