@@ -1241,7 +1241,7 @@
      HERO MOBILE - Pinning & Animation restored
      ===================== */
   .hero-scroll-wrapper {
-    height: 130vh; /* Extremely tight track to eliminate bottom void */
+    height: 250vh; /* Enough scrolling distance to complete the animation while pinned */
     min-height: 100vh;
   }
   .hero-section {
