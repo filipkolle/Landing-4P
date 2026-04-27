@@ -1394,12 +1394,14 @@
   .hero-section { 
     position: sticky;
     top: 0;
-    height: 75vh; /* Center more accurately */
-    padding-top: 60px;    padding-bottom: 40px; 
+    min-height: 100vh;
+    padding-top: 60px;
+    padding-bottom: 40px; 
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    background: var(--bg-light);
   }
   .hero-content-centered { margin-bottom: 0px; }
   .hero-content-centered h1 { font-size: 1.8rem; padding: 0 8px; }
