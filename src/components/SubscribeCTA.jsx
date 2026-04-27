@@ -22,6 +22,7 @@ const SubscribeCTA = () => {
                 <Star size={16} fill="currentColor" style={{ marginRight: '8px' }} />
                 <span>Omejen dostop</span>
               </div>
+              <h3>Bodi prvi, ki uporablja Finance 4P</h3>
               <p>Pridruži se čakalni vrsti in bodi med prvimi, ki bodo uporabljali aplikacijo.</p>
             </div>
             
