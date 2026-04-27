@@ -69,7 +69,7 @@ const FeatureSwitcher = () => {
           transition={{ duration: 0.8, ease: expoOut }}
         >
           <h2>Uporabi samo to, kar <br /><span className="highlight-blue">potrebuješ</span></h2>
-          <p>Izberite način, ki najbolje ustreza vašemu delovnemu ritmu in osebnim financam.</p>
+
         </motion.div>
 
         <div className="switcher-tabs-centered">
