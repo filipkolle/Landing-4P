@@ -1440,7 +1440,7 @@
   .section-padding { padding: 40px 0; }
 
   /* Subscribe CTA */
-  .subscribe-cta-section { padding: 16px 0 40px; }
+  .subscribe-cta-section { margin-top: -100px; padding: 16px 0 40px; }
   .subscribe-cta-card { padding: 20px 16px; border-radius: 20px; }
   .subscribe-content h3 { font-size: 1.35rem; }
   .subscribe-content p { font-size: 0.9rem; }
