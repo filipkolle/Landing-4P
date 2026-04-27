@@ -65,7 +65,7 @@ const AboutPage = () => {
             transition={{ duration: 1, ease: expoOut }}
           >
             <div className="idea-content">
-              <h2>Ena navada. <br/><span className="blue-text">Dva rezultata.</span></h2>
+              <h2>Ena navada <br/><span className="blue-text">Dva rezultata</span></h2>
               <p>
                 Ker vaš čas neposredno ustvarja denar, postane ločeno spremljanje nesmiselno. Če že beležite ure, zakaj ne bi v istem koraku prevzeli nadzora še nad financami?
               </p>
