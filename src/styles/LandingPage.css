@@ -383,7 +383,7 @@
 .problem-solution {
   position: relative;
   z-index: 30; /* Transition layering */
-  background: var(--bg-light);
+  background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg-light) 80%, #ffffff 100%);
   margin-top: -1px; /* Seamless overlap */
 }
 
@@ -1462,6 +1462,7 @@
    SUBSCRIBE CTA (MID-PAGE)
    =========================== */
 .subscribe-cta-section {
+  background: var(--bg-light);
   padding: 60px 0 100px;
   position: relative;
   z-index: 40;
