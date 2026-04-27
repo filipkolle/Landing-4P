@@ -693,6 +693,21 @@
   .digital-sig { font-size: 1.8rem; }
   .sig-actual-img { max-width: 180px; }
   .statement-sub { font-size: 1.5rem; }
+  .step-highlight { 
+    max-width: 100%; 
+    padding: 32px 16px; 
+    margin-top: 40px; 
+    border-radius: 32px; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-title { 
+    font-size: 1.1rem; 
+    text-align: center;
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -712,8 +727,7 @@
   .cta-left h2 { font-size: 1.8rem; }
   .statement-sub { font-size: 1.15rem; }
   .idea-card { padding: 40px 24px; gap: 32px; }
-  .step-highlight { padding: 32px 16px; margin-top: 40px; border-radius: 32px; }
-  .step-title { font-size: 1rem; }
+  .step-title { font-size: 0.95rem; }
 }
 
 .nowrap {
