@@ -64,74 +64,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* 1.5. Glavna ideja */}
-      <section className="idea-section">
-        <div className="container">
-          <motion.div 
-            className="idea-card"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: expoOut }}
-          >
-            <div className="idea-content">
-              <h2>Ena navada <br/><span className="blue-text">Dva rezultata</span></h2>
-              <p>
-                Vi beležite ure, aplikacija vodi finance.<br/>
-                Zakaj si ne bi poenostavili spremljanja osebnih financ in ubili dve muhi na en mah?
-              </p>
-            </div>
-            <div className="idea-visual">
-              <motion.div 
-                className="idea-icon-box blue-box"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-              >
-                <Clock size={36} />
-                <span>Čas</span>
-              </motion.div>
-              
-              <div className="idea-connector">
-                <motion.div 
-                  className="conn-line"
-                  initial={{ scaleX: 0, opacity: 0 }}
-                  whileInView={{ scaleX: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                  style={{ transformOrigin: "left center" }}
-                />
-                <motion.div 
-                  className="conn-plus"
-                  initial={{ scale: 0, rotate: -90 }}
-                  whileInView={{ scale: 1, rotate: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                >
-                  +
-                </motion.div>
-                <motion.div 
-                  className="conn-line"
-                  initial={{ scaleX: 0, opacity: 0 }}
-                  whileInView={{ scaleX: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  style={{ transformOrigin: "right center" }}
-                />
-              </div>
-              
-              <motion.div 
-                className="idea-icon-box green-box"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 1.75 }}
-              >
-                <Wallet size={36} />
-                <span>Denar</span>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+
 
       {/* 2. Poslanstvo: Zakaj Finance 4P ni le "še ena aplikacija" */}
       <section className="mission-section">
