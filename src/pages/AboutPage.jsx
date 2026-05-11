@@ -6,6 +6,8 @@ import Navbar from '../components/Navbar';
 import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
 import phoneMockup from '../assets/mockups/phone_3d_v2.png';
+import appStoreBadge from '../assets/app_store_badge.png';
+import androidBadge from '../assets/android_badge.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
@@ -294,60 +296,47 @@ const AboutPage = () => {
               
               <div className="store-buttons" style={{ 
                 display: 'flex', 
-                gap: '12px', 
+                gap: '15px', 
                 flexWrap: 'wrap', 
                 marginTop: '30px',
-                justifyContent: 'flex-start'
+                justifyContent: 'flex-start',
+                alignItems: 'center'
               }}>
                 <a 
                   href="https://apps.apple.com/si/app/finance-4p/id6762084663" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px', 
-                    textDecoration: 'none', 
-                    backgroundColor: '#000', 
-                    color: '#fff', 
-                    padding: '8px 20px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    minWidth: '170px',
-                    transition: 'transform 0.2s'
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <Apple size={28} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Download on the</span>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>App Store</span>
-                  </div>
+                  <img 
+                    src={appStoreBadge} 
+                    alt="Download on the App Store" 
+                    style={{ height: '54px', width: 'auto' }}
+                  />
                 </a>
                 <button 
                   onClick={() => navigate('/cakalna-vrsta')}
                   style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '10px', 
-                    backgroundColor: '#000', 
-                    color: '#fff', 
-                    padding: '8px 20px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    minWidth: '170px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    padding: 0,
                     cursor: 'pointer',
-                    transition: 'transform 0.2s'
+                    transition: 'transform 0.2s',
+                    display: 'inline-block'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <Play size={24} fill="white" />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Za Android</span>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>Pridruži se</span>
-                  </div>
+                  <img 
+                    src={androidBadge} 
+                    alt="Za Android Pridruži se" 
+                    style={{ height: '54px', width: 'auto' }}
+                  />
                 </button>
               </div>
             </div>
