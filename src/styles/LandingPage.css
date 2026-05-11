@@ -20,6 +20,7 @@
   height: 80px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 100px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -27,6 +28,7 @@
   z-index: 1000;
   border: 1px solid rgba(255, 255, 255, 0.6);
   transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  will-change: transform;
 }
 
 .navbar .container {
@@ -140,6 +142,8 @@
   overflow: visible;
   background: transparent;
   z-index: 20;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .hero-background {
@@ -177,7 +181,9 @@
   max-width: 100%;
   flex-shrink: 0;
   overflow: visible !important; 
-  z-index: 5; 
+  z-index: 5;
+  will-change: opacity, transform;
+  transform: translateZ(0);
 }
 
 .phone-glow {
@@ -187,9 +193,10 @@
   width: 260%;
   height: 150%;
   border-radius: 50%;
-  filter: blur(55px);
+  filter: blur(35px);
   z-index: -1 !important; /* Force behind phone content */
   pointer-events: none;
+  will-change: opacity;
 }
 
 .glow-blue {
@@ -575,8 +582,10 @@
    FEATURE SWITCHER
    =========================== */
 .feature-switcher {
+  background: var(--bg-light);
   overflow: hidden;
   transition: background 1s ease;
+  contain: layout style;
 }
 
 .switcher-tabs-centered {
@@ -592,7 +601,6 @@
   padding: 8px;
   border-radius: 100px;
   border: 1px solid rgba(94, 141, 178, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 .tab-capsule-btn {
@@ -639,7 +647,6 @@
   padding: 8px;
   border-radius: 100px;
   border: 1px solid rgba(94, 141, 178, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 .switcher-display-grid {
@@ -656,7 +663,18 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 480px; /* Stabilizes layout during switch */
+  min-height: 320px; /* Stabilizes layout during switch */
+  position: relative;
+}
+
+.switcher-crossfade-panel {
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+/* Clip container for slide-in/out animations */
+.switcher-clip {
+  overflow: hidden;
 }
 
 .display-header { 
@@ -672,7 +690,8 @@
   position: relative;
   display: flex;
   justify-content: center;
-  min-height: 580px;
+  align-items: flex-start;
+  min-height: 500px;
 }
 
 .display-title {
@@ -721,6 +740,10 @@
   max-width: 320px;
   z-index: 1;
   background: none !important;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+  border-radius: 40px;
+  overflow: hidden;
 }
 
 .mockup-glass img {
@@ -728,8 +751,8 @@
   height: auto;
   border-radius: 40px;
   display: block;
-  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.12));
-  mix-blend-mode: multiply; /* Crucial: hides white backgrounds in PNG/JPG files */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  mix-blend-mode: multiply; /* Crucial: hides white backgrounds in mockup images */
 }
 
 
@@ -740,8 +763,7 @@
   left: 10%;
   right: 10%;
   height: 40px;
-  background: radial-gradient(ellipse at center, rgba(94,141,178,0.2) 0%, transparent 70%);
-  filter: blur(15px);
+  background: radial-gradient(ellipse at center, rgba(94,141,178,0.15) 0%, transparent 70%);
   z-index: 0;
 }
 
@@ -1325,7 +1347,7 @@
   .curve-text { font-size: 20px; }
 
   .subscribe-cta-section {
-    margin-top: -80px; /* Pull it way up into the hero void */
+    margin-top: -20vh; /* Pull it way up into the hero void */
     padding: 32px 0 60px;
   }
 
@@ -1400,9 +1422,15 @@
   .logo-img-wrapper img.navbar-logo-img { height: 22px; }
 
   /* Hero */
+  .hero-scroll-wrapper {
+    height: 250vh;
+    min-height: 100vh;
+  }
+  
   .hero-section { 
     position: sticky;
     top: 0;
+    height: 100vh;
     min-height: 100vh;
     padding-top: 0;
     padding-bottom: 0; 
@@ -1440,7 +1468,7 @@
   .section-padding { padding: 40px 0; }
 
   /* Subscribe CTA */
-  .subscribe-cta-section { margin-top: -100px; padding: 16px 0 40px; }
+  .subscribe-cta-section { margin-top: calc(-50vh + 150px); padding: 16px 0 40px; }
   .subscribe-cta-card { padding: 20px 16px; border-radius: 20px; }
   .subscribe-content h3 { font-size: 1.35rem; }
   .subscribe-content p { font-size: 0.9rem; }
@@ -1523,23 +1551,46 @@
 }
 
 .animated-badge {
-  animation: badge-pulse 4s infinite alternate ease-in-out;
-  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  background: rgba(212, 175, 55, 0.1);
+  color: #d4af37;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  animation: badge-breathe 2.5s infinite ease-in-out;
 }
 
-@keyframes badge-pulse {
-  0% {
-    background: rgba(212, 175, 55, 0.1); /* Gold shadow */
-    color: #d4af37; /* Gold gold */
-    border-color: rgba(212, 175, 55, 0.2);
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+.animated-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: shine-sweep 4s infinite;
+}
+
+@keyframes badge-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
   }
-  100% {
-    background: rgba(94, 141, 178, 0.1); /* Blue shadow */
-    color: var(--primary); /* Deep blue */
-    border-color: rgba(94, 141, 178, 0.2);
-    box-shadow: 0 0 15px rgba(94, 141, 178, 0.1);
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 22px rgba(212, 175, 55, 0.4);
   }
+}
+
+@keyframes shine-sweep {
+  0% { left: -100%; }
+  15% { left: 200%; }
+  100% { left: 200%; }
 }
 
 .professional-cta-btn {

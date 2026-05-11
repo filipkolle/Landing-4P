@@ -15,10 +15,7 @@ const TermsOfService = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <button className="pp-back-btn floating" onClick={() => navigate('/')} aria-label="Nazaj">
-        <ArrowLeft size={22} />
-        <span>Nazaj</span>
-      </button>
+
 
       <motion.div
         className="pp-panel standalone"

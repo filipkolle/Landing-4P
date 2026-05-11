@@ -57,8 +57,8 @@ const ProblemSolution = () => {
           <div className="comparison-grid">
             <motion.div
               className="comparison-card problem"
-              initial={{ opacity: 0, x: -30, filter: 'blur(5px)' }}
-              whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-100px' }}
               transition={{ duration: 1, ease: expoOut }}
             >
@@ -95,8 +95,8 @@ const ProblemSolution = () => {
  
             <motion.div
               className="comparison-card solution"
-              initial={{ opacity: 0, x: 30, filter: 'blur(5px)' }}
-              whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-100px' }}
               transition={{ duration: 1, ease: expoOut }}
             >

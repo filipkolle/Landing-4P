@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users, ArrowRight, Clock, Wallet } from 'lucide-react';
+import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Users, ArrowRight, Clock, Wallet, Apple, Play } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
+import phoneMockup from '../assets/mockups/phone_3d_v2.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
@@ -40,16 +41,25 @@ const AboutPage = () => {
       
       {/* 1. Hook / Hero */}
       <section className="about-hero">
+        <div className="hero-blobs aurora-bg">
+          <div className="aurora-blob aurora-1"></div>
+          <div className="aurora-blob aurora-2"></div>
+          <div className="aurora-blob aurora-3"></div>
+          <div className="aurora-blob aurora-4"></div>
+        </div>
         <div className="container">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 1.2, ease: expoOut }}
+            className="about-hero-container"
           >
             <h1>Finance za <span className="blue-text">ljudi!</span></h1>
-            <p className="hook-desc">
-              Zgodba o digitalnem asistentu, ustvarjenem, da povrne nadzor tistim, ki cenijo svoj čas in trdo prislužen denar.
-            </p>
+            <div className="about-hero-content">
+              <p className="hook-desc">
+                Zgodba o digitalnem asistentu, ustvarjenem, da povrne nadzor tistim, ki cenijo svoj čas in trdo prislužen denar.
+              </p>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -281,17 +291,37 @@ const AboutPage = () => {
               <p>
                 Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
               </p>
-              <button 
-                className="cta-primary-btn"
-                onClick={() => navigate('/waitlist')}
-              >
-                Pridruži se zdaj!
-                <ArrowRight size={20} />
-              </button>
+              
+              <div className="store-buttons" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '20px' }}>
+                <a 
+                  href="https://apps.apple.com/si/app/finance-4p/id6762084663" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="cta-primary-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', backgroundColor: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '12px' }}
+                >
+                  <Apple size={28} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>Prenesi v</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>App Store</span>
+                  </div>
+                </a>
+                <button 
+                  onClick={() => navigate('/cakalna-vrsta')}
+                  className="cta-primary-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'var(--bg-glass)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '10px 20px', borderRadius: '12px' }}
+                >
+                  <Play size={28} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>Za Android</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>Pridruži se</span>
+                  </div>
+                </button>
+              </div>
             </div>
             
-            <div className="cta-right">
-              <img src={ctaWomanImg} alt="Finance 4P" className="cta-featured-image" />
+            <div className="cta-right" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
+              <img src={phoneMockup} alt="Finance 4P" className="cta-featured-image" style={{ maxHeight: '400px', objectFit: 'contain' }} />
             </div>
           </motion.div>
         </div>

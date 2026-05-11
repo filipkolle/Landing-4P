@@ -11,8 +11,16 @@ const Hero = () => {
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    let timeout;
+    const debouncedCheck = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(checkMobile, 150);
+    };
+    window.addEventListener('resize', debouncedCheck);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', debouncedCheck);
+    };
   }, []);
 
   const { scrollYProgress } = useScroll({

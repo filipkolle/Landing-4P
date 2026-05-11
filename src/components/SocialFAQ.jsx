@@ -77,8 +77,8 @@ const SocialFAQ = () => {
             <motion.div
               key={index}
               className="faq-item"
-              initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
-              whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.6, delay: index * 0.08, ease: expoOut }}
             >

@@ -46,11 +46,10 @@ const FeaturesGrid = () => {
   };
 
   const itemVars = {
-    before: { opacity: 0, y: 30, filter: 'blur(10px)' },
+    before: { opacity: 0, y: 30 },
     after: { 
       opacity: 1, 
       y: 0, 
-      filter: 'blur(0px)',
       transition: { ease: [0.19, 1, 0.22, 1], duration: 0.8 }
     }
   };
