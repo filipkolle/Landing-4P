@@ -36,10 +36,12 @@ const SubscribeCTA = () => {
               
               <div className="store-buttons" style={{ 
                 display: 'flex', 
-                gap: '20px', 
-                flexWrap: 'wrap', 
+                gap: '15px', 
+                flexWrap: 'nowrap', 
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                width: '100%',
+                marginTop: '10px'
               }}>
                 {/* Official App Store Button */}
                 <a 
@@ -48,7 +50,9 @@ const SubscribeCTA = () => {
                   rel="noopener noreferrer"
                   style={{ 
                     transition: 'transform 0.2s',
-                    display: 'inline-block'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                   onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -56,7 +60,7 @@ const SubscribeCTA = () => {
                   <img 
                     src={appStoreBadge} 
                     alt="Download on the App Store" 
-                    style={{ height: '54px', width: 'auto' }}
+                    style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
                   />
                 </a>
 
@@ -69,7 +73,9 @@ const SubscribeCTA = () => {
                     padding: 0,
                     cursor: 'pointer',
                     transition: 'transform 0.2s',
-                    display: 'inline-block'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                   onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -77,7 +83,7 @@ const SubscribeCTA = () => {
                   <img 
                     src={androidBadge} 
                     alt="Za Android Pridruži se" 
-                    style={{ height: '54px', width: 'auto' }}
+                    style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
                   />
                 </button>
               </div>
