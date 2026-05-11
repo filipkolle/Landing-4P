@@ -292,28 +292,60 @@ const AboutPage = () => {
                 Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
               </p>
               
-              <div className="store-buttons" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '20px' }}>
+              <div className="store-buttons" style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                flexWrap: 'wrap', 
+                marginTop: '30px',
+                justifyContent: 'flex-start'
+              }}>
                 <a 
                   href="https://apps.apple.com/si/app/finance-4p/id6762084663" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="cta-primary-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', backgroundColor: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '12px' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    textDecoration: 'none', 
+                    backgroundColor: '#000', 
+                    color: '#fff', 
+                    padding: '8px 20px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    minWidth: '170px',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                   <Apple size={28} />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>Prenesi v</span>
+                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Download on the</span>
                     <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>App Store</span>
                   </div>
                 </a>
                 <button 
                   onClick={() => navigate('/cakalna-vrsta')}
-                  className="cta-primary-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'var(--bg-glass)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '10px 20px', borderRadius: '12px' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    backgroundColor: '#000', 
+                    color: '#fff', 
+                    padding: '8px 20px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    minWidth: '170px',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <Play size={28} />
+                  <Play size={24} fill="white" />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>Za Android</span>
+                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Za Android</span>
                     <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>Pridruži se</span>
                   </div>
                 </button>

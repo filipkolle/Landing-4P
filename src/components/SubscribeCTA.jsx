@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Apple, Play } from 'lucide-react';
+import { Apple, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import phoneMockup from '../assets/mockups/phone_3d_v2.png';
 
@@ -18,48 +18,93 @@ const SubscribeCTA = () => {
           transition={{ duration: 0.8, ease: [0.19, 1, 0.22, 1] }}
           style={{ overflow: 'hidden', padding: 0 }}
         >
-          <div className="subscribe-grid" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="subscribe-content" style={{ flex: '1 1 300px', padding: '40px' }}>
-              <div className="cta-badge animated-badge" style={{ width: 'fit-content' }}>
-                <Star size={16} fill="currentColor" style={{ marginRight: '8px' }} />
-                <span>Omejen dostop</span>
-              </div>
-              <h3 style={{ marginTop: '20px', marginBottom: '15px' }}><span className="highlight-blue">Bodi prvi</span>, ki uporablja Finance 4P</h3>
-              <p style={{ marginBottom: '30px' }}>Aplikacija je že na voljo za iOS naprave, za Android pa se pridruži čakalni vrsti.</p>
+          <div className="subscribe-grid" style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            padding: '40px 20px'
+          }}>
+            <div className="subscribe-content" style={{ maxWidth: '600px', marginBottom: '40px' }}>
+              <h3 style={{ fontSize: '2.5rem', marginBottom: '15px' }}>
+                <span className="highlight-blue">Bodi prvi</span>, ki uporablja Finance 4P
+              </h3>
+              <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', marginBottom: '30px' }}>
+                Aplikacija je že na voljo za iOS naprave, za Android pa se pridruži čakalni vrsti.
+              </p>
               
-              <div className="store-buttons" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+              <div className="store-buttons" style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                flexWrap: 'wrap', 
+                justifyContent: 'center' 
+              }}>
+                {/* Official App Store Button */}
                 <a 
                   href="https://apps.apple.com/si/app/finance-4p/id6762084663" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="professional-cta-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', backgroundColor: '#000', color: '#fff', border: 'none' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    textDecoration: 'none', 
+                    backgroundColor: '#000', 
+                    color: '#fff', 
+                    padding: '8px 20px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    minWidth: '170px',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <Apple size={24} />
+                  <Apple size={28} />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>Prenesi v</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.1 }}>App Store</span>
+                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Download on the</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>App Store</span>
                   </div>
                 </a>
+
+                {/* Official-looking Play Store Button (Join Waitlist) */}
                 <button 
                   onClick={() => navigate('/cakalna-vrsta')}
-                  className="professional-cta-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-main)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    backgroundColor: '#000', 
+                    color: '#fff', 
+                    padding: '8px 20px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    minWidth: '170px',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <Play size={24} />
+                  <Play size={24} fill="white" />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>Za Android</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.1 }}>Pridruži se</span>
+                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', lineHeight: 1 }}>Za Android</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 600, lineHeight: 1.1 }}>Pridruži se</span>
                   </div>
                 </button>
               </div>
             </div>
             
-            <div className="subscribe-visual" style={{ flex: '1 1 300px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingTop: '20px' }}>
+            <div className="subscribe-visual" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
               <img 
                 src={phoneMockup} 
-                alt="Finance 4P App na telefonu" 
-                style={{ maxHeight: '350px', objectFit: 'contain', marginBottom: '-20px' }} 
+                alt="Finance 4P App" 
+                style={{ 
+                  width: '100%',
+                  maxWidth: '320px', 
+                  height: 'auto',
+                  objectFit: 'contain'
+                }} 
               />
             </div>
           </div>
@@ -70,4 +115,5 @@ const SubscribeCTA = () => {
 };
 
 export default SubscribeCTA;
+
 
