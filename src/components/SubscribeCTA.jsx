@@ -25,7 +25,7 @@ const SubscribeCTA = () => {
           }}>
             <div className="subscribe-content" style={{ maxWidth: '550px', width: '100%' }}>
               <h3 style={{ fontSize: '1.8rem', marginBottom: '12px', lineHeight: 1.2 }}>
-                <span className="highlight-blue">Bodi prvi</span>, ki uporablja Finance 4P
+                <span className="highlight-blue">Uporabi svojega</span> Finance 4P asistenta.
               </h3>
               <p style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '25px', lineHeight: 1.5 }}>
                 Aplikacija je že na voljo za iOS naprave, za Android pa se pridruži čakalni vrsti.
