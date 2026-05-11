@@ -28,7 +28,7 @@ const SubscribeCTA = () => {
                 <span className="highlight-blue">Uporabi svojega</span> Finance 4P asistenta.
               </h3>
               <p style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '25px', lineHeight: 1.5 }}>
-                Prenesi aplikacijo, Izberi si svojega asistenta in prevzami nadzor nad svojim življenskim slogom!
+                Brezplačno prenesi aplikacijo, izberi asistenta in prevzami nadzor nad svojim življenskim slogom!
               </p>
                           <div className="store-buttons" style={{ 
                 display: 'flex', 
