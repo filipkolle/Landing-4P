@@ -1470,22 +1470,11 @@
   .section-padding { padding: 40px 0; }
 
   /* Subscribe CTA */
-  .subscribe-cta-section { margin-top: calc(-50vh + 150px); padding: 16px 0 40px; }
+  .subscribe-cta-section { margin-top: calc(-50vh + 40px); padding: 16px 0 40px; }
   .subscribe-cta-card { padding: 20px 16px; border-radius: 20px; }
   .subscribe-content h3 { font-size: 1.35rem; }
   .subscribe-content p { font-size: 0.9rem; }
-
-  /* Feature Switcher tabs */
-  .tabs-capsule { border-radius: 16px; }
-  .tab-capsule-btn { padding: 6px 10px; font-size: 0.7rem; }
-  .display-title { font-size: 1.4rem; }
-
-  /* Problem/Solution */
-  .comparison-card { padding: 24px 16px; }
-
-  /* Footer */
-  .footer-links { flex-direction: column; gap: 24px; }
-  .footer-bottom { font-size: 0.78rem; }
+  .store-buttons { margin-top: 15px; }
 }
 
 /* ===========================
@@ -1493,10 +1482,10 @@
    =========================== */
 .subscribe-cta-section {
   background: var(--bg-light);
-  padding: 60px 0 100px;
+  padding: 40px 0 80px;
   position: relative;
   z-index: 40;
-  margin-top: 20px; /* Moved lower to balance space between hero and problem section */
+  margin-top: -60px; /* Pulls content closer to hero mockups */
 }
 
 .subscribe-cta-card {
