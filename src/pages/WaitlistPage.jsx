@@ -102,7 +102,7 @@ const WaitlistPage = () => {
               </motion.h1>
               
               <motion.p className="waitlist-subtitle" variants={itemVars}>
-                Za namestitev Android aplikacije nam posreduj svoje podatke. <br/><strong style={{color: 'var(--text-main)', display: 'block', marginTop: '8px'}}>Pomembno: Vnesi e-poštni naslov, s katerim si prijavljen/-a v Google Play trgovino.</strong>
+                Za namestitev Android aplikacije nam posreduj naslednje podatke. <br/><strong style={{color: 'var(--text-main)', display: 'block', marginTop: '8px'}}>Pomembno: Vnesi e-poštni naslov, s katerim si prijavljen/-a v Google Play trgovino.</strong>
               </motion.p>
 
               <AnimatePresence mode="wait">
