@@ -48,7 +48,7 @@ const WaitlistPage = () => {
           setErrorMessage('Vnesi veljaven e-poštni naslov.');
         } else {
           // Default to the message the user wants most
-          setErrorMessage('Ta naslov je že v čakalni vrsti!');
+          setErrorMessage('Ta naslov je že prejel dostop!');
         }
         setStatus('error');
       }
@@ -98,11 +98,11 @@ const WaitlistPage = () => {
           >
             <div className="waitlist-main-card">
               <motion.h1 variants={itemVars}>
-                Bodi med <span className="highlight-waitlist">prvimi</span>, ki <br /> uporabljajo <span className="highlight-waitlist">Finance 4P</span>
+                Pridobi <span className="highlight-waitlist">Google Play</span> <br /> dostop do aplikacije
               </motion.h1>
               
               <motion.p className="waitlist-subtitle" variants={itemVars}>
-                Pridruži se čakalni vrsti in si zagotovi dostop do Finance 4P aplikacije še pred tem, ko bo na voljo širši javnosti.
+                Za namestitev Android aplikacije nam posreduj svoje podatke. <br/><strong style={{color: 'var(--text-main)', display: 'block', marginTop: '8px'}}>Pomembno: Vnesi e-poštni naslov, s katerim si prijavljen/-a v Google Play trgovino.</strong>
               </motion.p>
 
               <AnimatePresence mode="wait">
@@ -136,7 +136,7 @@ const WaitlistPage = () => {
                         </div>
                         <input 
                           type="email" 
-                          placeholder="E-poštni naslov" 
+                          placeholder="Google Play e-poštni naslov" 
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           disabled={status === 'loading'}
@@ -168,7 +168,7 @@ const WaitlistPage = () => {
                           <div className="spinner" />
                         ) : (
                           <>
-                            <span>Pridruži se</span>
+                            <span>Zahtevaj dostop</span>
                             <ArrowRight size={18} />
                           </>
                         )}
@@ -200,8 +200,8 @@ const WaitlistPage = () => {
                     <div className="success-icon-circle">
                       <Check size={40} strokeWidth={3} />
                     </div>
-                    <h2>Uspešno si se pridružil čakalni vrsti!</h2>
-                    <p>Kmalu boš prejel več informacij na svoj e-poštni naslov.</p>
+                    <h2>Uspešno si oddal/-a podatke!</h2>
+                    <p>Kmalu ti bomo omogočili prenos aplikacije v Google Play trgovini.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -210,18 +210,18 @@ const WaitlistPage = () => {
             <motion.div className="waitlist-info-grid" variants={itemVars}>
               <div className="info-card">
                 <Clock className="info-icon" />
-                <h3>Prvi v vrsti</h3>
-                <p>Uporabniki na čakalni vrsti bodo aplikacijo prejeli 2 tedna pred uradnim izidom.</p>
+                <h3>Hitra odobritev</h3>
+                <p>Tvoj e-poštni naslov bomo pregledali in ti v najkrajšem možnem času omogočili prenos aplikacije.</p>
               </div>
               <div className="info-card">
                 <Rocket className="info-icon" />
                 <h3>Brezplačna uporaba</h3>
-                <p>Osnovna verzija aplikacije je popolnoma brezplačna za vse uporabnike.</p>
+                <p>Aplikacija je v fazi testiranja popolnoma brezplačna za vse Android uporabnike.</p>
               </div>
               <div className="info-card">
                 <Shield className="info-icon" />
                 <h3>Varnost podatkov</h3>
-                <p>Tvoji podatki so pri nas varni. Pošiljali ti bomo le pomembne novice o izidu.</p>
+                <p>Tvoj e-poštni naslov bo uporabljen izključno za dodelitev dostopa v sistemu Google Play.</p>
               </div>
             </motion.div>
           </motion.div>
