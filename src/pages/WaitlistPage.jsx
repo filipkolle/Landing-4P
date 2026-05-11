@@ -216,7 +216,7 @@ const WaitlistPage = () => {
               <div className="info-card">
                 <Rocket className="info-icon" />
                 <h3>Brezplačna uporaba</h3>
-                <p>Aplikacija je v fazi testiranja popolnoma brezplačna za vse Android uporabnike.</p>
+                <p>Aplikacija je popolnoma brezplačna za vse Android uporabnike.</p>
               </div>
               <div className="info-card">
                 <Shield className="info-icon" />
