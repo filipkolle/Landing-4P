@@ -103,7 +103,7 @@ const SubscribeCTA = () => {
                     <span style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' }}>Google Play</span>
                   </div>
                 </button>
-              </div>iv>
+              </div>
             </div>
           </div>
         </motion.div>
