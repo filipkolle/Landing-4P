@@ -10,14 +10,14 @@
 /* 1. Hook / Hero */
 .about-hero {
   position: relative;
-  min-height: 100vh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   background: #f8fafc;
   overflow: hidden;
-  padding: 80px 0; /* Keep some padding for navbar space */
+  padding: 60px 0;
 }
 
 .hero-blobs {
@@ -154,7 +154,7 @@
 
 /* 2. My Story */
 .story-section {
-  padding: 100px 0;
+  padding: 60px 0;
 }
 
 .story-grid {
@@ -221,7 +221,7 @@
 
 /* 3. Mission */
 .mission-section {
-  padding: 120px 0;
+  padding: 80px 0;
 }
 
 .mission-quotes {
@@ -289,7 +289,7 @@
 
 /* 5. Vision - LIGHT VERSION */
 .vision-social-section {
-  padding: 120px 0;
+  padding: 80px 0;
 }
 
 .vision-container {
@@ -437,7 +437,7 @@
 
 /* 6. Waitlist */
 .about-cta-section {
-  padding: 120px 0;
+  padding: 60px 0;
 }
 
 /* Hybrid CTA Section Style */
