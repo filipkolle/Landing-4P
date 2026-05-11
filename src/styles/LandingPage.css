@@ -461,9 +461,9 @@
 
 .card-header {
   display: flex;
-  flex-direction: row; /* Force horizontal alignment */
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-start; /* Align to the left */
+  justify-content: center; /* Center horizontally */
   gap: 16px;
   margin-bottom: 24px;
 }
