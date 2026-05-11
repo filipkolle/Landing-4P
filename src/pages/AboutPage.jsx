@@ -5,7 +5,7 @@ import { Target, Award, Rocket, Check, Mail, Handshake, Heart, MessageCircle, Us
 import Navbar from '../components/Navbar';
 import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
-import phoneMockup from '../assets/mockups/phone_3d_v2.png';
+
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
@@ -219,7 +219,7 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: expoOut }}
           >
-            <div className="cta-left">
+            <div className="cta-left" style={{ textAlign: 'center', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h2>Začni svojo pot</h2>
               <p>
                 Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
@@ -230,7 +230,7 @@ const AboutPage = () => {
                 gap: '15px', 
                 flexWrap: 'nowrap', 
                 marginTop: '30px',
-                justifyContent: 'flex-start',
+                justifyContent: 'center',
                 alignItems: 'center'
               }}>
                 <a 
@@ -297,9 +297,7 @@ const AboutPage = () => {
               </div>
             </div>
             
-            <div className="cta-right" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
-              <img src={phoneMockup} alt="Finance 4P" className="cta-featured-image" style={{ maxHeight: '400px', objectFit: 'contain' }} />
-            </div>
+
           </motion.div>
         </div>
       </section>
