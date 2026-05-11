@@ -98,7 +98,7 @@ const WaitlistPage = () => {
           >
             <div className="waitlist-main-card">
               <motion.h1 variants={itemVars}>
-                Pridobi <span className="highlight-waitlist">Google Play</span> <br /> dostop do aplikacije
+                Pridobi dostop do <span className="highlight-waitlist">Google Play</span> <br /> aplikacije
               </motion.h1>
               
               <motion.p className="waitlist-subtitle" variants={itemVars}>
