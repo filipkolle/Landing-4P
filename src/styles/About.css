@@ -477,7 +477,7 @@
 }
 
 .cta-left h2 {
-  font-size: 2.8rem;
+  font-size: 3.2rem;
   font-weight: 850;
   color: #0c1e21;
   margin-bottom: 20px;
@@ -486,7 +486,7 @@
 }
 
 .cta-left p {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   line-height: 1.6;
   color: var(--text-muted);
   margin-bottom: 32px;
@@ -712,7 +712,8 @@
   .vision-lead-heading { font-size: 1.5rem !important; margin-bottom: 24px; }
   .vision-lead-heading span.blue-text { white-space: nowrap !important; display: inline; }
   .vision-solution { font-size: 1.1rem; }
-  .cta-left h2 { font-size: 1.8rem; }
+  .cta-left h2 { font-size: 2.2rem; }
+  .cta-left p { font-size: 1.15rem; }
   .statement-sub { font-size: 1.15rem; }
 
   .step-title { 
