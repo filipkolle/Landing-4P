@@ -390,7 +390,7 @@
 .problem-solution {
   position: relative;
   z-index: 30; /* Transition layering */
-  background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg-light) 80%, #ffffff 100%);
+  background: var(--bg-light);
   margin-top: -1px; /* Seamless overlap */
 }
 
@@ -818,7 +818,7 @@
    FEATURES GRID
    =========================== */
 .features-grid-section {
-  background: #fff;
+  background: var(--bg-light);
 }
 
 .features-grid {
