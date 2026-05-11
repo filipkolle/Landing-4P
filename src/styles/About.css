@@ -577,13 +577,12 @@
 /* Hybrid CTA Section Style */
 .about-hybrid-cta {
   position: relative;
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-  border-radius: 48px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+  border: none;
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   overflow: hidden;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   min-height: 500px;
   margin: 0 auto;
   max-width: 1100px;
@@ -652,7 +651,7 @@
 
 .cta-right {
   position: relative;
-  background: #ffffff;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;

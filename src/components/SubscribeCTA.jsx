@@ -11,7 +11,7 @@ const SubscribeCTA = () => {
     <section className="subscribe-cta-section">
       <div className="container">
         <motion.div 
-          className="subscribe-cta-card glass-card"
+          className="subscribe-cta-card"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
