@@ -461,9 +461,11 @@
 
 .card-header {
   display: flex;
+  flex-direction: row; /* Force horizontal alignment */
   align-items: center;
+  justify-content: flex-start; /* Align to the left */
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .icon-box {
