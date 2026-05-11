@@ -2,8 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import phoneMockup from '../assets/mockups/phone_3d_v2.png';
-import appStoreBadge from '../assets/app_store_badge.png';
-import androidBadge from '../assets/android_badge.png';
 
 const SubscribeCTA = () => {
   const navigate = useNavigate();

@@ -6,8 +6,6 @@ import Navbar from '../components/Navbar';
 import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
 import phoneMockup from '../assets/mockups/phone_3d_v2.png';
-import appStoreBadge from '../assets/app_store_badge.png';
-import androidBadge from '../assets/android_badge.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
