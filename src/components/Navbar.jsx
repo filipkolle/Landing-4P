@@ -17,12 +17,6 @@ const Navbar = () => {
             <Link to="/" className="nav-link">Domov</Link>
             <Link to="/o-nas" className="nav-link">O nas</Link>
           </div>
-          <Link
-            to="/cakalna-vrsta"
-            className="navbar-cta-btn"
-          >
-            Pridruži se
-          </Link>
         </div>
       </div>
     </nav>
