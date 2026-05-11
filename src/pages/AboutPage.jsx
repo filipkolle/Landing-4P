@@ -220,7 +220,7 @@ const AboutPage = () => {
             transition={{ duration: 1.2, ease: expoOut }}
           >
             <div className="cta-left" style={{ textAlign: 'center', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h2>Začni svojo pot</h2>
+              <h2>Začni <span className="blue-text">svojo pot</span></h2>
               <p>
                 Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
               </p>
