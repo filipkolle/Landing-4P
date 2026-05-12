@@ -193,23 +193,23 @@ const Hero = () => {
                 textDecoration: 'none', 
                 backgroundColor: '#000', 
                 color: '#fff', 
-                padding: isMobile ? '8px 12px' : '12px 20px',
+                padding: isMobile ? '8px 12px' : '10px 20px',
                 borderRadius: '16px',
                 width: isMobile ? '160px' : '210px',
                 height: isMobile ? '52px' : '64px',
                 transition: 'transform 0.2s',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                border: '1px solid rgba(255,255,255,0.1)'
               }}
               onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
               onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
-              <svg viewBox="0 0 448 512" width={isMobile ? "28" : "34"} height={isMobile ? "28" : "34"}>
-                <rect x="0" y="32" width="448" height="448" rx="100" fill="#fff"/>
-                <path fill="#0A84FF" d="M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zM127 384.5c-5.5 9.6-17.8 12.8-27.3 7.3-9.6-5.5-12.8-17.8-7.3-27.3l14.3-24.7c16.1-4.9 29.3-1.1 39.6 11.4L127 384.5zm138.9-53.9H84c-11 0-20-9-20-20s9-20 20-20h51l65.4-113.2-20.5-35.4c-5.5-9.6-2.2-21.8 7.3-27.3 9.6-5.5 21.8-2.2 27.3 7.3l8.9 15.4 8.9-15.4c5.5-9.6 17.8-12.8 27.3-7.3 9.6 5.5 12.8 17.8 7.3 27.3l-85.8 148.6h62.1c20.2 0 31.5 23.7 22.7 40zm98.1 0h-29l19.6 33.9c5.5 9.6 2.2 21.8-7.3 27.3-9.6 5.5-21.8 2.2-27.3-7.3-32.9-56.9-57.5-99.7-74-128.1-16.7-29-4.8-58 7.1-67.8 13.1 22.7 32.7 56.7 58.9 102h52c11 0 20 9 20 20 0 11.1-9 20-20 20z"/>
+              <svg viewBox="0 0 384 512" width={isMobile ? "22" : "28"} height={isMobile ? "22" : "28"} fill="#fff" style={{ marginBottom: '2px' }}>
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
               </svg>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-                <span style={{ fontSize: isMobile ? '0.6rem' : '0.8rem', lineHeight: 1.1, letterSpacing: '0.01em', fontWeight: 500 }}>Available on the</span>
-                <span style={{ fontSize: isMobile ? '1.1rem' : '1.4rem', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' }}>App Store</span>
+                <span style={{ fontSize: isMobile ? '0.6rem' : '0.75rem', lineHeight: 1.1, letterSpacing: '0.02em', fontWeight: 500, opacity: 0.9 }}>Download on the</span>
+                <span style={{ fontSize: isMobile ? '1.1rem' : '1.35rem', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', marginTop: '1px' }}>App Store</span>
               </div>
             </a>
 
@@ -222,27 +222,27 @@ const Hero = () => {
                 gap: isMobile ? '8px' : '12px', 
                 backgroundColor: '#000', 
                 color: '#fff', 
-                padding: isMobile ? '8px 12px' : '12px 20px',
+                padding: isMobile ? '8px 12px' : '10px 20px',
                 borderRadius: '16px',
                 width: isMobile ? '160px' : '210px',
                 height: isMobile ? '52px' : '64px',
                 cursor: 'pointer',
-                border: 'none',
+                border: '1px solid rgba(255,255,255,0.1)',
                 transition: 'transform 0.2s',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
               }}
               onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
               onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
-              <svg viewBox="0 0 512 512" width={isMobile ? "24" : "30"} height={isMobile ? "24" : "30"} style={{ marginLeft: '4px' }}>
+              <svg viewBox="0 0 512 512" width={isMobile ? "24" : "30"} height={isMobile ? "24" : "30"}>
                 <path fill="#4caf50" d="M47.7 29.5C41 33.7 36 41 36 50.8v410.4c0 9.8 5 17.1 11.7 21.3L253 277 47.7 29.5z"/>
                 <path fill="#fbc02d" d="M336.8 378L253 277l83.8-101 64.9 36.8c18.5 10.5 18.5 27.6 0 38.1l-64.9 37.1z"/>
                 <path fill="#e53935" d="M47.7 482.5c6.3 4 14.9 4 24.3-1.3l264.8-150.9L253 277 47.7 482.5z"/>
                 <path fill="#2196f3" d="M72 30.8C62.6 25.5 54 25.5 47.7 29.5L253 277l83.8-101L72 30.8z"/>
               </svg>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-                <span style={{ fontSize: isMobile ? '0.6rem' : '0.8rem', textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.01em', fontWeight: 500 }}>GET IT ON</span>
-                <span style={{ fontSize: isMobile ? '1.1rem' : '1.4rem', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' }}>Google Play</span>
+                <span style={{ fontSize: isMobile ? '0.6rem' : '0.75rem', textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.02em', fontWeight: 500, opacity: 0.9 }}>GET IT ON</span>
+                <span style={{ fontSize: isMobile ? '1.1rem' : '1.35rem', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', marginTop: '1px' }}>Google Play</span>
               </div>
             </button>
           </div>
