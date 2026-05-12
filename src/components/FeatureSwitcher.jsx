@@ -104,7 +104,7 @@ const FeatureSwitcher = () => {
           style={{ marginBottom: '100px' }}
         >
           <div className="idea-content">
-            <h2 style={{ textAlign: 'left', margin: 0 }}>Ena navada <br/><span className="highlight-blue">Dva rezultata</span></h2>
+            <h2 style={{ textAlign: 'center', margin: 0 }}>Ena navada <br/><span className="highlight-blue">Dva rezultata</span></h2>
             <p style={{ marginTop: '24px' }}>
               Vi beležite ure, aplikacija vodi finance.<br/>
               Zakaj si ne bi poenostavili spremljanja osebnih financ in ubili dve muhi na en mah?
