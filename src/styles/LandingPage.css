@@ -1488,6 +1488,16 @@
   margin-top: -60px; /* Pulls content closer to hero mockups */
 }
 
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block !important;
+  }
+}
+
 .subscribe-cta-card {
   padding: 48px;
   border-radius: 32px;

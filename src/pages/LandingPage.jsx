@@ -14,14 +14,7 @@ function LandingPage() {
       <Navbar />
       <main>
         <Hero />
-        <div className="mobile-only-cta" style={{ display: 'none' }}>
-          <SubscribeCTA />
-        </div>
-        <style>{`
-          @media (max-width: 768px) {
-            .mobile-only-cta { display: block !important; }
-          }
-        `}</style>
+        <SubscribeCTA className="mobile-only" />
         <ProblemSolution />
         <FeatureSwitcher />
         <FeaturesGrid />

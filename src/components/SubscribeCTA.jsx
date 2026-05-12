@@ -2,11 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-const SubscribeCTA = () => {
+const SubscribeCTA = ({ className = "" }) => {
   const navigate = useNavigate();
 
   return (
-    <section className="subscribe-cta-section" style={{ padding: '60px 0' }}>
+    <section className={`subscribe-cta-section ${className}`} style={{ padding: '60px 0' }}>
       <div className="container" style={{ padding: '0 20px' }}>
         <motion.div 
           className="subscribe-cta-card"
