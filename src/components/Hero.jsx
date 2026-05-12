@@ -146,7 +146,7 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
           style={{ 
-            marginTop: isMobile ? '20px' : '40px', 
+            marginTop: isMobile ? '20px' : '20px', 
             textAlign: 'center', 
             zIndex: 100,
             width: '100%',

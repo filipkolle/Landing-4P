@@ -138,8 +138,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 100px; /* Reduced further to lift content */
-  padding-bottom: 80px; /* Added padding at the bottom for breathing room */
+  padding-top: 170px; /* Increased to ensure content is below the floating navbar */
+  padding-bottom: 80px; /* Space for the bottom buttons */
   overflow: visible;
   background: transparent;
   z-index: 20;
