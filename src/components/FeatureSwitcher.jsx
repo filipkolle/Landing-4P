@@ -4,7 +4,6 @@ import { Clock, Wallet } from 'lucide-react';
 import workImg from '../assets/mockups/work_v5.png';
 import financeImg from '../assets/mockups/finance_v4.png';
 import dashboardImg from '../assets/mockups/dashboard_v3.png';
-import ideaImage from '../assets/idea_image.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
@@ -102,79 +101,61 @@ const FeatureSwitcher = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1, ease: expoOut }}
+          style={{ marginBottom: '100px' }}
         >
-          {/* Desktop background textures */}
-          <div className="idea-card-bg-texture desktop-only"></div>
-          <div className="idea-card-glow desktop-only"></div>
-
-          {/* Left side: Original content */}
-          <div className="idea-card-left">
-            <div className="idea-content">
-              <h2 style={{ textAlign: 'center', margin: 0 }}>Ena navada <br/><span className="highlight-blue">Dva rezultata</span></h2>
-              <p style={{ marginTop: '24px' }}>
-                Vi beležite ure, aplikacija vodi finance.<br/>
-                Zakaj si ne bi poenostavili spremljanja osebnih financ in ubili dve muhi na en mah?
-              </p>
-            </div>
-            <div className="idea-visual">
-              <motion.div 
-                className="idea-icon-box blue-box"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-              >
-                <Clock size={36} />
-                <span>Čas</span>
-              </motion.div>
-              
-              <div className="idea-connector">
-                <motion.div 
-                  className="conn-line"
-                  initial={{ scaleX: 0, opacity: 0 }}
-                  whileInView={{ scaleX: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                  style={{ transformOrigin: "left center" }}
-                />
-                <motion.div 
-                  className="conn-plus"
-                  initial={{ scale: 0, rotate: -90 }}
-                  whileInView={{ scale: 1, rotate: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                >
-                  +
-                </motion.div>
-                <motion.div 
-                  className="conn-line"
-                  initial={{ scaleX: 0, opacity: 0 }}
-                  whileInView={{ scaleX: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  style={{ transformOrigin: "right center" }}
-                />
-              </div>
-              
-              <motion.div 
-                className="idea-icon-box green-box"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 1.75 }}
-              >
-                <Wallet size={36} />
-                <span>Denar</span>
-              </motion.div>
-            </div>
+          <div className="idea-content">
+            <h2 style={{ textAlign: 'center', margin: 0 }}>Ena navada <br/><span className="highlight-blue">Dva rezultata</span></h2>
+            <p style={{ marginTop: '24px' }}>
+              Vi beležite ure, aplikacija vodi finance.<br/>
+              Zakaj si ne bi poenostavili spremljanja osebnih financ in ubili dve muhi na en mah?
+            </p>
           </div>
-
-          {/* Right side: New image (desktop only) */}
-          <div className="idea-card-right desktop-only">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 20 }}
-              whileInView={{ opacity: 1, scale: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, ease: expoOut, delay: 0.3 }}
+          <div className="idea-visual">
+            <motion.div 
+              className="idea-icon-box blue-box"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
             >
-              <img src={ideaImage} alt="Finance 4P Idea" style={{ width: '100%', maxWidth: '450px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+              <Clock size={36} />
+              <span>Čas</span>
+            </motion.div>
+            
+            <div className="idea-connector">
+              <motion.div 
+                className="conn-line"
+                initial={{ scaleX: 0, opacity: 0 }}
+                whileInView={{ scaleX: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                style={{ transformOrigin: "left center" }}
+              />
+              <motion.div 
+                className="conn-plus"
+                initial={{ scale: 0, rotate: -90 }}
+                whileInView={{ scale: 1, rotate: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
+                whileHover={{ scale: 1.1, rotate: 90 }}
+              >
+                +
+              </motion.div>
+              <motion.div 
+                className="conn-line"
+                initial={{ scaleX: 0, opacity: 0 }}
+                whileInView={{ scaleX: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                style={{ transformOrigin: "right center" }}
+              />
+            </div>
+            
+            <motion.div 
+              className="idea-icon-box green-box"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 1.75 }}
+            >
+              <Wallet size={36} />
+              <span>Denar</span>
             </motion.div>
           </div>
         </motion.div>
