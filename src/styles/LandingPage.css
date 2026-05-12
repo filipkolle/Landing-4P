@@ -138,7 +138,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 120px; /* Reduced from 145px to give bottom content more space */
+  padding-top: 100px; /* Reduced further to lift content */
+  padding-bottom: 80px; /* Added padding at the bottom for breathing room */
   overflow: visible;
   background: transparent;
   z-index: 20;
@@ -151,11 +152,10 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: -80px; /* Extends below the section to avoid cutting off buttons */
+  bottom: -120px; /* Extended further to ensure background covers the padding area */
   z-index: 0;
   background: linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 95%);
-  mask-image: linear-gradient(to bottom, black 50%, transparent 95%);
+  /* Removed mask-image which was likely causing the 'cut-off' look on desktop buttons */
 }
 
 .hero-logo-morph {
