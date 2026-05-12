@@ -295,13 +295,12 @@
 .vision-container {
   max-width: 1000px;
   margin: 0 auto;
-  background: linear-gradient(135deg, rgba(240, 253, 250, 0.8) 0%, rgba(224, 242, 254, 0.8) 100%);
-  backdrop-filter: blur(20px);
+  background: #ffffff;
   padding: 100px 80px;
   border-radius: 64px;
   text-align: center;
-  box-shadow: 0 40px 100px rgba(94, 141, 178, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   position: relative;
 }
 

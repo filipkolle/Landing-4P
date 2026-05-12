@@ -42,12 +42,6 @@ const AboutPage = () => {
       
       {/* 1. Hook / Hero */}
       <section className="about-hero">
-        <div className="hero-blobs aurora-bg">
-          <div className="aurora-blob aurora-1"></div>
-          <div className="aurora-blob aurora-2"></div>
-          <div className="aurora-blob aurora-3"></div>
-          <div className="aurora-blob aurora-4"></div>
-        </div>
         <div className="container">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -220,10 +214,6 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: expoOut }}
           >
-            {/* Desktop background textures */}
-            <div className="about-cta-bg-texture desktop-only"></div>
-            <div className="about-cta-glow desktop-only"></div>
-
             <div className="cta-left">
               <h2>Začni <span className="blue-text">svojo pot</span></h2>
               <p>
