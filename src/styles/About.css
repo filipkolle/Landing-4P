@@ -443,12 +443,13 @@
 /* Hybrid CTA Section Style */
 .about-hybrid-cta {
   position: relative;
-  background: transparent;
-  border: none;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 40px;
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: 0 30px 80px rgba(94, 141, 178, 0.06);
   min-height: 500px;
   margin: 0 auto;
   max-width: 1100px;
