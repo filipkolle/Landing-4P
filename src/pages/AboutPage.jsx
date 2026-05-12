@@ -9,6 +9,7 @@ import ctaWomanImg from '../assets/cta_woman_v2.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
+import ctaWomanNewImg from '../assets/cta_woman_new.png';
 import '../styles/About.css';
 
 const expoOut = [0.19, 1, 0.22, 1];
@@ -297,6 +298,19 @@ const AboutPage = () => {
                   </div>
                 </button>
               </div>
+            </div>
+            
+            {/* Right side: Woman image (desktop only) */}
+            <div className="cta-right desktop-only" style={{ display: 'flex', alignItems: 'flex-end', justifyItems: 'center', position: 'relative', zIndex: 2, height: '100%' }}>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, ease: expoOut, delay: 0.2 }}
+                style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
+              >
+                <img src={ctaWomanNewImg} alt="Finance 4P Assistant" style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', objectPosition: 'bottom center', display: 'block', marginBottom: '-10px' }} />
+              </motion.div>
             </div>
           </motion.div>
         </div>
