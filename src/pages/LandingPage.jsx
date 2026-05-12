@@ -14,7 +14,7 @@ function LandingPage() {
       <Navbar />
       <main>
         <Hero />
-        <SubscribeCTA className="mobile-only" />
+
         <ProblemSolution />
         <FeatureSwitcher />
         <FeaturesGrid />
