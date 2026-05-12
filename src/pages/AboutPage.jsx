@@ -9,6 +9,7 @@ import ctaWomanImg from '../assets/cta_woman_v2.png';
 import Footer from '../components/Footer';
 import founderImg from '../assets/founder.jpg';
 import signatureImg from '../assets/signature.png';
+import ideaImage from '../assets/idea_image.png';
 import '../styles/About.css';
 
 const expoOut = [0.19, 1, 0.22, 1];
@@ -219,21 +220,17 @@ const AboutPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: expoOut }}
           >
-            <div className="cta-left" style={{ textAlign: 'center', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {/* Desktop background textures */}
+            <div className="about-cta-bg-texture desktop-only"></div>
+            <div className="about-cta-glow desktop-only"></div>
+
+            <div className="cta-left">
               <h2>Začni <span className="blue-text">svojo pot</span></h2>
               <p>
                 Bodi med prvimi, ki bodo uporabljali aplikacijo! Izberi svojega asistenta in izboljšaj svoj življenjski slog!
               </p>
               
-              <div className="store-buttons" style={{ 
-                display: 'flex', 
-                gap: '10px', 
-                flexWrap: 'nowrap', 
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                marginTop: '10px'
-              }}>
+              <div className="store-buttons">
                 {/* Requested App Store Button */}
                 <a 
                   href="https://apps.apple.com/si/app/finance-4p/id6762084663" 
@@ -302,8 +299,18 @@ const AboutPage = () => {
                 </button>
               </div>
             </div>
-            
 
+            {/* Right side: New image (desktop only) */}
+            <div className="cta-right desktop-only" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2, ease: expoOut, delay: 0.3 }}
+              >
+                <img src={ideaImage} alt="Finance 4P Image" style={{ width: '100%', maxWidth: '450px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
