@@ -1304,7 +1304,7 @@
   .hero-phones-container { 
     min-height: 185px; /* 550px × 0.33 */
     height: auto;
-    margin: 15px auto 0; /* Tightened gap to title */
+    margin: 50px auto 0; /* Increased gap to title to avoid clipping */
     display: flex;
     justify-content: center;
     align-items: flex-end;
@@ -1464,7 +1464,7 @@
   .phone-left { margin-right: -45px; }
   .phone-right { margin-left: -45px; }
   .phone-center { width: 135px; } 
-  .hero-phones-container { margin-top: 20px; padding: 0 20px; min-height: 260px; }
+  .hero-phones-container { margin-top: 50px; padding: 0 20px; min-height: 260px; }
   .hero-logo-morph { max-width: 200px; }
   .hero-phone-label { font-size: 0.7rem; top: -30px; }
 
