@@ -1268,7 +1268,7 @@
      HERO MOBILE - Pinning & Animation restored
      ===================== */
   .hero-scroll-wrapper {
-    height: 250vh; /* Enough scrolling distance to complete the animation while pinned */
+    height: 300vh; /* Increased scrolling distance for taller section stability */
     min-height: 100vh;
   }
   .hero-section {
@@ -1428,7 +1428,7 @@
 
   /* Hero */
   .hero-scroll-wrapper {
-    height: 250vh;
+    height: 350vh; /* More room for the 130vh sticky section */
     min-height: 100vh;
   }
   
@@ -1474,7 +1474,7 @@
   .section-padding { padding: 40px 0; }
 
   /* Subscribe CTA */
-  .subscribe-cta-section { margin-top: calc(-50vh + 40px); padding: 16px 0 40px; }
+  .subscribe-cta-section { margin-top: 0; padding: 40px 0; }
   .subscribe-cta-card { padding: 20px 16px; border-radius: 20px; }
   .subscribe-content h3 { font-size: 1.35rem; }
   .subscribe-content p { font-size: 0.9rem; }
