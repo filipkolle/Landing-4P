@@ -48,14 +48,14 @@
   }
 
   .about-hero::after {
-    /* Reduced scale to show more of the hands cluster without over-zooming */
-    background-position: right center;
-    transform: rotate(90deg) scale(1.15); 
-    transform-origin: center;
+    /* Using the new portrait-oriented image for mobile, no rotation needed */
+    background-image: url('../assets/about_hero_bg_mobile.jpg');
+    background-position: center bottom;
+    transform: none; 
   }
   
   .about-hero::before {
-    /* Keep the bottom clear */
+    /* Slightly clearer at the bottom to show the hands */
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 15%, rgba(255, 255, 255, 0.1) 100%);
   }
 }
