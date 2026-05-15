@@ -1274,8 +1274,8 @@
   .hero-section {
     position: sticky;
     top: 0;
-    height: 80vh; /* Increased slightly for better centering feel */
-    min-height: 80vh;
+    height: 110vh; 
+    min-height: 110vh;
     padding-top: 130px; /* Increased to ensure content is below the floating navbar */
     padding-bottom: 40px;
     width: 100%;
@@ -1435,8 +1435,8 @@
   .hero-section { 
     position: sticky;
     top: 0;
-    height: 100vh;
-    min-height: 100vh;
+    height: 130vh;
+    min-height: 130vh;
     padding-top: 170px;
     padding-bottom: 20px; 
     display: flex;
