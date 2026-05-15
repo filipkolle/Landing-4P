@@ -1276,7 +1276,7 @@
     top: 0;
     height: 80vh; /* Increased slightly for better centering feel */
     min-height: 80vh;
-    padding-top: 60px; /* Minimal space for navbar */
+    padding-top: 130px; /* Increased to ensure content is below the floating navbar */
     padding-bottom: 40px;
     width: 100%;
     overflow: visible;
