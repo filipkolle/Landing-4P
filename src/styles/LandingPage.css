@@ -1428,15 +1428,15 @@
 
   /* Hero */
   .hero-scroll-wrapper {
-    height: 350vh; /* More room for the 130vh sticky section */
+    height: 2800px; /* Fixed height for stability across mobile browsers */
     min-height: 100vh;
   }
   
   .hero-section { 
     position: sticky;
     top: 0;
-    height: 130vh;
-    min-height: 130vh;
+    height: 900px; /* Fixed height to avoid jumps from Instagram browser bars */
+    min-height: 900px;
     padding-top: 170px;
     padding-bottom: 20px; 
     display: flex;
