@@ -9,6 +9,22 @@ const SocialFAQ = () => {
 
   const faqs = [
     {
+      question: "Kako mi Finance 4P pomaga pri beleženju delovnih ur?",
+      answer: "Finance 4P poenostavi beleženje delovnih ur tako, da na podlagi vnesenega časa avtomatično izračuna tvoje dohodke. Poleg tega generira poročila, ki jih lahko takoj posreduješ delodajalcu, s čimer prihraniš čas in imaš vedno popoln pregled nad opravljenim delom."
+    },
+    {
+      question: "Ali je aplikacija primerna za študentsko delo?",
+      answer: "Absolutno. Finance 4P je idealna za študente, ki delajo preko napotnic. Omogoča natančno vodenje ur, izračun neto zaslužka in pregledno arhiviranje vseh opravljenih del, kar ti olajša nadzor nad izplačili."
+    },
+    {
+      question: "Kako lahko z aplikacijo optimiziram svoje mesečne stroške?",
+      answer: "Z enostavnim in preglednim kategoriziranjem stroškov točno izveš, kam odteka tvoj denar. Aplikacija ti pomaga spremljati porabo v realnem času, zastaviti finančne cilje in poiskati priložnosti za varčevanje."
+    },
+    {
+      question: "Ali lahko spremljam tudi dolgove in kredite?",
+      answer: "Da. Da bi imel popolno sliko svojih financ, Finance 4P omogoča spremljanje sredstev in dolgov (npr. krediti). Omogoča celo zastavitev realnih vrednosti sredstev s pomočjo amortizacije, kar je ključno za dolgoročno finančno načrtovanje."
+    },
+    {
       question: "Ali so moji podatki varni?",
       answer: "Da. Varnost vaših podatkov je naša prioriteta. Vse podatke šifriramo in smo popolnoma v skladu z GDPR uredbo."
     },
