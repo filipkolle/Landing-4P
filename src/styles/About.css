@@ -48,15 +48,17 @@
   }
 
   .about-hero::after {
-    /* Rotate the image 90 degrees and reduce scale to avoid zooming past the hands */
-    transform: rotate(90deg) scale(1.3); 
+    /* Hands are on the right in the landscape image. 
+       Rotating 90deg puts them at the bottom.
+       We use background-position: right to ensure the hands part is favored before rotation. */
+    background-position: right center;
+    transform: rotate(90deg) scale(1.5); 
     transform-origin: center;
-    background-position: center;
   }
   
   .about-hero::before {
-    /* Lower opacity at the bottom to make the hands pop */
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 20%, rgba(255, 255, 255, 0.3) 100%);
+    /* Even clearer at the bottom to show the hands */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 15%, rgba(255, 255, 255, 0.2) 100%);
   }
 }
 
