@@ -7,7 +7,7 @@ import logoImg from '../assets/logo_full_v2.png';
 import ctaWomanImg from '../assets/cta_woman_v2.png';
 
 import Footer from '../components/Footer';
-import founderImg from '../assets/founder.jpg';
+import founderImg from '../assets/founder_v2.jpg';
 import signatureImg from '../assets/signature.png';
 import ctaWomanNewImg from '../assets/cta_woman_new.png';
 import '../styles/About.css';
