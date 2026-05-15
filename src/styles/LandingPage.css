@@ -1437,13 +1437,14 @@
     top: 0;
     height: 100vh;
     min-height: 100vh;
-    padding-top: 150px;
+    padding-top: 170px;
     padding-bottom: 20px; 
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     background: transparent;
+    overflow: visible;
   }
 
   .hero-section::after {
@@ -1464,7 +1465,7 @@
   .phone-left { margin-right: -45px; }
   .phone-right { margin-left: -45px; }
   .phone-center { width: 135px; } 
-  .hero-phones-container { margin-top: 50px; padding: 0 20px; min-height: 260px; }
+  .hero-phones-container { margin-top: 80px; padding: 0 20px; min-height: 280px; overflow: visible; }
   .hero-logo-morph { max-width: 200px; }
   .hero-phone-label { font-size: 0.7rem; top: -30px; }
 
