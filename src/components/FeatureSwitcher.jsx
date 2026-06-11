@@ -47,7 +47,7 @@ const tabs = [
     features: [
       'Popoln pregled nad delom in financami',
       'Napredna finančna analitika',
-      'Izračun vaše neto vrednosti',
+      'Avtomatizacija zaslužkov in stroškov',
     ],
   },
 ];

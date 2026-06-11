@@ -1,5 +1,5 @@
 import React from 'react';
-import { Timer, BarChart3, Receipt, Zap, FileText, TrendingUp } from 'lucide-react';
+import { Timer, BarChart3, Receipt, Zap, FileText, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const FeaturesGrid = () => {
@@ -30,9 +30,9 @@ const FeaturesGrid = () => {
       description: "Izvoz profesionalnih poročil za delodajalca, računovodstvo ali osebni arhiv z enim klikom."
     },
     {
-      icon: <TrendingUp size={32} className="feature-icon" />,
-      title: "Neto vrednost",
-      description: "Edino orodje, ki ti omogoča izračun neto vrednosti na podlagi sredstev in obveznosti."
+      icon: <Lock size={32} className="feature-icon" />,
+      title: "Privatni način",
+      description: "Vaši podatki so hitro dostopni samo vam in jih lahko skrijete pred drugimi osebami, za popolno zasebnost."
     }
   ];
 
