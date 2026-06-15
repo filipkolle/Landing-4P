@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import phoneDelo from '../assets/mockups/hero_phone_delo.png';
+import phoneDelo from '../assets/mockups/delovni_asistent.png';
 import phoneFinance from '../assets/mockups/mockup_main_hero.png';
-import phoneCategories from '../assets/mockups/hero_phone_categories.png';
+import phoneCategories from '../assets/mockups/finance.png';
 
 const Hero = () => {
   const [isMobile, setIsMobile] = React.useState(false);
