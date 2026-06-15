@@ -21,10 +21,6 @@ const SocialFAQ = () => {
       answer: "Z enostavnim in preglednim kategoriziranjem stroškov točno izveš, kam odteka tvoj denar. Aplikacija ti pomaga spremljati porabo v realnem času, zastaviti finančne cilje in poiskati priložnosti za varčevanje."
     },
     {
-      question: "Ali lahko spremljam tudi dolgove in kredite?",
-      answer: "Da. Da bi imel popolno sliko svojih financ, Finance 4P omogoča spremljanje sredstev in dolgov (npr. krediti). Omogoča celo zastavitev realnih vrednosti sredstev s pomočjo amortizacije, kar je ključno za dolgoročno finančno načrtovanje."
-    },
-    {
       question: "Ali so moji podatki varni?",
       answer: "Da. Varnost vaših podatkov je naša prioriteta. Vse podatke šifriramo in smo popolnoma v skladu z GDPR uredbo."
     },

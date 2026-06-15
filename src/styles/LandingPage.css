@@ -964,8 +964,8 @@
   gap: 40px;
 }
 
-.footer-brand .logo-text { color: #fff; }
-.footer-brand .logo-img-wrapper img { filter: brightness(10); opacity: 0.8; }
+.footer-brand .logo-brand { color: #fff; }
+.footer-brand .logo-img-wrapper img { opacity: 1; }
 .footer-brand p { margin-top: 16px; color: #6b7280; max-width: 260px; line-height: 1.6; }
 
 .footer-links { display: flex; gap: 80px; }
