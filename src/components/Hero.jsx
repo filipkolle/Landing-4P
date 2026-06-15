@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import phoneDelo from '../assets/mockups/hero_phone_delo.png';
-import phoneFinance from '../assets/mockups/hero_phone_finance_dark.png';
+import phoneFinance from '../assets/mockups/mockup_main_hero.png';
 import phoneCategories from '../assets/mockups/hero_phone_categories.png';
 
 const Hero = () => {
