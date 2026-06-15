@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Wallet } from 'lucide-react';
-import workImg from '../assets/mockups/work_v5.png';
-import financeImg from '../assets/mockups/finance_v4.png';
-import dashboardImg from '../assets/mockups/dashboard_v3.png';
+import workImg from '../assets/mockups/delovni_asistent.png';
+import financeImg from '../assets/mockups/financni_asistent.png';
+import dashboardImg from '../assets/mockups/4p_asistent.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
