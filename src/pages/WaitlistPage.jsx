@@ -41,14 +41,14 @@ const WaitlistPage = () => {
         setEmail('');
         setName('');
       } else {
-        // Broad check for duplicates or any other error (user specifically wants duplicate message)
         const errorContent = JSON.stringify(data).toLowerCase();
         
-        if (errorContent.includes('invalid') || response.status === 400) {
+        if (response.status === 409 || errorContent.includes('duplicate') || errorContent.includes('already_exists') || errorContent.includes('already exists')) {
+          setErrorMessage('Ta naslov je že prejel dostop!');
+        } else if (response.status === 400 || errorContent.includes('invalid') || errorContent.includes('missing')) {
           setErrorMessage('Vnesi veljaven e-poštni naslov.');
         } else {
-          // Default to the message the user wants most
-          setErrorMessage('Ta naslov je že prejel dostop!');
+          setErrorMessage('Prišlo je do napake pri povezavi z Brevo. Poskusi znova pozneje.');
         }
         setStatus('error');
       }
