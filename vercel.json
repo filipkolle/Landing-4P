@@ -8,5 +8,12 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard/",
+      "permanent": true
+    }
   ]
 }

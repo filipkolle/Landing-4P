@@ -149,7 +149,14 @@ async function handleAuthState(session, companyNameOverride = null) {
 
   if (session && session.user) {
     state.currentUser = session.user;
-    state.companyName = companyNameOverride || session.user.user_metadata?.company_name || localStorage.getItem("4p_company_name") || "Moje podjetje";
+    const meta = session.user.user_metadata || {};
+    state.companyName =
+      companyNameOverride ||
+      meta.company_name ||
+      meta.full_name ||
+      meta.name ||
+      localStorage.getItem("4p_company_name") ||
+      "Moje podjetje";
     
     if (companyNameOverride) {
       localStorage.setItem("4p_company_name", companyNameOverride);
@@ -171,6 +178,40 @@ async function handleAuthState(session, companyNameOverride = null) {
     if (appShell) appShell.hidden = true;
   }
 }
+
+// Google OAuth Sign In
+$("#googleAuthBtn")?.addEventListener("click", async () => {
+  hideAuthAlerts();
+  if (!supabaseClient) {
+    showAuthAlert("login", "Povezava s strežnikom ni na voljo. Preverite nastavitve.");
+    return;
+  }
+
+  const googleBtn = $("#googleAuthBtn");
+  const originalHtml = googleBtn.innerHTML;
+  googleBtn.disabled = true;
+  googleBtn.innerHTML = `<span>Povezujem z Googlom...</span>`;
+
+  try {
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectTo,
+      },
+    });
+
+    if (error) {
+      showAuthAlert("login", `Napaka pri Google prijavi: ${error.message}`);
+      googleBtn.disabled = false;
+      googleBtn.innerHTML = originalHtml;
+    }
+  } catch (err) {
+    showAuthAlert("login", "Prišlo je do napake pri Google prijavi. Poskusite znova.");
+    googleBtn.disabled = false;
+    googleBtn.innerHTML = originalHtml;
+  }
+});
 
 // Auth UI Tab Switching
 $("#tabLogin")?.addEventListener("click", () => {
