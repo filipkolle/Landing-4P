@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="sl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=45" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <!-- 1. Professional Company Auth Screen -->
+    <div id="authScreen" class="auth-screen">
+      <div class="auth-card">
+        <div class="auth-header">
+          <img src="logo.png" alt="4P Logo" class="auth-brand-logo" />
+          <h1 class="auth-title">Dashboard</h1>
+          <p class="auth-subtitle">Finance 4P · Portal za delodajalce in podjetja</p>
+        </div>
+
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab-btn active" id="tabLogin">Prijava</button>
+          <button type="button" class="auth-tab-btn" id="tabSignup">Registracija</button>
+        </div>
+
+        <!-- Prijava Form -->
+        <form id="loginForm" class="auth-form">
+          <div id="loginAlert" class="auth-alert error" hidden></div>
+          <div class="auth-field">
+            <label for="loginEmail">Službeni e-naslov</label>
+            <input id="loginEmail" type="email" placeholder="ime@podjetje.si" required autocomplete="email" />
+          </div>
+          <div class="auth-field">
+            <label for="loginPassword">Geslo</label>
+            <input id="loginPassword" type="password" placeholder="••••••••••••" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="auth-submit-btn" id="loginSubmitBtn">Prijavi se v Dashboard</button>
+        </form>
+
+        <!-- Registracija Form -->
+        <form id="signupForm" class="auth-form" hidden>
+          <div id="signupAlert" class="auth-alert error" hidden></div>
+          <div class="auth-field">
+            <label for="signupCompanyName">Ime podjetja / delodajalca</label>
+            <input id="signupCompanyName" type="text" placeholder="npr. Nord Studio d.o.o." required />
+          </div>
+          <div class="auth-field">
+            <label for="signupEmail">Službeni e-naslov</label>
+            <input id="signupEmail" type="email" placeholder="direktor@podjetje.si" required autocomplete="email" />
+          </div>
+          <div class="auth-field">
+            <label for="signupPassword">Geslo (vsaj 6 znakov)</label>
+            <input id="signupPassword" type="password" placeholder="••••••••••••" minlength="6" required autocomplete="new-password" />
+          </div>
+          <div class="auth-field">
+            <label for="signupPasswordConfirm">Ponovite geslo</label>
+            <input id="signupPasswordConfirm" type="password" placeholder="••••••••••••" minlength="6" required autocomplete="new-password" />
+          </div>
+          <button type="submit" class="auth-submit-btn" id="signupSubmitBtn">Ustvari račun podjetja</button>
+        </form>
+
+        <div class="auth-features">
+          <div class="feature-pill">⏱ Delovne ure</div>
+          <div class="feature-pill">⚡ Real-time zahteve</div>
+          <div class="feature-pill">💶 Izplačila</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Main Dashboard Shell -->
+    <div class="shell" id="appShell" hidden>
+      <aside class="sidebar" aria-label="Glavna navigacija">
+        <div class="brand">
+          <img src="logo.png" alt="4P Logo" class="brand-logo" />
+          <div>
+            <p class="brand-title">Dashboard</p>
+            <p class="brand-subtitle">Delovne ure in izplačila</p>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-item active" data-view="overview" type="button">
+            <span class="icon" aria-hidden="true">⌂</span>
+            <span>Overview</span>
+          </button>
+          <button class="nav-item" data-view="sectors" type="button">
+            <span class="icon" aria-hidden="true">▦</span>
+            <span>Sektorji</span>
+          </button>
+          <button class="nav-item" data-view="employees" type="button">
+            <span class="icon" aria-hidden="true">◎</span>
+            <span>Zaposleni</span>
+          </button>
+          <button class="nav-item" data-view="schedule" type="button">
+            <span class="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <span style="display: flex; align-items: center; gap: 6px;">Urnik <span class="beta-badge">BETA</span></span>
+          </button>
+          <button class="nav-item" data-view="calendar" type="button">
+            <span class="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </span>
+            <span>Koledar ur</span>
+          </button>
+          <button class="nav-item" data-view="settings" type="button">
+            <span class="icon" aria-hidden="true">⚙</span>
+            <span>Nastavitve</span>
+          </button>
+        </nav>
+
+        <div class="company-card">
+          <p class="label">Podjetje</p>
+          <h2 id="sidebarCompany">-</h2>
+          <p class="company-user-email" id="sidebarUserEmail">-</p>
+          <p id="sidebarStats">0 sektorjev · 0 zaposlenih</p>
+          <button type="button" class="logout-btn" id="logoutBtn">
+            <span>⎋</span> Odjava
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-title-wrap">
+            <p class="eyebrow">Finance 4P · Employer portal</p>
+            <div class="page-title-row">
+              <h1 id="pageTitle">Overview</h1>
+              <button class="primary-button add-sector-top-btn" id="openSectorModal" type="button" style="display: none;">+ Dodaj sektor</button>
+            </div>
+            <p id="pageDescription" class="page-subtitle" style="display: none;"></p>
+          </div>
+          <div class="month-switcher" aria-label="Preklop meseca">
+            <button class="icon-button" id="prevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
+            <div class="month-pill" id="activeMonth">Avgust 2026</div>
+            <button class="icon-button" id="nextMonth" type="button" aria-label="Naslednji mesec">›</button>
+          </div>
+        </header>
+
+        <!-- Obvestila o novih zahtevah za povezavo -->
+        <div id="requestsNotificationArea" class="requests-notification-area" hidden></div>
+
+        <section class="view active" id="overviewView">
+          <div class="metric-grid">
+            <article class="metric">
+              <p>Skupne ure</p>
+              <strong id="totalHours">0 h</strong>
+              <span>Za izbrani mesec</span>
+            </article>
+            <article class="metric">
+              <p>Skupni zaslužek</p>
+              <strong id="totalEarnings">0 €</strong>
+              <span>Vsi zaposleni skupaj</span>
+            </article>
+            <article class="metric">
+              <p>Za izplačilo</p>
+              <strong id="unpaidTotal">0 €</strong>
+              <span>Neoznačeno kot plačano</span>
+            </article>
+            <article class="metric">
+              <p>Zaposleni</p>
+              <strong id="employeeCount">0</strong>
+              <span id="sectorCount">0 sektorjev</span>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Sektorji</h2>
+                  <p>Porazdelitev ur in stroškov dela</p>
+                </div>
+              </div>
+              <div class="sector-list" id="overviewSectorList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Izplačila</h2>
+                  <p>Status po zaposlenih</p>
+                </div>
+              </div>
+              <div class="payroll-list" id="payrollList"></div>
+            </section>
+          </div>
+
+          <section class="panel table-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Mesečni pregled zaposlenih</h2>
+                <p>Ure, potni stroški, zaslužek in status izplačila</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Zaposleni</th>
+                    <th>Sektor</th>
+                    <th>Ure</th>
+                    <th>Potni stroški</th>
+                    <th>Skupni zaslužek</th>
+                    <th>Status izplačila</th>
+                  </tr>
+                </thead>
+                <tbody id="overviewTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="sectorsView">
+          <div class="sector-card-grid" id="sectorCards"></div>
+          <section class="panel sector-detail" id="sectorDetail" hidden>
+            <div class="panel-header">
+              <div>
+                <h2 id="sectorDetailTitle">Sektor</h2>
+                <p id="sectorDetailSubtitle">Pregled zaposlenih v sektorju</p>
+              </div>
+              <button class="ghost-button" id="closeSectorDetail" type="button">Zapri</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Zaposleni</th>
+                    <th>Status</th>
+                    <th>Ure</th>
+                    <th>Urna postavka</th>
+                    <th>Potni stroški</th>
+                    <th>Skupni zaslužek</th>
+                    <th>Izplačano</th>
+                  </tr>
+                </thead>
+                <tbody id="sectorDetailRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="employeesView">
+          <!-- Seznam vseh zaposlenih -->
+          <div id="employeesListContainer">
+            <div class="action-row">
+              <div>
+                <h2>Baza zaposlenih</h2>
+                <p>Podatki, ki jih delodajalec vidi za povezane vire dohodka. Kliknite na zaposlenega za podroben pregled po sektorjih.</p>
+              </div>
+              <div class="filters">
+                <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
+                <select id="sectorFilter" aria-label="Filtriraj po sektorju"></select>
+              </div>
+            </div>
+            <section class="panel table-panel">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Zaposleni</th>
+                      <th style="width: 240px;">Izplačano</th>
+                      <th style="text-align: right; padding-right: 24px;">Sektorji</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employeesTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <!-- Podrobnosti posameznega zaposlenega (Profil z razčlenitvijo po sektorjih) -->
+          <div id="employeeDetailContainer" hidden>
+            <div style="margin-bottom: 16px;">
+              <button type="button" class="ghost-button" id="backToEmployeesList" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+                <span>←</span> Nazaj na seznam zaposlenih
+              </button>
+            </div>
+
+            <!-- Glavna kartica zaposlenega z metriko -->
+            <section class="panel employee-profile-panel" style="margin-bottom: 20px;">
+              <div class="emp-profile-header">
+                <div class="emp-profile-info">
+                  <span class="avatar emp-profile-avatar" id="empDetailAvatar">--</span>
+                  <div>
+                    <h2 id="empDetailName" style="margin: 0 0 4px; font-size: 22px;">-</h2>
+                    <div id="empDetailBadges" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
+                  </div>
+                </div>
+                <div class="emp-profile-month-pill" id="empDetailMonthPill">Avgust 2026</div>
+              </div>
+
+              <div class="metric-grid" style="margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <article class="metric">
+                  <p>Skupne ure</p>
+                  <strong id="empDetailTotalHours">0 h</strong>
+                  <span>Vsi sektorji ta mesec</span>
+                </article>
+                <article class="metric">
+                  <p>Skupni zaslužek</p>
+                  <strong id="empDetailTotalEarnings">0,00 €</strong>
+                  <span>Delo + potni stroški</span>
+                </article>
+                <article class="metric">
+                  <p>Za izplačilo</p>
+                  <strong id="empDetailUnpaid">0,00 €</strong>
+                  <span>Neizplačan znesek</span>
+                </article>
+              </div>
+            </section>
+
+            <!-- Razčlenitev po sektorjih -->
+            <section class="panel" style="margin-bottom: 20px;">
+              <div class="panel-header">
+                <div>
+                  <h2>Razčlenitev ur in zaslužka po sektorjih</h2>
+                  <p>Natančen pregled ur, urne postavke in skupnega zaslužka za vsak sektor delavca</p>
+                </div>
+              </div>
+              <div id="empSectorCardsContainer" class="emp-sector-cards-grid"></div>
+            </section>
+
+            <!-- Dnevni vpisi delovnih ur v izbranem mesecu -->
+            <section class="panel table-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Zabeleženi delovni dnevi</h2>
+                  <p>Kronološki seznam vseh vpisov delovnih ur za ta mesec</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Datum</th>
+                      <th>Sektor</th>
+                      <th>Čas izmene</th>
+                      <th>Ure</th>
+                      <th>Urna postavka</th>
+                      <th>Potni stroški</th>
+                      <th>Zaslužek</th>
+                      <th>Opomba</th>
+                      <th>Status izplačila</th>
+                    </tr>
+                  </thead>
+                  <tbody id="empDailyLogsTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Urnik (Izmenski razpored / Načrtovalnik delovnega časa) -->
+        <section class="view" id="scheduleView">
+          <!-- Zgornja vrstica z orodji in filtri -->
+          <div class="schedule-controls-bar panel">
+            <!-- Preklop med mesecem in tednom -->
+            <div class="cal-mode-toggle" id="scheduleModeToggle">
+              <button type="button" class="cal-toggle-btn active" data-schedule-mode="month">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Mesečni pogled</span>
+              </button>
+              <button type="button" class="cal-toggle-btn" data-schedule-mode="week">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <line x1="10" y1="4" x2="10" y2="22"></line>
+                </svg>
+                <span>Tedenski pogled</span>
+              </button>
+            </div>
+
+            <!-- Izbira delovnih mest / sektorjev (Skupen ali posamezen sektor) -->
+            <div class="schedule-sector-selector-wrap" id="scheduleSectorSelectorWrap">
+              <div class="schedule-sector-pills" id="scheduleSectorPills"></div>
+            </div>
+
+            <!-- Filter po zaposlenih -->
+            <div class="cal-filters-group">
+              <select id="scheduleEmployeeFilter" class="cal-select">
+                <option value="all">Vsi zaposleni</option>
+              </select>
+            </div>
+
+            <!-- Navigacija po obdobju -->
+            <div class="cal-nav-group">
+              <button type="button" class="icon-button" id="schedulePrevBtn" aria-label="Prejšnje obdobje">‹</button>
+              <button type="button" class="cal-today-btn" id="scheduleTodayBtn">Danes</button>
+              <div class="cal-period-pill" id="schedulePeriodTitle">Avgust 2026</div>
+              <button type="button" class="icon-button" id="scheduleNextBtn" aria-label="Naslednje obdobje">›</button>
+            </div>
+
+            <!-- Gumb za ustvarjanje izmene -->
+            <div>
+              <button type="button" class="primary-button" id="openAddShiftBtn" onclick="openShiftModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 16px;">
+                <span>+</span> Dodaj na urnik
+              </button>
+            </div>
+          </div>
+
+          <!-- Hitri seštevek urnika -->
+          <div class="schedule-stats-grid" id="scheduleStatsGrid" style="margin-bottom: 20px;">
+            <div class="panel schedule-stat-card">
+              <span class="schedule-stat-label">Načrtovane ure</span>
+              <strong id="scheduleTotalHours">0 h</strong>
+              <p id="scheduleTotalHoursSub">Za izbrano obdobje</p>
+            </div>
+            <div class="panel schedule-stat-card">
+              <span class="schedule-stat-label">Število izmen</span>
+              <strong id="scheduleTotalShifts">0</strong>
+              <p id="scheduleTotalShiftsSub">Vseh načrtovanih vnosov</p>
+            </div>
+            <div class="panel schedule-stat-card">
+              <span class="schedule-stat-label">Zaposleni na urniku</span>
+              <strong id="scheduleActiveEmployees">0</strong>
+              <p id="scheduleActiveEmployeesSub">Aktivnih delavcev</p>
+            </div>
+          </div>
+
+          <!-- Glavni koledar za urnik -->
+          <div class="calendar-main-panel panel" id="scheduleMainPanel">
+            <div id="scheduleContainer"></div>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView">
+          <div class="settings-grid">
+            <!-- Profil podjetja in varnost -->
+            <section class="panel settings-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Podatki o računu</h2>
+                  <p>Upravljanje profila podjetja in prijavnih podatkov</p>
+                </div>
+                <div id="connectionStatus" class="status-pill online">
+                  <span class="status-dot"></span> Povezava vzpostavljena
+                </div>
+              </div>
+
+              <form id="companyForm" class="settings-form">
+                <div id="accountAlert" class="auth-alert success" hidden></div>
+                <label>
+                  Ime podjetja / blagovne znamke
+                  <input id="companyName" type="text" placeholder="Ime podjetja" required />
+                </label>
+                <label>
+                  Prijavni e-naslov
+                  <input id="accountEmail" type="email" placeholder="email@podjetje.si" readonly style="background: var(--surface-soft); color: var(--muted); cursor: not-allowed;" />
+                </label>
+                <button class="primary-button" type="submit">Shrani podatke podjetja</button>
+              </form>
+
+              <!-- Sprememba gesla -->
+              <div class="settings-password-section">
+                <div class="settings-section-title">
+                  <h3>Varnost in geslo</h3>
+                  <p>Nastavite novo geslo za vstop v Dashboard.</p>
+                </div>
+                <form id="passwordForm" class="settings-form">
+                  <div id="passwordAlert" class="auth-alert success" hidden></div>
+                  <label>
+                    Novo geslo
+                    <input id="newPassword" type="password" placeholder="••••••••••••" minlength="6" required />
+                  </label>
+                  <label>
+                    Ponovite novo geslo
+                    <input id="confirmNewPassword" type="password" placeholder="••••••••••••" minlength="6" required />
+                  </label>
+                  <button class="ghost-button" type="submit" style="font-weight: 700;">Posodobi geslo</button>
+                </form>
+              </div>
+            </section>
+
+            <!-- Sektorji in povezovalne kode -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Ustvarjeni sektorji in povezovalne kode</h2>
+                    <p>Vsak sektor ima unikatno 6-mestno kodo za povezavo zaposlenih.</p>
+                  </div>
+                  <button type="button" class="primary-button add-sector-small-btn" onclick="openSectorModalDialog()">+ Dodaj sektor</button>
+                </div>
+                <div class="job-code-list" id="jobCodeList"></div>
+              </section>
+
+              <!-- Statusi zaposlenih -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Statusi zaposlenih</h2>
+                    <p>Ustvarite in upravljajte statuse, ki jih lahko dodelite zaposlenim.</p>
+                  </div>
+                </div>
+
+                <!-- Obrazec za dodajanje novega statusa -->
+                <form id="addStatusForm" class="add-status-inline-form" style="margin-bottom: 16px;">
+                  <div style="display: flex; gap: 8px; width: 100%;">
+                    <input type="text" id="newStatusInput" placeholder="npr. Študent, Pogodbenik, Poskusno delo" required style="flex: 1;" />
+                    <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 8px 14px;">+ Dodaj status</button>
+                  </div>
+                </form>
+
+                <div class="custom-status-list" id="customStatusList"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <!-- Koledar delovnih ur (Tedenski in Mesečni pogled) -->
+        <section class="view" id="calendarView">
+          <div class="calendar-controls-bar panel">
+            <div class="cal-mode-toggle" id="calModeToggle">
+              <button type="button" class="cal-toggle-btn active" data-cal-mode="month">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Mesečni pogled</span>
+              </button>
+              <button type="button" class="cal-toggle-btn" data-cal-mode="week">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <line x1="10" y1="4" x2="10" y2="22"></line>
+                </svg>
+                <span>Tedenski pogled</span>
+              </button>
+            </div>
+
+            <div class="cal-filters-group">
+              <select id="calSectorFilter" class="cal-select">
+                <option value="all">Vsi sektorji</option>
+              </select>
+              <select id="calEmployeeFilter" class="cal-select">
+                <option value="all">Vsi zaposleni</option>
+              </select>
+            </div>
+
+            <div class="cal-nav-group">
+              <button type="button" class="icon-button" id="calPrevBtn" aria-label="Prejšnje obdobje">‹</button>
+              <button type="button" class="cal-today-btn" id="calTodayBtn">Danes</button>
+              <div class="cal-period-pill" id="calPeriodTitle">Avgust 2026</div>
+              <button type="button" class="icon-button" id="calNextBtn" aria-label="Naslednje obdobje">›</button>
+            </div>
+          </div>
+
+          <div class="calendar-main-panel panel" id="calendarMainPanel">
+            <div id="calendarContainer"></div>
+          </div>
+
+          <!-- Mesečni seštevek ur in izplačil po zaposlenih -->
+          <section class="panel cal-summary-panel" style="margin-top: 20px;">
+            <div class="panel-header">
+              <div>
+                <h2 id="calSummaryTitle">Obračun po zaposlenih</h2>
+                <p id="calSummarySubtitle">Pregled zabeleženih ur, urne postavke in zneskov za izplačilo za izbrani mesec</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Zaposleni</th>
+                    <th>Sektor(ji)</th>
+                    <th>Zabeležene ure</th>
+                    <th>Urna postavka</th>
+                    <th>Potni stroški</th>
+                    <th>Skupni zaslužek</th>
+                    <th>Za izplačilo</th>
+                    <th>Status izplačila</th>
+                  </tr>
+                </thead>
+                <tbody id="calEmployeeSummaryTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="sectorModal" class="modal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div>
+            <h2>Ustvari nov sektor</h2>
+            <p>Določite ime, barvo in opombe sektorja.</p>
+          </div>
+          <button type="button" class="icon-button modal-close" id="closeSectorModal" aria-label="Zapri">✕</button>
+        </div>
+        <form id="sectorModalForm" class="modal-form">
+          <div class="form-group">
+            <label for="modalSectorName">Ime sektorja <span class="required">*</span></label>
+            <input id="modalSectorName" type="text" placeholder="npr. Kuhinja, Strežba, Trženje" required />
+          </div>
+
+          <div class="form-group">
+            <label>Barva sektorja</label>
+            <div class="color-picker-group">
+              <div class="color-presets" id="colorPresets">
+                <button type="button" class="color-swatch active" data-color="#56829d" style="--swatch-color: #56829d; background-color: #56829d;" aria-label="Skrilasto modra"></button>
+                <button type="button" class="color-swatch" data-color="#0284c7" style="--swatch-color: #0284c7; background-color: #0284c7;" aria-label="Svetlo modra"></button>
+                <button type="button" class="color-swatch" data-color="#475569" style="--swatch-color: #475569; background-color: #475569;" aria-label="Grafitna"></button>
+                <button type="button" class="color-swatch" data-color="#0f172a" style="--swatch-color: #0f172a; background-color: #0f172a;" aria-label="Temno siva"></button>
+                <button type="button" class="color-swatch" data-color="#059669" style="--swatch-color: #059669; background-color: #059669;" aria-label="Zelena"></button>
+                <button type="button" class="color-swatch" data-color="#7c3aed" style="--swatch-color: #7c3aed; background-color: #7c3aed;" aria-label="Vijolična"></button>
+                <button type="button" class="color-swatch" data-color="#d97706" style="--swatch-color: #d97706; background-color: #d97706;" aria-label="Oranžna"></button>
+                <button type="button" class="color-swatch" data-color="#e11d48" style="--swatch-color: #e11d48; background-color: #e11d48;" aria-label="Rdeča"></button>
+              </div>
+              <div class="custom-color-wrap">
+                <input type="color" id="modalSectorColor" value="#56829d" title="Izberi poljubno barvo" />
+                <span id="selectedColorHex">#56829D</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalSectorNotes">Opombe <span class="optional">(neobvezno)</span></label>
+            <textarea id="modalSectorNotes" rows="3" placeholder="Vnesite morebitne opombe ali opis sektorja..."></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="ghost-button" id="cancelSectorModal">Prekliči</button>
+            <button type="submit" class="primary-button">Ustvari sektor</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Modal za podroben pregled ur posameznega dneva -->
+    <dialog id="dayDetailModal" class="modal">
+      <div class="modal-box day-detail-modal-box">
+        <div class="modal-header">
+          <div>
+            <h2 id="dayDetailModalTitle">Pregled delovnih ur</h2>
+            <p id="dayDetailModalSubtitle">Vnosi ur zaposlenih za izbrani dan</p>
+          </div>
+          <button type="button" class="icon-button modal-close" id="closeDayDetailModal" aria-label="Zapri">✕</button>
+        </div>
+        <div id="dayDetailModalContent" class="day-detail-modal-content"></div>
+        <div class="modal-footer">
+          <button type="button" class="ghost-button" id="closeDayDetailModalBtn">Zapri</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Modal za dodajanje / urejanje izmene na urniku -->
+    <dialog id="shiftModal" class="modal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div>
+            <h2 id="shiftModalTitle">Dodaj zaposlenega na urnik</h2>
+            <p>Določite zaposlenega, sektor, datum in delovni čas.</p>
+          </div>
+          <button type="button" class="icon-button modal-close" id="closeShiftModal" onclick="closeShiftModal()" aria-label="Zapri">✕</button>
+        </div>
+        <form id="shiftModalForm" class="modal-form">
+          <input type="hidden" id="modalShiftId" value="" />
+
+          <div class="form-group">
+            <label for="modalShiftEmployee">Zaposleni <span class="required">*</span></label>
+            <select id="modalShiftEmployee" required class="cal-select" style="width: 100%;">
+              <option value="">Izberite zaposlenega...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="modalShiftSector">Delovno mesto / Sektor <span class="required">*</span></label>
+            <select id="modalShiftSector" required class="cal-select" style="width: 100%;">
+              <option value="">Izberite sektor...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="modalShiftDate">Datum <span class="required">*</span></label>
+            <input type="date" id="modalShiftDate" required style="width: 100%;" />
+          </div>
+
+          <!-- Čas izmene -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="modalShiftStartTime">Začetek (Od) <span class="required">*</span></label>
+              <input type="time" id="modalShiftStartTime" value="08:00" required />
+            </div>
+            <div class="form-group">
+              <label for="modalShiftEndTime">Zaključek (Do) <span class="required">*</span></label>
+              <input type="time" id="modalShiftEndTime" value="16:00" required />
+            </div>
+          </div>
+
+          <!-- Hitri prednastavljeni časi -->
+          <div class="form-group" style="margin-top: -6px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Hitra izbira izmene:</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('06:00', '14:00')">06:00 – 14:00 (8h)</button>
+              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('08:00', '16:00')">08:00 – 16:00 (8h)</button>
+              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('14:00', '22:00')">14:00 – 22:00 (8h)</button>
+              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('16:00', '00:00')">16:00 – 00:00 (8h)</button>
+              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('09:00', '17:00')">09:00 – 17:00 (8h)</button>
+            </div>
+          </div>
+
+          <!-- Izračun ur -->
+          <div class="shift-calc-preview" id="shiftCalcPreview">
+            <span>Trajanje izmene:</span>
+            <strong id="shiftCalcDuration">8,0 ur</strong>
+          </div>
+
+          <div class="form-group">
+            <label for="modalShiftNote">Opomba / Zadolžitev (neobvezno)</label>
+            <input type="text" id="modalShiftNote" placeholder="npr. Dopoldan, Glavna kuhinja, Šank, Terasa..." />
+          </div>
+
+          <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <button type="button" class="delete-sector-btn" id="deleteShiftBtn" style="display: none;" onclick="handleDeleteShiftModal()">Izbriši izmeno</button>
+            <div style="display: flex; gap: 8px; margin-left: auto;">
+              <button type="button" class="ghost-button" onclick="closeShiftModal()">Prekliči</button>
+              <button type="submit" class="primary-button" id="saveShiftBtn">Shrani na urnik</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <script src="app.js?v=45"></script>
+  </body>
+</html>
