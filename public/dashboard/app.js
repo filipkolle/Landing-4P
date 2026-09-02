@@ -10,8 +10,13 @@ const SLO_MONTH_NAMES = [
 // Current active date (defaults to August 2026)
 let currentDate = new Date(2026, 7, 1);
 
+function getUserStorageKey(key) {
+  const uid = state.currentUser ? state.currentUser.id : "guest";
+  return `4p_${uid}_${key}`;
+}
+
 const state = {
-  companyName: localStorage.getItem("4p_company_name") || "Moje podjetje",
+  companyName: "Moje podjetje",
   supabaseUrl: localStorage.getItem("4p_supabase_url") || SUPABASE_DEFAULT_URL,
   supabaseKey: localStorage.getItem("4p_supabase_key") || SUPABASE_DEFAULT_KEY,
   currentUser: null,
@@ -24,7 +29,7 @@ const state = {
   scheduleDate: new Date(2026, 7, 1),
   scheduleSectorFilter: "all",
   scheduleEmployeeFilter: "all",
-  scheduleShifts: JSON.parse(localStorage.getItem("4p_schedule_shifts") || "null"),
+  scheduleShifts: null,
   sectors: [],
   jobs: [],
   employees: [],
@@ -34,10 +39,36 @@ const state = {
   approvedRequests: [],
   userProfiles: new Map(),
   pendingRequests: [],
-  customStatuses: JSON.parse(localStorage.getItem("4p_custom_statuses") || '["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"]'),
-  employeeCustomStatuses: JSON.parse(localStorage.getItem("4p_employee_statuses") || '{}'),
+  customStatuses: ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"],
+  employeeCustomStatuses: {},
   supabaseConnected: false,
 };
+
+function clearUserState() {
+  state.currentUser = null;
+  state.companyName = "";
+  state.sectors = [];
+  state.jobs = [];
+  state.employees = [];
+  state.workLogs = [];
+  state.rawLogs = [];
+  state.incomeSources = [];
+  state.approvedRequests = [];
+  state.pendingRequests = [];
+  state.scheduleShifts = null;
+  state.employeeCustomStatuses = {};
+  state.customStatuses = ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"];
+  state.userProfiles.clear();
+
+  if (realtimeChannel && supabaseClient) {
+    try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+    realtimeChannel = null;
+  }
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
 
 const currency = new Intl.NumberFormat("sl-SI", { style: "currency", currency: "EUR" });
 const number = new Intl.NumberFormat("sl-SI", { maximumFractionDigits: 1 });
@@ -117,7 +148,7 @@ async function syncEmployerProfile(user, companyNameOverride = null) {
     const companyName =
       companyNameOverride ||
       user.user_metadata?.company_name ||
-      localStorage.getItem("4p_company_name") ||
+      localStorage.getItem(getUserStorageKey("company_name")) ||
       "Moje podjetje";
 
     const { error } = await supabaseClient
@@ -149,18 +180,50 @@ async function handleAuthState(session, companyNameOverride = null) {
 
   if (session && session.user) {
     state.currentUser = session.user;
-    const meta = session.user.user_metadata || {};
-    state.companyName =
-      companyNameOverride ||
-      meta.company_name ||
-      meta.full_name ||
-      meta.name ||
-      localStorage.getItem("4p_company_name") ||
-      "Moje podjetje";
-    
-    if (companyNameOverride) {
-      localStorage.setItem("4p_company_name", companyNameOverride);
+
+    // 1. Resolve company name for this specific employer
+    let companyName = companyNameOverride;
+    if (!companyName && supabaseClient) {
+      try {
+        const { data: ep } = await supabaseClient
+          .from("employer_profiles")
+          .select("company_name")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        if (ep && ep.company_name) {
+          companyName = ep.company_name;
+        }
+      } catch (e) {}
     }
+
+    if (!companyName) {
+      companyName = localStorage.getItem(getUserStorageKey("company_name"));
+    }
+
+    if (!companyName) {
+      const meta = session.user.user_metadata || {};
+      companyName =
+        meta.company_name ||
+        meta.full_name ||
+        meta.name ||
+        session.user.email?.split("@")[0] ||
+        "Moje podjetje";
+    }
+
+    state.companyName = companyName;
+    localStorage.setItem(getUserStorageKey("company_name"), companyName);
+
+    // 2. Load user-specific storage for shifts & statuses
+    state.scheduleShifts = JSON.parse(
+      localStorage.getItem(getUserStorageKey("schedule_shifts")) || "null"
+    );
+    state.customStatuses = JSON.parse(
+      localStorage.getItem(getUserStorageKey("custom_statuses")) ||
+        '["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"]'
+    );
+    state.employeeCustomStatuses = JSON.parse(
+      localStorage.getItem(getUserStorageKey("employee_statuses")) || "{}"
+    );
 
     if (authScreen) authScreen.hidden = true;
     if (appShell) appShell.hidden = false;
@@ -171,9 +234,9 @@ async function handleAuthState(session, companyNameOverride = null) {
     await syncEmployerProfile(session.user, state.companyName);
 
     setupRealtimeListeners();
-    loadAllData();
+    await loadAllData();
   } else {
-    state.currentUser = null;
+    clearUserState();
     if (authScreen) authScreen.hidden = false;
     if (appShell) appShell.hidden = true;
   }
@@ -328,7 +391,6 @@ $("#signupForm")?.addEventListener("submit", async (e) => {
       if (error.message.includes("already registered") || error.message.includes("User already exists")) {
         const loginRes = await supabaseClient.auth.signInWithPassword({ email, password });
         if (loginRes.data && loginRes.data.session) {
-          localStorage.setItem("4p_company_name", companyName);
           await handleAuthState(loginRes.data.session, companyName);
           return;
         } else {
@@ -338,8 +400,6 @@ $("#signupForm")?.addEventListener("submit", async (e) => {
         showAuthAlert("signup", `Napaka pri registraciji: ${error.message}`);
       }
     } else if (data && data.user) {
-      localStorage.setItem("4p_company_name", companyName);
-
       // Save to employer_profiles
       await syncEmployerProfile(data.user, companyName);
 
@@ -367,6 +427,7 @@ $("#signupForm")?.addEventListener("submit", async (e) => {
 $("#logoutBtn")?.addEventListener("click", async () => {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
+  clearUserState();
   handleAuthState(null);
 });
 
@@ -374,6 +435,7 @@ $("#logoutBtn")?.addEventListener("click", async () => {
 // Data Fetching & Syncing
 // --------------------------------------------------------------------------
 async function loadAllData() {
+  if (!state.currentUser) return;
   await fetchWorkplaces();
   await fetchUserProfiles();
   await fetchPendingRequests();
@@ -385,15 +447,36 @@ async function loadAllData() {
 }
 
 async function fetchWorkplaces() {
-  if (!supabaseClient) return;
+  if (!supabaseClient || !state.currentUser) return;
   try {
     const { data, error } = await supabaseClient.from("workplaces").select("*");
     if (!error && Array.isArray(data)) {
       state.sectors = [];
       state.jobs = [];
       const sectorMap = new Map();
+      const currentUserId = state.currentUser.id;
 
-      data.forEach((wp) => {
+      // Filter: Only keep workplaces belonging to this employer
+      const myWorkplaces = data.filter((wp) => {
+        if (wp.employer_id) {
+          return wp.employer_id === currentUserId;
+        }
+        if (wp.sector_notes && wp.sector_notes.includes(`[emp:${currentUserId}]`)) {
+          return true;
+        }
+        // Legacy fallback: for original creator Filip Kolle
+        if (
+          !wp.employer_id &&
+          (!wp.sector_notes || !wp.sector_notes.includes("[emp:")) &&
+          currentUserId === "e469c8c8-0678-49fd-917d-0f60b031d006"
+        ) {
+          return true;
+        }
+        return false;
+      });
+
+      myWorkplaces.forEach((wp) => {
+        const cleanNotes = (wp.sector_notes || "").replace(/\[emp:[^\]]+\]\s*/g, "");
         const sectorNameVal = wp.sector_name || wp.name || "Splošno";
         const sectorIdVal = wp.id || slugify(sectorNameVal);
         if (!sectorMap.has(sectorIdVal)) {
@@ -401,7 +484,7 @@ async function fetchWorkplaces() {
             id: sectorIdVal,
             name: sectorNameVal,
             color: wp.sector_color || "#56829d",
-            notes: wp.sector_notes || "",
+            notes: cleanNotes,
             code: wp.join_code || wp.code || generateSectorCode(),
           });
         }
@@ -436,7 +519,7 @@ async function fetchUserProfiles() {
 }
 
 async function fetchApprovedRequests() {
-  if (!supabaseClient) return [];
+  if (!supabaseClient || !state.currentUser) return [];
   try {
     const { data, error } = await supabaseClient
       .from("workplace_requests")
@@ -445,8 +528,17 @@ async function fetchApprovedRequests() {
       .order("created_at", { ascending: false });
 
     if (!error && Array.isArray(data)) {
-      state.approvedRequests = data;
-      return data;
+      const myWorkplaceIds = new Set(state.sectors.map((s) => s.id));
+      const myJoinCodes = new Set(state.sectors.map((s) => s.code));
+
+      const filtered = data.filter((req) => {
+        return (
+          myWorkplaceIds.has(req.workplace_id) ||
+          myJoinCodes.has(req.workplaces?.join_code)
+        );
+      });
+      state.approvedRequests = filtered;
+      return filtered;
     }
   } catch (e) {
     console.log("Info: approved requests sync", e);
@@ -491,7 +583,8 @@ function setupRealtimeListeners() {
   if (!supabaseClient) return;
 
   if (realtimeChannel) {
-    supabaseClient.removeChannel(realtimeChannel);
+    try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+    realtimeChannel = null;
   }
 
   try {
@@ -501,14 +594,14 @@ function setupRealtimeListeners() {
         "postgres_changes",
         { event: "*", schema: "public", table: "workplace_requests" },
         async () => {
-          await loadAllData();
+          if (state.currentUser) await loadAllData();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "work_logs" },
         async () => {
-          await loadAllData();
+          if (state.currentUser) await loadAllData();
         }
       )
       .subscribe();
@@ -524,9 +617,9 @@ function setupRealtimeListeners() {
   }, 5000);
 }
 
-// 3. Fetch and Display Pending Requests
+// 3. Fetch and Display Pending Requests (Scoped to Employer's Sectors)
 async function fetchPendingRequests() {
-  if (!supabaseClient) return;
+  if (!supabaseClient || !state.currentUser) return;
   try {
     const { data, error } = await supabaseClient
       .from("workplace_requests")
@@ -535,7 +628,15 @@ async function fetchPendingRequests() {
       .order("created_at", { ascending: false });
 
     if (!error && Array.isArray(data)) {
-      state.pendingRequests = data;
+      const myWorkplaceIds = new Set(state.sectors.map((s) => s.id));
+      const myJoinCodes = new Set(state.sectors.map((s) => s.code));
+
+      state.pendingRequests = data.filter((req) => {
+        return (
+          myWorkplaceIds.has(req.workplace_id) ||
+          myJoinCodes.has(req.workplaces?.join_code)
+        );
+      });
       renderPendingRequestsNotification();
     }
   } catch (e) {
@@ -1581,7 +1682,7 @@ window.handleAddCustomStatus = function (statusName) {
   if (!state.customStatuses) state.customStatuses = ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"];
   if (!state.customStatuses.includes(trimmed)) {
     state.customStatuses.push(trimmed);
-    localStorage.setItem("4p_custom_statuses", JSON.stringify(state.customStatuses));
+    localStorage.setItem(getUserStorageKey("custom_statuses"), JSON.stringify(state.customStatuses));
     renderCustomStatuses();
     if (state.selectedEmployeeId) {
       renderEmployeeDetail(state.selectedEmployeeId);
@@ -1592,7 +1693,7 @@ window.handleAddCustomStatus = function (statusName) {
 window.handleDeleteCustomStatus = function (statusName) {
   if (!state.customStatuses) return;
   state.customStatuses = state.customStatuses.filter((s) => s !== statusName);
-  localStorage.setItem("4p_custom_statuses", JSON.stringify(state.customStatuses));
+  localStorage.setItem(getUserStorageKey("custom_statuses"), JSON.stringify(state.customStatuses));
   renderCustomStatuses();
   if (state.selectedEmployeeId) {
     renderEmployeeDetail(state.selectedEmployeeId);
@@ -1602,7 +1703,7 @@ window.handleDeleteCustomStatus = function (statusName) {
 window.handleEmployeeStatusChange = function (employeeId, newStatus) {
   if (!state.employeeCustomStatuses) state.employeeCustomStatuses = {};
   state.employeeCustomStatuses[employeeId] = newStatus;
-  localStorage.setItem("4p_employee_statuses", JSON.stringify(state.employeeCustomStatuses));
+  localStorage.setItem(getUserStorageKey("employee_statuses"), JSON.stringify(state.employeeCustomStatuses));
 
   const emp = state.employees.find((e) => e.id === employeeId);
   if (emp) {
@@ -2112,67 +2213,17 @@ window.openDayDetailModal = function (dateStr) {
 // Urnik (Shift Scheduler) Implementation
 // ==========================================================================
 function initDefaultScheduleShifts() {
-  if (!state.scheduleShifts || state.scheduleShifts.length === 0) {
-    const emp = state.employees[0] || { id: "emp_1", name: "Filip Kolle" };
-    const sec1 = state.sectors[0] || { id: "sec_1", name: "Postojna", color: "#56829d" };
-    const sec2 = state.sectors[1] || { id: "sec_2", name: "Divino", color: "#0284c7" };
-    const sec3 = state.sectors[2] || { id: "sec_3", name: "Mokrice", color: "#7c3aed" };
-
-    state.scheduleShifts = [
-      {
-        id: "shift_1",
-        userId: emp.id,
-        userName: emp.name,
-        sectorId: sec1.id,
-        sectorName: sec1.name,
-        color: sec1.color || "#56829d",
-        date: "2026-08-08",
-        startTime: "08:00",
-        endTime: "16:00",
-        hours: 8,
-        note: "Dopoldanska izmena",
-      },
-      {
-        id: "shift_2",
-        userId: emp.id,
-        userName: emp.name,
-        sectorId: sec2.id,
-        sectorName: sec2.name,
-        color: sec2.color || "#0284c7",
-        date: "2026-08-14",
-        startTime: "14:00",
-        endTime: "22:00",
-        hours: 8,
-        note: "Strežba terasa",
-      },
-      {
-        id: "shift_3",
-        userId: emp.id,
-        userName: emp.name,
-        sectorId: sec3.id,
-        sectorName: sec3.name,
-        color: sec3.color || "#7c3aed",
-        date: "2026-08-23",
-        startTime: "08:00",
-        endTime: "16:00",
-        hours: 8,
-        note: "Glavna izmena",
-      },
-      {
-        id: "shift_4",
-        userId: emp.id,
-        userName: emp.name,
-        sectorId: sec3.id,
-        sectorName: sec3.name,
-        color: sec3.color || "#7c3aed",
-        date: "2026-08-28",
-        startTime: "08:00",
-        endTime: "17:00",
-        hours: 9,
-        note: "Priprava in delo",
-      },
-    ];
-    localStorage.setItem("4p_schedule_shifts", JSON.stringify(state.scheduleShifts));
+  if (state.scheduleShifts === null || state.scheduleShifts === undefined) {
+    const saved = localStorage.getItem(getUserStorageKey("schedule_shifts"));
+    if (saved) {
+      try {
+        state.scheduleShifts = JSON.parse(saved);
+      } catch (e) {
+        state.scheduleShifts = [];
+      }
+    } else {
+      state.scheduleShifts = [];
+    }
   }
 }
 
@@ -2596,7 +2647,7 @@ window.handleDeleteShiftModal = function () {
   if (!id) return;
   if (confirm("Ali ste prepričani, da želite izbrisati to izmeno z urnika?")) {
     state.scheduleShifts = (state.scheduleShifts || []).filter((s) => s.id !== id);
-    localStorage.setItem("4p_schedule_shifts", JSON.stringify(state.scheduleShifts));
+    localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
     closeShiftModal();
     renderSchedule();
   }
@@ -2733,20 +2784,22 @@ $("#sectorModalForm")?.addEventListener("submit", async (event) => {
   const notes = $("#modalSectorNotes") ? $("#modalSectorNotes").value.trim() : "";
   const code = generateSectorCode();
   const id = `${slugify(name)}-${Date.now().toString(36)}`;
+  const currentUserId = state.currentUser ? state.currentUser.id : "";
+  const notesWithTag = currentUserId ? `[emp:${currentUserId}] ${notes}`.trim() : notes;
 
   // Optimistic instant UI update
   state.sectors.push({ id, name, color, notes, code });
   closeSectorModalDialog();
   renderAll();
 
-  if (supabaseClient) {
+  if (supabaseClient && state.currentUser) {
     try {
       const { data, error } = await supabaseClient.from("workplaces").insert([
         {
           name: name,
           sector_name: name,
           sector_color: color,
-          sector_notes: notes,
+          sector_notes: notesWithTag,
           join_code: code,
         },
       ]).select();
@@ -2887,7 +2940,7 @@ $("#companyForm")?.addEventListener("submit", async (event) => {
   if (!newCompanyName) return;
 
   state.companyName = newCompanyName;
-  localStorage.setItem("4p_company_name", newCompanyName);
+  localStorage.setItem(getUserStorageKey("company_name"), newCompanyName);
 
   if (state.currentUser) {
     await syncEmployerProfile(state.currentUser, newCompanyName);
@@ -3136,7 +3189,7 @@ $("#shiftModalForm")?.addEventListener("submit", (e) => {
     state.scheduleShifts.push(newShift);
   }
 
-  localStorage.setItem("4p_schedule_shifts", JSON.stringify(state.scheduleShifts));
+  localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
   closeShiftModal();
   renderSchedule();
 });
