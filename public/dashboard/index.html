@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=48" />
+    <link rel="stylesheet" href="styles.css?v=57" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -129,17 +129,6 @@
               </svg>
             </span>
             <span style="display: flex; align-items: center; gap: 6px;">Urnik <span class="beta-badge">BETA</span></span>
-          </button>
-          <button class="nav-item" data-view="calendar" type="button">
-            <span class="icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </span>
-            <span>Koledar ur</span>
           </button>
           <button class="nav-item" data-view="settings" type="button">
             <span class="icon" aria-hidden="true">⚙</span>
@@ -309,9 +298,13 @@
 
           <!-- Podrobnosti posameznega zaposlenega (Profil z razčlenitvijo po sektorjih) -->
           <div id="employeeDetailContainer" hidden>
-            <div style="margin-bottom: 16px;">
+            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
               <button type="button" class="ghost-button" id="backToEmployeesList" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
                 <span>←</span> Nazaj na seznam zaposlenih
+              </button>
+              <button type="button" id="dismissEmployeeBtn" class="btn-danger-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; color: #ef4444; border: 1px solid #fca5a5; background: #fef2f2; cursor: pointer; transition: all 0.2s;" title="Prekini povezavo in odstrani zaposlenega iz vseh vaših sektorjev">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+                Odpusti zaposlenega
               </button>
             </div>
 
@@ -343,6 +336,34 @@
                   <p>Za izplačilo</p>
                   <strong id="empDetailUnpaid">0,00 €</strong>
                   <span>Neizplačan znesek</span>
+                </article>
+              </div>
+
+              <!-- Dodatne metrike: Nedelje, Prazniki in Nadure -->
+              <div class="metric-grid" style="margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <article class="metric">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <p style="margin: 0;">Nedelje</p>
+                    <span style="font-size: 11px; font-weight: 700; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 6px;">Nedeljsko delo</span>
+                  </div>
+                  <strong id="empDetailSundays">0 nedelj</strong>
+                  <span id="empDetailSundayHours">0 h ob nedeljah</span>
+                </article>
+                <article class="metric">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <p style="margin: 0;">Prazniki</p>
+                    <span style="font-size: 11px; font-weight: 700; background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 6px;">Dela prosti dnevi</span>
+                  </div>
+                  <strong id="empDetailHolidays">0 praznikov</strong>
+                  <span id="empDetailHolidayHours">0 h ob praznikih</span>
+                </article>
+                <article class="metric">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <p style="margin: 0;">Nadure</p>
+                    <span id="empDetailOvertimeBadge" style="font-size: 11px; font-weight: 700; background: rgba(86, 130, 157, 0.12); color: var(--primary-dark); padding: 2px 8px; border-radius: 6px;">40h / teden</span>
+                  </div>
+                  <strong id="empDetailOvertime">0 h</strong>
+                  <span id="empDetailOvertimeSub">Presežek delovnih ur</span>
                 </article>
               </div>
             </section>
@@ -433,8 +454,12 @@
               <button type="button" class="icon-button" id="scheduleNextBtn" aria-label="Naslednje obdobje">›</button>
             </div>
 
-            <!-- Gumb za ustvarjanje izmene -->
-            <div>
+            <!-- Gumbi za urnik (povezava s koledarjem in dodajanje izmene) -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" class="ghost-button" id="openCalendarSyncBtn" onclick="openCalendarSyncModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 14px; font-weight: 700; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);" title="Poveži z Google ali Apple koledarjem">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>Poveži s koledarjem</span>
+              </button>
               <button type="button" class="primary-button" id="openAddShiftBtn" onclick="openShiftModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 16px;">
                 <span>+</span> Dodaj na urnik
               </button>
@@ -468,51 +493,66 @@
 
         <section class="view" id="settingsView">
           <div class="settings-grid">
-            <!-- Profil podjetja in varnost -->
-            <section class="panel settings-panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Podatki o računu</h2>
-                  <p>Upravljanje profila podjetja in prijavnih podatkov</p>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <!-- Profil podjetja in varnost -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Podatki o računu</h2>
+                    <p>Upravljanje profila podjetja in prijavnih podatkov</p>
+                  </div>
+                  <div id="connectionStatus" class="status-pill online">
+                    <span class="status-dot"></span> Povezava vzpostavljena
+                  </div>
                 </div>
-                <div id="connectionStatus" class="status-pill online">
-                  <span class="status-dot"></span> Povezava vzpostavljena
-                </div>
-              </div>
 
-              <form id="companyForm" class="settings-form">
-                <div id="accountAlert" class="auth-alert success" hidden></div>
-                <label>
-                  Ime podjetja / blagovne znamke
-                  <input id="companyName" type="text" placeholder="Ime podjetja" required />
-                </label>
-                <label>
-                  Prijavni e-naslov
-                  <input id="accountEmail" type="email" placeholder="email@podjetje.si" readonly style="background: var(--surface-soft); color: var(--muted); cursor: not-allowed;" />
-                </label>
-                <button class="primary-button" type="submit">Shrani podatke podjetja</button>
-              </form>
-
-              <!-- Sprememba gesla -->
-              <div class="settings-password-section">
-                <div class="settings-section-title">
-                  <h3>Varnost in geslo</h3>
-                  <p>Nastavite novo geslo za vstop v Dashboard.</p>
-                </div>
-                <form id="passwordForm" class="settings-form">
-                  <div id="passwordAlert" class="auth-alert success" hidden></div>
+                <form id="companyForm" class="settings-form">
+                  <div id="accountAlert" class="auth-alert success" hidden></div>
                   <label>
-                    Novo geslo
-                    <input id="newPassword" type="password" placeholder="••••••••••••" minlength="6" required />
+                    Ime podjetja / blagovne znamke
+                    <input id="companyName" type="text" placeholder="Ime podjetja" required />
                   </label>
                   <label>
-                    Ponovite novo geslo
-                    <input id="confirmNewPassword" type="password" placeholder="••••••••••••" minlength="6" required />
+                    Prijavni e-naslov
+                    <input id="accountEmail" type="email" placeholder="email@podjetje.si" readonly style="background: var(--surface-soft); color: var(--muted); cursor: not-allowed;" />
                   </label>
-                  <button class="ghost-button" type="submit" style="font-weight: 700;">Posodobi geslo</button>
+                  <button class="primary-button" type="submit">Shrani podatke podjetja</button>
                 </form>
-              </div>
-            </section>
+              </section>
+
+              <!-- Hitre izbire izmene -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Hitre izbire izmene</h2>
+                    <p>Nastavite pogoste termine delovnih izmen za hiter vnos na urniku.</p>
+                  </div>
+                </div>
+
+                <!-- Obrazec za dodajanje nove hitre izbire -->
+                <form id="addShiftPresetForm" class="settings-form" style="background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label style="font-size: 12px; font-weight: 600;">
+                      Začetek (Od)
+                      <input type="time" id="newPresetStartTime" value="08:00" required style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                    <label style="font-size: 12px; font-weight: 600;">
+                      Zaključek (Do)
+                      <input type="time" id="newPresetEndTime" value="16:00" required style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                  </div>
+                  <div style="display: flex; gap: 8px; align-items: flex-end; margin-top: -4px;">
+                    <label style="flex: 1; font-size: 12px; font-weight: 600; margin-bottom: 0;">
+                      Poimenovanje / Oznaka (neobvezno)
+                      <input type="text" id="newPresetLabel" placeholder="npr. Jutranja, Dopoldan, Nočna..." style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                    <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 7px 14px; height: 38px;">+ Dodaj izbiro</button>
+                  </div>
+                </form>
+
+                <div class="shift-presets-manage-list" id="shiftPresetsManageList"></div>
+              </section>
+            </div>
 
             <!-- Sektorji in povezovalne kode -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -550,77 +590,6 @@
           </div>
         </section>
 
-        <!-- Koledar delovnih ur (Tedenski in Mesečni pogled) -->
-        <section class="view" id="calendarView">
-          <div class="calendar-controls-bar panel">
-            <div class="cal-mode-toggle" id="calModeToggle">
-              <button type="button" class="cal-toggle-btn active" data-cal-mode="month">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                <span>Mesečni pogled</span>
-              </button>
-              <button type="button" class="cal-toggle-btn" data-cal-mode="week">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                  <line x1="10" y1="4" x2="10" y2="22"></line>
-                </svg>
-                <span>Tedenski pogled</span>
-              </button>
-            </div>
-
-            <div class="cal-filters-group">
-              <select id="calSectorFilter" class="cal-select">
-                <option value="all">Vsi sektorji</option>
-              </select>
-              <select id="calEmployeeFilter" class="cal-select">
-                <option value="all">Vsi zaposleni</option>
-              </select>
-            </div>
-
-            <div class="cal-nav-group">
-              <button type="button" class="icon-button" id="calPrevBtn" aria-label="Prejšnje obdobje">‹</button>
-              <button type="button" class="cal-today-btn" id="calTodayBtn">Danes</button>
-              <div class="cal-period-pill" id="calPeriodTitle">Avgust 2026</div>
-              <button type="button" class="icon-button" id="calNextBtn" aria-label="Naslednje obdobje">›</button>
-            </div>
-          </div>
-
-          <div class="calendar-main-panel panel" id="calendarMainPanel">
-            <div id="calendarContainer"></div>
-          </div>
-
-          <!-- Mesečni seštevek ur in izplačil po zaposlenih -->
-          <section class="panel cal-summary-panel" style="margin-top: 20px;">
-            <div class="panel-header">
-              <div>
-                <h2 id="calSummaryTitle">Obračun po zaposlenih</h2>
-                <p id="calSummarySubtitle">Pregled zabeleženih ur, urne postavke in zneskov za izplačilo za izbrani mesec</p>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Zaposleni</th>
-                    <th>Sektor(ji)</th>
-                    <th>Zabeležene ure</th>
-                    <th>Urna postavka</th>
-                    <th>Potni stroški</th>
-                    <th>Skupni zaslužek</th>
-                    <th>Za izplačilo</th>
-                    <th>Status izplačila</th>
-                  </tr>
-                </thead>
-                <tbody id="calEmployeeSummaryTable"></tbody>
-              </table>
-            </div>
-          </section>
-        </section>
       </main>
     </div>
 
@@ -672,22 +641,7 @@
       </div>
     </dialog>
 
-    <!-- Modal za podroben pregled ur posameznega dneva -->
-    <dialog id="dayDetailModal" class="modal">
-      <div class="modal-box day-detail-modal-box">
-        <div class="modal-header">
-          <div>
-            <h2 id="dayDetailModalTitle">Pregled delovnih ur</h2>
-            <p id="dayDetailModalSubtitle">Vnosi ur zaposlenih za izbrani dan</p>
-          </div>
-          <button type="button" class="icon-button modal-close" id="closeDayDetailModal" aria-label="Zapri">✕</button>
-        </div>
-        <div id="dayDetailModalContent" class="day-detail-modal-content"></div>
-        <div class="modal-footer">
-          <button type="button" class="ghost-button" id="closeDayDetailModalBtn">Zapri</button>
-        </div>
-      </div>
-    </dialog>
+
 
     <!-- Modal za dodajanje / urejanje izmene na urniku -->
     <dialog id="shiftModal" class="modal">
@@ -701,12 +655,41 @@
         </div>
         <form id="shiftModalForm" class="modal-form">
           <input type="hidden" id="modalShiftId" value="" />
+          <input type="hidden" id="modalShiftType" value="assigned" />
 
-          <div class="form-group">
+          <!-- Preklopnik: Dodeljena izmena vs. Odprta izmena -->
+          <div class="shift-type-selector" style="display: flex; gap: 8px; margin-bottom: 16px; background: #f1f5f9; padding: 4px; border-radius: 10px;">
+            <button type="button" class="shift-type-btn active" id="shiftTypeAssigned" onclick="setShiftModalType('assigned')" style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: #fff; color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              👤 Dodeljena izmena
+            </button>
+            <button type="button" class="shift-type-btn" id="shiftTypeOpen" onclick="setShiftModalType('open')" style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b;">
+              🔓 Odprta izmena (prosta prijava)
+            </button>
+          </div>
+
+          <!-- Skupina za izbiro zaposlenega (samo pri dodeljeni izmeni) -->
+          <div class="form-group" id="shiftEmployeeGroup">
             <label for="modalShiftEmployee">Zaposleni <span class="required">*</span></label>
             <select id="modalShiftEmployee" required class="cal-select" style="width: 100%;">
               <option value="">Izberite zaposlenega...</option>
             </select>
+          </div>
+
+          <!-- Skupina za število potrebnih oseb (samo pri odprti izmeni) -->
+          <div class="form-group" id="shiftSpotsGroup" style="display: none;">
+            <label for="modalShiftRequiredSpots">Potrebno število oseb <span class="required">*</span></label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="ghost-button" onclick="adjustShiftSpots(-1)" style="width: 38px; height: 38px; padding: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center;">-</button>
+              <input type="number" id="modalShiftRequiredSpots" min="1" max="50" value="1" style="width: 80px; text-align: center; font-weight: 800; font-size: 16px;" />
+              <button type="button" class="ghost-button" onclick="adjustShiftSpots(1)" style="width: 38px; height: 38px; padding: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center;">+</button>
+              <span style="font-size: 13px; color: var(--muted);">zaposlenih se lahko prijavi</span>
+            </div>
+          </div>
+
+          <!-- Seznam prijavljenih zaposlenih (ob ogledu obstoječe odprte izmene) -->
+          <div class="form-group" id="shiftSignupsGroup" style="display: none;">
+            <label style="margin-bottom: 6px; display: block; font-weight: 700; font-size: 13px;">Prijavljeni zaposleni (<span id="shiftSignupsCount">0</span>):</label>
+            <div id="shiftSignupsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
           </div>
 
           <div class="form-group">
@@ -735,14 +718,10 @@
 
           <!-- Hitri prednastavljeni časi -->
           <div class="form-group" style="margin-top: -6px;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Hitra izbira izmene:</span>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
-              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('06:00', '14:00')">06:00 – 14:00 (8h)</button>
-              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('08:00', '16:00')">08:00 – 16:00 (8h)</button>
-              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('14:00', '22:00')">14:00 – 22:00 (8h)</button>
-              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('16:00', '00:00')">16:00 – 00:00 (8h)</button>
-              <button type="button" class="shift-preset-btn" onclick="setShiftPreset('09:00', '17:00')">09:00 – 17:00 (8h)</button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Hitra izbira izmene:</span>
             </div>
+            <div id="shiftModalPresets" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;"></div>
           </div>
 
           <!-- Izračun ur -->
@@ -767,6 +746,121 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=48"></script>
+    <!-- Modal za sinhronizacijo s koledarjem (Google Koledar, Apple Koledar) -->
+    <dialog id="calendarSyncModal" class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-content" style="max-width: 540px; padding: 22px 24px;">
+        <div class="modal-header" style="margin-bottom: 18px; padding-bottom: 0; border-bottom: none;">
+          <div>
+            <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);">Povezava s koledarjem</h2>
+          </div>
+          <button type="button" class="icon-button modal-close" onclick="closeCalendarSyncModal()" aria-label="Zapri">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          
+          <!-- 1. Apple Koledar -->
+          <div class="cal-sync-row">
+            <div class="cal-sync-row-left">
+              <div class="cal-sync-icon-box">
+                <svg width="20" height="20" viewBox="0 0 170 170" fill="currentColor">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.3-5.77-8.71-10.36-18.73-13.78-30.06-3.42-11.33-5.13-22.18-5.13-32.55 0-14.38 3.54-26.4 10.63-36.08 7.09-9.68 16.32-14.65 27.7-14.9 4.35 0 9.38 1.13 15.08 3.39 5.7 2.26 9.68 3.42 11.94 3.48 1.96 0 6.09-1.25 12.39-3.75 6.3-2.5 11.75-3.61 16.36-3.34 12.63.75 22.84 5.38 30.63 13.88-11.01 6.64-16.37 15.77-16.09 27.38.28 9.25 3.9 17.06 10.85 23.44 6.95 6.38 15.19 10.02 24.72 10.92-2.18 6.44-4.73 12.92-7.65 19.46zM119.22 33.15c0-7.39 2.65-14.28 7.95-20.67 5.3-6.39 11.89-10.42 19.77-12.08.22 1.3.33 2.45.33 3.45 0 7.39-2.73 14.38-8.19 20.97-5.46 6.59-12.18 10.51-20.16 11.76-.07-1.12-.1-2.26-.1-3.43z"/>
+                </svg>
+              </div>
+              <span class="cal-sync-row-title">Apple Koledar</span>
+            </div>
+            <button type="button" class="primary-button" onclick="subscribeAppleCalendar()" style="padding: 8px 16px; font-size: 13px; font-weight: 700; white-space: nowrap;">
+               Naroči se
+            </button>
+          </div>
+
+          <!-- 2. Google Koledar -->
+          <div class="cal-sync-card">
+            <div class="cal-sync-row" style="padding: 0; border: none; box-shadow: none; margin-bottom: 10px;">
+              <div class="cal-sync-row-left">
+                <div class="cal-sync-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </div>
+                <span class="cal-sync-row-title">Google Koledar</span>
+              </div>
+              <button type="button" class="primary-button" onclick="openGoogleCalendarImport()" style="padding: 8px 14px; font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                Odpri Google Koledar ↗
+              </button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="calSyncFeedUrl" readonly value="" class="cal-sync-input" />
+              <button type="button" class="primary-button" id="copyCalSyncUrlBtn" onclick="copyCalendarFeedUrl()" style="padding: 8px 14px; font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                Kopiraj povezavo
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Prenos datoteke (.ics) -->
+          <div class="cal-sync-row">
+            <div class="cal-sync-row-left">
+              <div class="cal-sync-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </div>
+              <span class="cal-sync-row-title">Ročni prenos (.ics datoteka)</span>
+            </div>
+            <button type="button" class="primary-button" onclick="downloadScheduleICS()" style="padding: 8px 16px; font-size: 13px; font-weight: 700; white-space: nowrap;">
+              Prenesi .ics
+            </button>
+          </div>
+
+          <!-- 4. Obratni uvoz: Osebne obveznosti na urniku -->
+          <div class="cal-sync-card" style="margin-top: 2px;">
+            <div class="cal-sync-row" style="padding: 0; border: none; box-shadow: none; margin-bottom: 10px;">
+              <div class="cal-sync-row-left">
+                <div class="cal-sync-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <span class="cal-sync-row-title">Osebne obveznosti na urniku</span>
+              </div>
+              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--ink);">
+                <input type="checkbox" id="toggleShowExternalEvents" onchange="toggleExternalEventsVisibility(event)" checked />
+                <span>Prikaži</span>
+              </label>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="url" id="employerExternalCalUrl" placeholder="Povezava iCal (Google / Apple URL)" class="cal-sync-input" />
+              <button type="button" class="primary-button" onclick="saveExternalCalendarUrl()" style="padding: 8px 14px; font-size: 12.5px; font-weight: 700; white-space: nowrap;">
+                Uvozi URL
+              </button>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <input type="file" id="employerExternalCalFile" accept=".ics,text/calendar" style="display: none;" onchange="handleExternalICSFileUpload(event)" />
+              <button type="button" class="primary-button" onclick="$('#employerExternalCalFile').click()" style="padding: 8px 14px; font-size: 12.5px; font-weight: 700;">
+                Naloži .ics datoteko
+              </button>
+              <button type="button" id="clearExternalCalBtn" onclick="clearExternalCalendarEvents()" class="ghost-button" style="display: none; padding: 7px 12px; font-size: 12px; color: #dc2626; border-color: #fecaca; margin-left: auto;">
+                Odstrani
+              </button>
+            </div>
+            <div id="externalCalStatus" style="font-size: 11px; color: var(--muted); margin-top: 6px;"></div>
+          </div>
+
+        </div>
+
+        <div class="modal-actions" style="margin-top: 18px; display: flex; justify-content: flex-end;">
+          <button type="button" class="ghost-button" onclick="closeCalendarSyncModal()" style="padding: 8px 18px; font-size: 13px; font-weight: 700;">Zapri</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="app.js?v=58"></script>
   </body>
 </html>

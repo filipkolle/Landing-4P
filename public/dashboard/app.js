@@ -15,21 +15,27 @@ function getUserStorageKey(key) {
   return `4p_${uid}_${key}`;
 }
 
+const DEFAULT_SHIFT_PRESETS = [
+  { id: "def-1", startTime: "06:00", endTime: "14:00", label: "" },
+  { id: "def-2", startTime: "08:00", endTime: "16:00", label: "" },
+  { id: "def-3", startTime: "14:00", endTime: "22:00", label: "" },
+  { id: "def-4", startTime: "16:00", endTime: "00:00", label: "" },
+  { id: "def-5", startTime: "09:00", endTime: "17:00", label: "" },
+];
+
 const state = {
   companyName: "Moje podjetje",
   supabaseUrl: localStorage.getItem("4p_supabase_url") || SUPABASE_DEFAULT_URL,
   supabaseKey: localStorage.getItem("4p_supabase_key") || SUPABASE_DEFAULT_KEY,
   currentUser: null,
   activeView: "overview",
-  calendarMode: "month", // "month" | "week"
-  calendarDate: new Date(2026, 7, 1),
-  calSectorFilter: "all",
-  calEmployeeFilter: "all",
   scheduleMode: "month", // "month" | "week"
   scheduleDate: new Date(2026, 7, 1),
   scheduleSectorFilter: "all",
   scheduleEmployeeFilter: "all",
   scheduleShifts: null,
+  openShifts: [],
+  shiftPresets: null,
   sectors: [],
   jobs: [],
   employees: [],
@@ -41,6 +47,9 @@ const state = {
   pendingRequests: [],
   customStatuses: ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"],
   employeeCustomStatuses: {},
+  employeeWorkTypes: {},
+  externalEvents: [],
+  showExternalEvents: true,
   supabaseConnected: false,
 };
 
@@ -56,7 +65,11 @@ function clearUserState() {
   state.approvedRequests = [];
   state.pendingRequests = [];
   state.scheduleShifts = null;
+  state.shiftPresets = null;
   state.employeeCustomStatuses = {};
+  state.employeeWorkTypes = {};
+  state.externalEvents = [];
+  state.showExternalEvents = true;
   state.customStatuses = ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"];
   state.userProfiles.clear();
 
@@ -224,6 +237,14 @@ async function handleAuthState(session, companyNameOverride = null) {
     state.employeeCustomStatuses = JSON.parse(
       localStorage.getItem(getUserStorageKey("employee_statuses")) || "{}"
     );
+    state.employeeWorkTypes = JSON.parse(
+      localStorage.getItem(getUserStorageKey("employee_work_types")) || "{}"
+    );
+    state.externalEvents = JSON.parse(
+      localStorage.getItem(getUserStorageKey("external_cal_events")) || "[]"
+    );
+    state.showExternalEvents =
+      localStorage.getItem(getUserStorageKey("show_external_cal")) !== "false";
 
     if (authScreen) authScreen.hidden = true;
     if (appShell) appShell.hidden = false;
@@ -443,6 +464,9 @@ async function loadAllData() {
   const sources = await fetchIncomeSources();
   const logs = await fetchWorkLogs();
   syncEmployeesAndLogs(approvedReqs, sources, logs);
+  await fetchScheduleShifts();
+  await fetchOpenShifts();
+  await fetchShiftPresets();
   renderAll();
 }
 
@@ -578,7 +602,152 @@ async function fetchWorkLogs() {
   return [];
 }
 
-// 2. Real-time Listener & Polling for workplace_requests and work_logs
+async function fetchScheduleShifts() {
+  if (!supabaseClient || !state.currentUser) return [];
+  try {
+    const { data, error } = await supabaseClient
+      .from("schedule_shifts")
+      .select("*")
+      .eq("employer_id", state.currentUser.id)
+      .order("date", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      state.scheduleShifts = data.map((d) => {
+        const sec = state.sectors.find((s) => s.id === d.workplace_id);
+        const emp = state.employees.find((e) => e.id === d.user_id);
+        const empName = emp ? emp.name : (state.userProfiles.get(d.user_id) || "Zaposleni");
+        return {
+          id: d.id,
+          userId: d.user_id,
+          userName: empName,
+          sectorId: d.workplace_id,
+          sectorName: sec?.name || "Delovno mesto",
+          color: sec?.color || "#56829d",
+          date: d.date,
+          startTime: d.start_time,
+          endTime: d.end_time,
+          hours: Number(d.hours) || 0,
+          note: d.note || "",
+          openShiftId: d.open_shift_id || null,
+        };
+      });
+      localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
+      return data;
+    }
+  } catch (e) {
+    console.log("Info: schedule_shifts sync", e);
+  }
+  return [];
+}
+
+async function fetchOpenShifts() {
+  if (!supabaseClient || !state.currentUser) return [];
+  try {
+    const { data, error } = await supabaseClient
+      .from("open_shifts")
+      .select("*, open_shift_signups(*)")
+      .eq("employer_id", state.currentUser.id)
+      .order("date", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      state.openShifts = data.map((d) => {
+        const sec = state.sectors.find((s) => s.id === d.workplace_id);
+        const signups = d.open_shift_signups || [];
+        return {
+          id: d.id,
+          isOpenShift: true,
+          workplaceId: d.workplace_id,
+          sectorId: d.workplace_id,
+          sectorName: sec?.name || "Delovno mesto",
+          color: sec?.color || "#f59e0b",
+          date: d.date,
+          startTime: d.start_time,
+          endTime: d.end_time,
+          hours: Number(d.hours) || 0,
+          requiredSpots: Number(d.required_spots) || 1,
+          note: d.note || "",
+          signups: signups.map((su) => {
+            const emp = state.employees.find((e) => e.id === su.user_id);
+            return {
+              id: su.id,
+              userId: su.user_id,
+              userName: su.user_name || emp?.name || state.userProfiles.get(su.user_id) || "Zaposleni",
+              createdAt: su.created_at,
+            };
+          }),
+        };
+      });
+      localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+      return state.openShifts;
+    }
+  } catch (e) {
+    console.log("Info: open_shifts sync", e);
+  }
+  return [];
+}
+
+async function fetchShiftPresets() {
+  if (!supabaseClient || !state.currentUser) {
+    const cached = localStorage.getItem(getUserStorageKey("shift_presets"));
+    state.shiftPresets = cached ? JSON.parse(cached) : [...DEFAULT_SHIFT_PRESETS];
+    return state.shiftPresets;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from("shift_presets")
+      .select("*")
+      .eq("employer_id", state.currentUser.id)
+      .order("created_at", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      if (data.length > 0) {
+        state.shiftPresets = data.map((d) => ({
+          id: d.id,
+          startTime: d.start_time,
+          endTime: d.end_time,
+          label: d.label || "",
+        }));
+      } else {
+        const cached = localStorage.getItem(getUserStorageKey("shift_presets"));
+        if (cached) {
+          state.shiftPresets = JSON.parse(cached);
+        } else {
+          // Initialize default presets in state and database for new employer
+          state.shiftPresets = DEFAULT_SHIFT_PRESETS.map((p) => ({
+            ...p,
+            id: crypto.randomUUID(),
+          }));
+          try {
+            await supabaseClient.from("shift_presets").insert(
+              state.shiftPresets.map((p) => ({
+                id: p.id,
+                employer_id: state.currentUser.id,
+                start_time: p.startTime,
+                end_time: p.endTime,
+                label: p.label || null,
+              }))
+            );
+          } catch (seedingErr) {
+            console.warn("Seeding default shift presets warning:", seedingErr);
+          }
+        }
+      }
+      localStorage.setItem(getUserStorageKey("shift_presets"), JSON.stringify(state.shiftPresets));
+      return state.shiftPresets;
+    } else {
+      if (error) console.log("shift_presets fetch note:", error.message);
+      const cached = localStorage.getItem(getUserStorageKey("shift_presets"));
+      state.shiftPresets = cached ? JSON.parse(cached) : [...DEFAULT_SHIFT_PRESETS];
+    }
+  } catch (err) {
+    console.warn("fetchShiftPresets error:", err);
+    const cached = localStorage.getItem(getUserStorageKey("shift_presets"));
+    state.shiftPresets = cached ? JSON.parse(cached) : [...DEFAULT_SHIFT_PRESETS];
+  }
+  return state.shiftPresets;
+}
+
+// 2. Real-time Listener & Polling for workplace_requests, work_logs, schedule_shifts, open_shifts
 function setupRealtimeListeners() {
   if (!supabaseClient) return;
 
@@ -602,6 +771,47 @@ function setupRealtimeListeners() {
         { event: "*", schema: "public", table: "work_logs" },
         async () => {
           if (state.currentUser) await loadAllData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "schedule_shifts" },
+        async () => {
+          if (state.currentUser) {
+            await fetchScheduleShifts();
+            renderSchedule();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "open_shifts" },
+        async () => {
+          if (state.currentUser) {
+            await fetchOpenShifts();
+            renderSchedule();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "open_shift_signups" },
+        async () => {
+          if (state.currentUser) {
+            await fetchOpenShifts();
+            renderSchedule();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shift_presets" },
+        async () => {
+          if (state.currentUser) {
+            await fetchShiftPresets();
+            renderShiftModalPresets();
+            renderShiftPresetsSettings();
+          }
         }
       )
       .subscribe();
@@ -715,75 +925,20 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     sectorByIdMap.set(sec.id, sec);
   });
 
-  // Map each income_source ID to its exact sector (Strict 1-to-1 code binding)
-  const sourceToSectorMap = new Map();
-  sources.forEach((src) => {
-    let matchedSector = null;
-    if (src.workplace_id && sectorByIdMap.has(src.workplace_id)) {
-      matchedSector = sectorByIdMap.get(src.workplace_id);
-    } else if (src.join_code && sectorByCode.has(src.join_code)) {
-      matchedSector = sectorByCode.get(src.join_code);
-    }
-
-    if (matchedSector) {
-      sourceToSectorMap.set(src.id, {
-        sectorId: matchedSector.id,
-        sectorName: matchedSector.name,
-        sectorCode: matchedSector.code,
-        color: matchedSector.color || "#56829d",
-        hourlyRate: Number(src.hourly_rate) || 15,
-        jobName: src.name || matchedSector.name,
-        workplaceId: src.workplace_id || matchedSector.id,
-      });
-
-      const userId = src.user_id;
-      if (userId) {
-        const userStatus = state.employeeCustomStatuses?.[userId] || "Zaposlen";
-        if (!empMap.has(userId)) {
-          const userName = state.userProfiles.get(userId) || "Zaposleni";
-          empMap.set(userId, {
-            id: userId,
-            name: userName,
-            status: userStatus,
-            sectors: {},
-            hours: {},
-            travelExpenses: {},
-            earnings: {},
-            paid: {},
-          });
-        }
-
-        const emp = empMap.get(userId);
-        if (emp) {
-          emp.status = userStatus;
-        }
-        if (!emp.sectors[matchedSector.id]) {
-          emp.sectors[matchedSector.id] = {
-            sectorId: matchedSector.id,
-            sectorName: matchedSector.name,
-            sectorCode: matchedSector.code,
-            color: matchedSector.color || "#56829d",
-            rate: Number(src.hourly_rate) || 15,
-            jobName: src.name || matchedSector.name,
-            hours: {},
-            travelExpenses: {},
-            earnings: {},
-            paid: {},
-          };
-        }
-      }
-    }
-  });
-
-  // Also include approved requests
+  // 1. Process approved requests as the SOLE source of truth for active employment
   approvedReqs.forEach((req) => {
     const userId = req.user_id;
     if (!userId) return;
 
     const wp = req.workplaces || state.jobs.find((j) => j.id === req.workplace_id) || {};
-    const matchedSector =
-      state.sectors.find((s) => s.id === req.workplace_id || s.name === wp.sector_name || s.id === wp.sectorId) ||
-      state.sectors[0];
+    // Strict match: must match one of our company's sectors (NO FALLBACK to state.sectors[0])
+    const matchedSector = state.sectors.find(
+      (s) =>
+        s.id === req.workplace_id ||
+        (wp.join_code && s.code === wp.join_code) ||
+        s.name === wp.sector_name ||
+        s.id === wp.sectorId
+    );
 
     if (!matchedSector) return;
 
@@ -805,24 +960,63 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const emp = empMap.get(userId);
     if (emp) {
       emp.status = userStatus;
+      if (req.user_name && emp.name === "Zaposleni") {
+        emp.name = req.user_name;
+      }
+      if (!emp.sectors[matchedSector.id]) {
+        emp.sectors[matchedSector.id] = {
+          sectorId: matchedSector.id,
+          sectorName: matchedSector.name,
+          sectorCode: matchedSector.code,
+          color: matchedSector.color || "#56829d",
+          rate: 0,
+          isFixed: false,
+          netSalary: 0,
+          jobName: wp.name || matchedSector.name,
+          hours: {},
+          travelExpenses: {},
+          earnings: {},
+          paid: {},
+        };
+      }
     }
-    if (req.user_name && emp.name === "Zaposleni") {
-      emp.name = req.user_name;
+  });
+
+  // 2. Map income_sources: ONLY attach custom rate/title to users who have an approved sector!
+  const sourceToSectorMap = new Map();
+  sources.forEach((src) => {
+    let matchedSector = null;
+    if (src.workplace_id && sectorByIdMap.has(src.workplace_id)) {
+      matchedSector = sectorByIdMap.get(src.workplace_id);
+    } else if (src.join_code && sectorByCode.has(src.join_code)) {
+      matchedSector = sectorByCode.get(src.join_code);
     }
 
-    if (!emp.sectors[matchedSector.id]) {
-      emp.sectors[matchedSector.id] = {
+    if (matchedSector && src.user_id) {
+      const emp = empMap.get(src.user_id);
+      const isFixed = src.type === "fixed";
+      const srcRate = isFixed ? 0 : (Number(src.hourly_rate) || 0);
+
+      if (emp && emp.sectors[matchedSector.id]) {
+        emp.sectors[matchedSector.id].rate = srcRate;
+        emp.sectors[matchedSector.id].isFixed = isFixed;
+        emp.sectors[matchedSector.id].netSalary = Number(src.net_salary) || 0;
+        if (src.name) {
+          emp.sectors[matchedSector.id].jobName = src.name;
+        }
+      }
+
+      sourceToSectorMap.set(src.id, {
         sectorId: matchedSector.id,
         sectorName: matchedSector.name,
         sectorCode: matchedSector.code,
         color: matchedSector.color || "#56829d",
-        rate: 15,
-        jobName: wp.name || matchedSector.name,
-        hours: {},
-        travelExpenses: {},
-        earnings: {},
-        paid: {},
-      };
+        hourlyRate: srcRate,
+        isFixed: isFixed,
+        netSalary: Number(src.net_salary) || 0,
+        jobName: src.name || matchedSector.name,
+        workplaceId: src.workplace_id || matchedSector.id,
+      });
     }
   });
 
@@ -843,7 +1037,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         sectorName: sec.name,
         sectorCode: sec.code,
         color: sec.color || "#56829d",
-        hourlyRate: 15,
+        hourlyRate: 0,
+        isFixed: false,
+        netSalary: 0,
       };
     }
 
@@ -860,7 +1056,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         sectorName: matchedSectorInfo.sectorName,
         sectorCode: matchedSectorInfo.sectorCode,
         color: matchedSectorInfo.color || "#56829d",
-        rate: matchedSectorInfo.hourlyRate || 15,
+        rate: matchedSectorInfo.hourlyRate || 0,
+        isFixed: matchedSectorInfo.isFixed || false,
+        netSalary: matchedSectorInfo.netSalary || 0,
         jobName: matchedSectorInfo.jobName || matchedSectorInfo.sectorName,
         hours: {},
         travelExpenses: {},
@@ -877,12 +1075,14 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     const h = Number(log.hours || 0);
     const travel = Number(log.travel_expenses || 0);
-    const fixedRate = Number(secEntry.rate) || Number(matchedSectorInfo.hourlyRate) || 15;
+    const fixedRate = Number(secEntry.rate) || Number(matchedSectorInfo.hourlyRate) || 0;
     
     // Base work earnings + travel expenses
     let totalLogEarnings = Number(log.earnings || 0);
-    if (totalLogEarnings === 0 && h > 0) {
+    if (totalLogEarnings === 0 && h > 0 && fixedRate > 0) {
       totalLogEarnings = (h * fixedRate) + travel;
+    } else if (totalLogEarnings === 0 && travel > 0) {
+      totalLogEarnings = travel;
     }
 
     // 1. Add strictly to the specific sector breakdown
@@ -931,7 +1131,48 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   state.employees = Array.from(empMap.values());
 }
 
-// Helpers
+// Helpers & Notifications
+function showToast(message, type = "success") {
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.style.cssText = "position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `dashboard-toast toast-${type}`;
+  toast.style.cssText = `
+    background: #1e293b;
+    color: #ffffff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-left: 4px solid ${type === "error" ? "#ef4444" : "#10b981"};
+    pointer-events: auto;
+    transition: all 200ms ease;
+  `;
+
+  const icon = type === "error" ? "⚠️" : "✓";
+  toast.innerHTML = `<span style="color: ${type === "error" ? "#ef4444" : "#10b981"}; font-weight: bold;">${icon}</span> <span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(6px)";
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 200);
+  }, 3500);
+}
+window.showToast = showToast;
+
 function formatSectorCount(count) {
   if (count === 1) return "1 sektor";
   if (count === 2) return "2 sektorja";
@@ -944,6 +1185,154 @@ function formatEmployeeCount(count) {
   if (count === 2) return "2 zaposlena";
   if (count === 3 || count === 4) return `${count} zaposleni`;
   return `${count} zaposlenih`;
+}
+
+// --- Slovenski prazniki in nedelje ---
+function getEasterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31); // 3 = March, 4 = April
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatUtcDateString(d) {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+const slovenianHolidaysCache = new Map();
+
+function getSlovenianHolidays(year) {
+  if (slovenianHolidaysCache.has(year)) {
+    return slovenianHolidaysCache.get(year);
+  }
+
+  const holidays = new Map();
+
+  // Fiksni zakonsko dela prosti dnevi v RS
+  holidays.set(`${year}-01-01`, "Novo leto");
+  holidays.set(`${year}-01-02`, "Novo leto");
+  holidays.set(`${year}-02-08`, "Prešernov dan");
+  holidays.set(`${year}-04-27`, "Dan upora proti okupatorju");
+  holidays.set(`${year}-05-01`, "Praznik dela");
+  holidays.set(`${year}-05-02`, "Praznik dela");
+  holidays.set(`${year}-06-25`, "Dan državnosti");
+  holidays.set(`${year}-08-15`, "Marijino vnebovzetje");
+  holidays.set(`${year}-10-31`, "Dan reformacije");
+  holidays.set(`${year}-11-01`, "Dan spomina na mrtve");
+  holidays.set(`${year}-12-25`, "Božič");
+  holidays.set(`${year}-12-26`, "Dan samostojnosti in enotnosti");
+
+  // Premakljivi dela prosti dnevi v RS
+  const easter = getEasterSunday(year);
+  const easterMonday = new Date(easter.getTime() + 86400000);
+  const pentecost = new Date(easter.getTime() + 49 * 86400000);
+
+  holidays.set(formatUtcDateString(easter), "Velika noč");
+  holidays.set(formatUtcDateString(easterMonday), "Velikonočni ponedeljek");
+  holidays.set(formatUtcDateString(pentecost), "Binkošti");
+
+  slovenianHolidaysCache.set(year, holidays);
+  return holidays;
+}
+
+function getSlovenianHolidayName(dateStr) {
+  if (!dateStr) return null;
+  const cleanDate = dateStr.slice(0, 10);
+  const year = parseInt(cleanDate.slice(0, 4), 10);
+  if (isNaN(year)) return null;
+  const holidays = getSlovenianHolidays(year);
+  return holidays.get(cleanDate) || null;
+}
+
+function isSunday(dateStr) {
+  if (!dateStr) return false;
+  const cleanDate = dateStr.slice(0, 10);
+  const parts = cleanDate.split("-").map(Number);
+  if (parts.length !== 3) return false;
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  return dt.getDay() === 0;
+}
+
+function formatSundayCount(count) {
+  if (count === 1) return "1 nedelja";
+  if (count === 2) return "2 nedelji";
+  if (count === 3 || count === 4) return `${count} nedelje`;
+  return `${count} nedelj`;
+}
+
+function formatHolidayCount(count) {
+  if (count === 1) return "1 praznik";
+  if (count === 2) return "2 praznika";
+  if (count === 3 || count === 4) return `${count} prazniki`;
+  return `${count} praznikov`;
+}
+
+// --- Izračun tedenskih nadur ---
+function getMondayOfWeekKey(dateStr) {
+  const parts = dateStr.slice(0, 10).split("-").map(Number);
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  const day = (dt.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+  const mon = new Date(dt);
+  mon.setDate(dt.getDate() - day);
+  const my = mon.getFullYear();
+  const mm = String(mon.getMonth() + 1).padStart(2, "0");
+  const md = String(mon.getDate()).padStart(2, "0");
+  return `${my}-${mm}-${md}`;
+}
+
+function calculateEmployeeWeeklyOvertime(empAllLogs, weeklyThreshold) {
+  // Združevanje po koledarskih tednih (ponedeljek - nedelja)
+  const weeksMap = new Map();
+  empAllLogs.forEach((log) => {
+    if (!log.date) return;
+    const weekKey = getMondayOfWeekKey(log.date);
+    if (!weeksMap.has(weekKey)) weeksMap.set(weekKey, []);
+    weeksMap.get(weekKey).push(log);
+  });
+
+  const logOvertimeMap = new Map();
+
+  weeksMap.forEach((weekLogs) => {
+    // Kronološka razvrstitev znotraj tedna
+    weekLogs.sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date);
+      if (cmp !== 0) return cmp;
+      return (a.startTime || "").localeCompare(b.startTime || "");
+    });
+
+    let cumulativeHours = 0;
+    for (const log of weekLogs) {
+      const prev = cumulativeHours;
+      const logH = Number(log.hours) || 0;
+      cumulativeHours += logH;
+
+      let ot = 0;
+      if (cumulativeHours <= weeklyThreshold) {
+        ot = 0;
+      } else if (prev < weeklyThreshold) {
+        ot = cumulativeHours - weeklyThreshold;
+      } else {
+        ot = logH;
+      }
+      logOvertimeMap.set(log.id, Math.round(ot * 100) / 100);
+    }
+  });
+
+  return logOvertimeMap;
 }
 
 function activeMonth() {
@@ -1005,32 +1394,39 @@ function employeeMonth(employee, specificSectorId = null) {
     const sec = employee.sectors[specificSectorId];
     const hours = sec.hours?.[monthKey] ?? 0;
     const travelExpenses = sec.travelExpenses?.[monthKey] ?? 0;
-    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate ?? 15) + travelExpenses);
+    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate || 0) + travelExpenses);
     const paid = sec.paid?.[monthKey] ?? (hours === 0 && travelExpenses === 0 ? true : false);
-    return { hours, travelExpenses, earnings, paid, rate: sec.rate ?? 15 };
+    return { hours, travelExpenses, earnings, paid, rate: sec.rate || 0, isFixed: sec.isFixed, netSalary: sec.netSalary };
   }
 
   const hours = employee.hours?.[monthKey] ?? 0;
   const travelExpenses = employee.travelExpenses?.[monthKey] ?? 0;
-  const earnings = employee.earnings?.[monthKey] ?? (hours * 15 + travelExpenses);
+  const sectorList = Object.values(employee.sectors || {});
+  const defaultRate = sectorList.length > 0 ? (sectorList[0].rate || 0) : 0;
+  const earnings = employee.earnings?.[monthKey] ?? (hours * defaultRate + travelExpenses);
   const paid = employee.paid?.[monthKey] ?? (hours === 0 && travelExpenses === 0 ? true : false);
 
-  const sectorList = Object.values(employee.sectors || {});
-  const rate = sectorList.length > 0 ? sectorList[0].rate : 15;
-  const rates = sectorList.map((s) => ({ sectorName: s.sectorName, rate: s.rate }));
+  const rate = defaultRate;
+  const isFixed = sectorList.length > 0 && sectorList.every((s) => s.isFixed);
+  const rates = sectorList.map((s) => ({ sectorName: s.sectorName, rate: s.rate || 0, isFixed: s.isFixed }));
 
-  return { hours, travelExpenses, earnings, paid, rate, rates };
+  return { hours, travelExpenses, earnings, paid, rate, rates, isFixed };
 }
 
 function formatHourlyRate(month, employee) {
+  if (month.isFixed) {
+    return `<span class="chip" style="font-size: 11px; padding: 2px 7px; background: #e0e7ff; color: #3730a3; font-weight: 700;">Polna zaposlitev</span>`;
+  }
   if (month.rates && month.rates.length > 1) {
     const uniqueRates = [...new Set(month.rates.map((r) => r.rate))];
     if (uniqueRates.length === 1) {
-      return `${currency.format(uniqueRates[0])}/h`;
+      return uniqueRates[0] > 0 ? `${currency.format(uniqueRates[0])}/h` : `<span style="color: var(--muted);">-</span>`;
     }
-    return month.rates.map((r) => `${r.sectorName}: ${currency.format(r.rate)}/h`).join("<br/>");
+    return month.rates
+      .map((r) => `${r.sectorName}: ${r.isFixed ? "Polna zaposlitev" : (r.rate > 0 ? `${currency.format(r.rate)}/h` : "-")}`)
+      .join("<br/>");
   }
-  return `${currency.format(month.rate || 15)}/h`;
+  return month.rate > 0 ? `${currency.format(month.rate)}/h` : `<span style="color: var(--muted);">-</span>`;
 }
 
 function currentTotals() {
@@ -1064,7 +1460,7 @@ function sectorStats(sectorId) {
     const sec = employee.sectors[sectorId];
     const hours = sec.hours?.[monthKey] ?? 0;
     const travel = sec.travelExpenses?.[monthKey] ?? 0;
-    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate ?? 15) + travel);
+    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate || 0) + travel);
 
     // Calculate whether this employee's work in this sector is paid
     const secLogs = state.rawLogs.filter(
@@ -1441,9 +1837,20 @@ function renderEmployeeDetail(employeeId) {
     </div>
   `;
 
+  const currentWorkType = state.employeeWorkTypes?.[employee.id] || "full_time";
+  const workTypeDropdownHTML = `
+    <div class="emp-worktype-badge-dropdown">
+      <select class="emp-worktype-select-chip" onchange="handleEmployeeWorkTypeChange('${employee.id}', this.value)" title="Kliknite za izbiro delovnega časa (polni / polovični)">
+        <option value="full_time" ${currentWorkType === "full_time" ? "selected" : ""}>⏱ Polni čas (40h/teden)</option>
+        <option value="part_time" ${currentWorkType === "part_time" ? "selected" : ""}>⏱ Polovični čas (20h/teden)</option>
+      </select>
+    </div>
+  `;
+
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusDropdownHTML}
+      ${workTypeDropdownHTML}
       ${sectorBadgesHTML}
     `;
   }
@@ -1455,20 +1862,66 @@ function renderEmployeeDetail(employeeId) {
   const totalEarnings = empMonthLogs.reduce((sum, l) => sum + l.earnings, 0);
   const unpaidAmount = empMonthLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
 
+  // --- Nedelje & Prazniki v izbranem mesecu ---
+  const sundayLogs = empMonthLogs.filter((l) => isSunday(l.date));
+  const sundayDates = new Set(sundayLogs.map((l) => l.date));
+  const sundayCount = sundayDates.size;
+  const sundayHours = sundayLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+
+  const holidayLogs = empMonthLogs.filter((l) => Boolean(getSlovenianHolidayName(l.date)));
+  const holidayDates = new Set(holidayLogs.map((l) => l.date));
+  const holidayCount = holidayDates.size;
+  const holidayHours = holidayLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+
+  // --- Nadure (tedenski prag: 40h za polni ali 20h za polovični delovni čas) ---
+  const weeklyThreshold = currentWorkType === "part_time" ? 20 : 40;
+  const empAllLogs = state.rawLogs.filter((l) => l.userId === employeeId);
+  const logOvertimeMap = calculateEmployeeWeeklyOvertime(empAllLogs, weeklyThreshold);
+
+  let totalMonthOvertime = 0;
+  empMonthLogs.forEach((l) => {
+    totalMonthOvertime += logOvertimeMap.get(l.id) || 0;
+  });
+
   if ($("#empDetailTotalHours")) $("#empDetailTotalHours").textContent = `${number.format(totalHours)} h`;
   if ($("#empDetailHourlyRate")) {
-    const rates = employeeSectors.map((s) => s.rate || 15);
-    const uniqueRates = [...new Set(rates)];
-    $("#empDetailHourlyRate").textContent =
-      uniqueRates.length === 1
-        ? `${currency.format(uniqueRates[0])}/h`
-        : employeeSectors.map((s) => `${s.sectorName}: ${currency.format(s.rate || 15)}/h`).join(" · ");
+    const isAnyFixed = employeeSectors.some((s) => s.isFixed);
+    if (isAnyFixed && employeeSectors.every((s) => s.isFixed)) {
+      $("#empDetailHourlyRate").textContent = "Polna zaposlitev (fiksna plača)";
+    } else {
+      const rates = employeeSectors.map((s) => s.rate || 0);
+      const uniqueRates = [...new Set(rates)];
+      $("#empDetailHourlyRate").textContent =
+        uniqueRates.length === 1
+          ? (uniqueRates[0] > 0 ? `${currency.format(uniqueRates[0])}/h` : (isAnyFixed ? "Polna zaposlitev" : "-"))
+          : employeeSectors.map((s) => `${s.sectorName}: ${s.isFixed ? "Polna zaposlitev" : (s.rate > 0 ? `${currency.format(s.rate)}/h` : "-")}`).join(" · ");
+    }
   }
   if ($("#empDetailTravel")) $("#empDetailTravel").textContent = currency.format(totalTravel);
   if ($("#empDetailTotalEarnings")) $("#empDetailTotalEarnings").textContent = currency.format(totalEarnings);
   if ($("#empDetailUnpaid")) {
     $("#empDetailUnpaid").textContent = currency.format(unpaidAmount);
     $("#empDetailUnpaid").style.color = unpaidAmount > 0 ? "var(--amber)" : "var(--primary-dark)";
+  }
+
+  // Posodobitev kartic za Nedelje, Praznike in Nadure
+  if ($("#empDetailSundays")) $("#empDetailSundays").textContent = formatSundayCount(sundayCount);
+  if ($("#empDetailSundayHours")) $("#empDetailSundayHours").textContent = `${number.format(sundayHours)} h ob nedeljah`;
+
+  if ($("#empDetailHolidays")) $("#empDetailHolidays").textContent = formatHolidayCount(holidayCount);
+  if ($("#empDetailHolidayHours")) $("#empDetailHolidayHours").textContent = `${number.format(holidayHours)} h ob praznikih`;
+
+  if ($("#empDetailOvertimeBadge")) {
+    $("#empDetailOvertimeBadge").textContent = currentWorkType === "part_time" ? "20h / teden (polovični)" : "40h / teden (polni)";
+  }
+  if ($("#empDetailOvertime")) {
+    $("#empDetailOvertime").textContent = `${number.format(totalMonthOvertime)} h`;
+    $("#empDetailOvertime").style.color = totalMonthOvertime > 0 ? "#b45309" : "var(--ink)";
+  }
+  if ($("#empDetailOvertimeSub")) {
+    $("#empDetailOvertimeSub").textContent = totalMonthOvertime > 0
+      ? `Presežek nad ${weeklyThreshold}h/teden`
+      : `Brez nadur (do ${weeklyThreshold}h/t)`;
   }
 
   // Sector breakdown cards
@@ -1487,7 +1940,7 @@ function renderEmployeeDetail(employeeId) {
           const secPaid = secLogs.filter((l) => l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
           const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
           const isPaid = (secHours > 0 || secTravel > 0) ? secUnpaid === 0 : true;
-          const rate = sec.rate || 15; // EXACT RATE FROM INCOME_SOURCES!
+          const rate = sec.rate || 0;
 
           let paidPct = 100;
           if (secEarnings > 0) {
@@ -1521,7 +1974,7 @@ function renderEmployeeDetail(employeeId) {
                 </div>
                 <div class="emp-sector-stat">
                   <p>Postavka</p>
-                  <strong>${currency.format(rate)}/h</strong>
+                  <strong>${sec.isFixed ? "Polna zaposlitev" : (rate > 0 ? `${currency.format(rate)}/h` : "-")}</strong>
                 </div>
                 <div class="emp-sector-stat">
                   <p>Potni stroški</p>
@@ -1543,7 +1996,10 @@ function renderEmployeeDetail(employeeId) {
                     ? `<span style="color: var(--muted); font-weight: 600;">Ni zabeleženih ur</span>`
                     : `<span style="color: ${isFull ? '#10b981' : 'var(--ink)'}; font-weight: 700;">${paidPct}% izplačano <span style="color: var(--muted); font-weight: 600; font-size: 11px;">(${currency.format(secPaid)} / ${currency.format(secEarnings)})</span></span>`
                 }
-                <span class="chip ${isPaid ? "" : "warning"}">${isPaid ? "Izplačano" : "Za izplačilo"}</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span class="chip ${isPaid ? "" : "warning"}">${isPaid ? "Izplačano" : "Za izplačilo"}</span>
+                  <button type="button" onclick="handleDismissEmployee('${employee.id}', '${sec.sectorId}')" class="ghost-button" style="color: #ef4444; font-size: 11px; padding: 4px 8px; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer;" title="Prekini povezavo in odstrani zaposlenega iz tega sektorja">Odstrani iz sektorja</button>
+                </div>
               </div>
             </article>
           `;
@@ -1573,9 +2029,30 @@ function renderEmployeeDetail(employeeId) {
             </label>
           `;
 
+          // Značke za slovenski praznik, nedeljo in nadure
+          const holidayName = getSlovenianHolidayName(log.date);
+          const isSun = isSunday(log.date);
+          const otHours = logOvertimeMap.get(log.id) || 0;
+
+          let badges = [];
+          if (holidayName) {
+            badges.push(`<span class="chip" style="background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Slovenski dela prosti dan: ${holidayName}">🎉 ${holidayName}</span>`);
+          }
+          if (isSun) {
+            badges.push(`<span class="chip" style="background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Nedeljsko delo">Nedelja</span>`);
+          }
+          if (otHours > 0) {
+            badges.push(`<span class="chip" style="background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Tedenski presežek delovnih ur">+${number.format(otHours)} h nadure</span>`);
+          }
+
+          const badgesHTML = badges.length > 0 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">${badges.join("")}</div>` : "";
+
           return `
             <tr>
-              <td><strong>${formattedDate}</strong></td>
+              <td>
+                <strong>${formattedDate}</strong>
+                ${badgesHTML}
+              </td>
               <td>
                 <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35;">
                   <span class="sector-color-dot" style="background-color: ${color};"></span>
@@ -1646,6 +2123,9 @@ function renderSettings() {
 
   // Render Custom Statuses List
   renderCustomStatuses();
+
+  // Render Shift Presets List
+  renderShiftPresetsSettings();
 }
 
 function renderCustomStatuses() {
@@ -1700,6 +2180,95 @@ window.handleDeleteCustomStatus = function (statusName) {
   }
 };
 
+function renderShiftPresetsSettings() {
+  const container = $("#shiftPresetsManageList");
+  if (!container) return;
+
+  const presets = state.shiftPresets || DEFAULT_SHIFT_PRESETS;
+  if (presets.length === 0) {
+    container.innerHTML = `<p class="empty-state" style="padding: 12px 0;">Trenutno nimate nastavljenih hitrih izbir izmene.</p>`;
+    return;
+  }
+
+  container.innerHTML = presets
+    .map((p) => {
+      const dur = calculateShiftDuration(p.startTime, p.endTime);
+      return `
+        <article class="shift-preset-manage-item">
+          <div class="shift-preset-item-info">
+            <span class="shift-preset-badge">${p.startTime} – ${p.endTime}</span>
+            ${p.label ? `<span class="shift-preset-label">${p.label}</span>` : ""}
+            <span class="shift-preset-duration">(${number.format(dur)} ur)</span>
+          </div>
+          <button type="button" class="delete-preset-btn" onclick="handleDeleteShiftPreset('${p.id}')" title="Izbriši to hitro izbiro">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            <span>Izbriši</span>
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+window.handleAddShiftPreset = async function (startTime, endTime, label) {
+  if (!startTime || !endTime) return;
+  const newPreset = {
+    id: crypto.randomUUID(),
+    startTime,
+    endTime,
+    label: (label || "").trim(),
+  };
+
+  if (!state.shiftPresets) {
+    state.shiftPresets = [...DEFAULT_SHIFT_PRESETS];
+  }
+  state.shiftPresets.push(newPreset);
+  localStorage.setItem(getUserStorageKey("shift_presets"), JSON.stringify(state.shiftPresets));
+  renderShiftPresetsSettings();
+  renderShiftModalPresets();
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient.from("shift_presets").insert([
+        {
+          id: newPreset.id,
+          employer_id: state.currentUser.id,
+          start_time: newPreset.startTime,
+          end_time: newPreset.endTime,
+          label: newPreset.label || null,
+        },
+      ]);
+    } catch (e) {
+      console.warn("Supabase insert shift_preset error:", e);
+    }
+  }
+};
+
+window.handleDeleteShiftPreset = async function (presetId) {
+  if (!state.shiftPresets) state.shiftPresets = [...DEFAULT_SHIFT_PRESETS];
+  state.shiftPresets = state.shiftPresets.filter((p) => p.id !== presetId);
+  localStorage.setItem(getUserStorageKey("shift_presets"), JSON.stringify(state.shiftPresets));
+  renderShiftPresetsSettings();
+  renderShiftModalPresets();
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient
+        .from("shift_presets")
+        .delete()
+        .eq("id", presetId)
+        .eq("employer_id", state.currentUser.id);
+    } catch (e) {
+      console.warn("Supabase delete shift_preset error:", e);
+    }
+  }
+};
+
 window.handleEmployeeStatusChange = function (employeeId, newStatus) {
   if (!state.employeeCustomStatuses) state.employeeCustomStatuses = {};
   state.employeeCustomStatuses[employeeId] = newStatus;
@@ -1710,6 +2279,89 @@ window.handleEmployeeStatusChange = function (employeeId, newStatus) {
     emp.status = newStatus;
   }
   renderAll();
+};
+
+window.handleEmployeeWorkTypeChange = function (employeeId, newType) {
+  if (!state.employeeWorkTypes) state.employeeWorkTypes = {};
+  state.employeeWorkTypes[employeeId] = newType;
+  localStorage.setItem(getUserStorageKey("employee_work_types"), JSON.stringify(state.employeeWorkTypes));
+
+  const emp = state.employees.find((e) => e.id === employeeId);
+  const empName = emp ? emp.name : "zaposlenega";
+  const label = newType === "part_time" ? "Polovični delovni čas (20h/teden)" : "Polni delovni čas (40h/teden)";
+  showToast(`Za ${empName} nastavljen ${label}.`, "success");
+
+  renderEmployeeDetail(employeeId);
+};
+
+// Odpusti zaposlenega (Prekini povezavo z enim sektorjem ali celotnim podjetjem)
+window.handleDismissEmployee = async function (employeeId, specificSectorId = null) {
+  const emp = state.employees.find((e) => e.id === employeeId);
+  const empName = emp ? emp.name : "tega zaposlenega";
+
+  let targetSectorIds = [];
+  if (specificSectorId) {
+    targetSectorIds = [specificSectorId];
+  } else {
+    // Vsi sektorji tega delodajalca
+    targetSectorIds = state.sectors.map((s) => s.id);
+  }
+
+  const confirmMsg = specificSectorId
+    ? `Ali ste prepričani, da želite zaposlenega "${empName}" odstraniti iz tega sektorja? Prekinil se bo pretok informacij in izbrisane bodo njegove dodeljene izmene v tem sektorju.`
+    : `Ali ste prepričani, da želite odpustiti zaposlenega "${empName}"? S tem boste prekinili povezavo z vašim podjetjem (vsemi sektorji) in izbrisali njegove prihodnje dodeljene izmene.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  if (!supabaseClient) {
+    alert("Ni povezave s podatkovno bazo.");
+    return;
+  }
+
+  try {
+    // 1. Izbriši iz workplace_requests
+    const { error: reqErr } = await supabaseClient
+      .from("workplace_requests")
+      .delete()
+      .eq("user_id", employeeId)
+      .in("workplace_id", targetSectorIds);
+
+    if (reqErr) {
+      console.warn("Brisanje zahteve ni uspelo, posodabljam status v 'denied':", reqErr);
+      await supabaseClient
+        .from("workplace_requests")
+        .update({ status: "denied", updated_at: new Date().toISOString() })
+        .eq("user_id", employeeId)
+        .in("workplace_id", targetSectorIds);
+    }
+
+    // 2. Izbriši dodeljene izmene v urniku tega sektorja / delodajalca
+    const { error: shiftErr } = await supabaseClient
+      .from("schedule_shifts")
+      .delete()
+      .eq("user_id", employeeId)
+      .in("workplace_id", targetSectorIds);
+
+    if (shiftErr) {
+      console.warn("Napaka pri brisanju dodeljenih izmen:", shiftErr);
+    }
+
+    alert(`Zaposleni "${empName}" je bil uspešno odpuščen in povezava prekinjena.`);
+
+    // 3. Ponovno naloži podatke
+    await loadAllData();
+
+    // 4. Če zaposleni nima več nobenega sektorja v tem podjetju, zapri profil
+    const updatedEmp = state.employees.find((e) => e.id === employeeId);
+    if (!updatedEmp || Object.keys(updatedEmp.sectors || {}).length === 0) {
+      window.closeEmployeeDetail();
+    } else {
+      renderEmployeeDetail(employeeId);
+    }
+  } catch (err) {
+    console.error("Napaka pri odpuščanju zaposlenega:", err);
+    alert("Prišlo je do napake: " + (err.message || err));
+  }
 };
 
 // Delete Sector Permanently from Database
@@ -1784,7 +2436,7 @@ function renderSectorDetail(sectorId) {
 }
 
 // ==========================================================================
-// Calendar Component (Tedenski & Mesečni koledar ur)
+// Urnik (Shift Scheduler) Helpers & Implementation
 // ==========================================================================
 const SLO_DAY_NAMES = ["Nedelja", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota"];
 const SLO_DAY_HEADERS = ["Pon", "Tor", "Sre", "Čet", "Pet", "Sob", "Ned"];
@@ -1818,396 +2470,6 @@ function getWeekBoundaries(dateObj) {
   const sunday = days[6];
   return { monday, sunday, days };
 }
-
-function renderCalendar() {
-  const container = $("#calendarContainer");
-  if (!container) return;
-
-  const activeMode = state.calendarMode || "month";
-  const calDate = state.calendarDate || new Date(currentDate);
-
-  // Update Toggle Button active states
-  $$(".cal-toggle-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.calMode === activeMode);
-  });
-
-  // Filter logs by selected sector and employee
-  let filteredLogs = [...state.rawLogs];
-  if (state.calSectorFilter && state.calSectorFilter !== "all") {
-    filteredLogs = filteredLogs.filter((l) => l.sectorId === state.calSectorFilter);
-  }
-  if (state.calEmployeeFilter && state.calEmployeeFilter !== "all") {
-    filteredLogs = filteredLogs.filter((l) => l.userId === state.calEmployeeFilter);
-  }
-
-  let periodLabel = "";
-  let periodLogsForSummary = [];
-
-  if (activeMode === "month") {
-    const year = calDate.getFullYear();
-    const month = calDate.getMonth();
-    const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-    periodLabel = `${SLO_MONTH_NAMES[month]} ${year}`;
-    $("#calPeriodTitle").textContent = periodLabel;
-    renderCalendarMonthView(container, calDate, filteredLogs);
-    periodLogsForSummary = state.rawLogs.filter((l) => l.date.startsWith(monthKey));
-  } else {
-    const { monday, sunday, days } = getWeekBoundaries(calDate);
-    const mStr = `${monday.getDate()}. ${SLO_MONTH_NAMES[monday.getMonth()].slice(0, 3)}.`;
-    const sStr = `${sunday.getDate()}. ${SLO_MONTH_NAMES[sunday.getMonth()].slice(0, 3)}. ${sunday.getFullYear()}`;
-    periodLabel = `${mStr} – ${sStr}`;
-    $("#calPeriodTitle").textContent = periodLabel;
-    renderCalendarWeekView(container, days, filteredLogs);
-
-    const monDateStr = monday.toISOString().slice(0, 10);
-    const sunDateStr = sunday.toISOString().slice(0, 10);
-    periodLogsForSummary = state.rawLogs.filter((l) => l.date >= monDateStr && l.date <= sunDateStr);
-  }
-
-  // Render Employee Breakdown Summary Table under the calendar
-  renderCalendarEmployeeSummary(periodLabel, periodLogsForSummary);
-}
-
-function renderCalendarEmployeeSummary(periodLabel, periodLogs) {
-  const summaryTable = $("#calEmployeeSummaryTable");
-  if (!summaryTable) return;
-
-  $("#calSummaryTitle").textContent = `Obračun po zaposlenih (${periodLabel})`;
-
-  // Filter employees if specific employee or sector filter is active
-  let targetEmployees = [...state.employees];
-  if (state.calEmployeeFilter && state.calEmployeeFilter !== "all") {
-    targetEmployees = targetEmployees.filter((e) => e.id === state.calEmployeeFilter);
-  }
-  if (state.calSectorFilter && state.calSectorFilter !== "all") {
-    targetEmployees = targetEmployees.filter((e) => Boolean(e.sectors?.[state.calSectorFilter]));
-  }
-
-  if (targetEmployees.length === 0) {
-    summaryTable.innerHTML = `<tr><td colspan="8" class="empty-cell">Ni zaposlenih za izbrani filter</td></tr>`;
-    return;
-  }
-
-  summaryTable.innerHTML = targetEmployees
-    .map((employee) => {
-      // Find logs of this employee for this period (optionally filtered by sector)
-      let empLogs = periodLogs.filter((l) => l.userId === employee.id);
-      if (state.calSectorFilter && state.calSectorFilter !== "all") {
-        empLogs = empLogs.filter((l) => l.sectorId === state.calSectorFilter);
-      }
-
-      const totalHours = empLogs.reduce((sum, l) => sum + l.hours, 0);
-      const totalTravel = empLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
-      const totalEarnings = empLogs.reduce((sum, l) => sum + l.earnings, 0);
-      const unpaidEarnings = empLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
-      const isAllPaid = (totalHours > 0 || totalTravel > 0) ? unpaidEarnings === 0 : true;
-
-      const employeeSectors = Object.values(employee.sectors || {});
-      const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
-
-      const rateDisplay = formatHourlyRate({ rate: employeeSectors[0]?.rate || 15, rates: employeeSectors.map((s) => ({ sectorName: s.sectorName, rate: s.rate })) }, employee);
-      const travelDisplay = totalTravel > 0 ? currency.format(totalTravel) : `<span style="color: var(--muted);">-</span>`;
-
-      return `
-        <tr>
-          <td><div class="person"><span class="avatar">${initials(employee.name)}</span><strong>${employee.name}</strong></div></td>
-          <td>${sectorBadgesHTML}</td>
-          <td><strong>${number.format(totalHours)} h</strong></td>
-          <td>${rateDisplay}</td>
-          <td>${travelDisplay}</td>
-          <td><strong>${currency.format(totalEarnings)}</strong></td>
-          <td>
-            <strong style="color: ${unpaidEarnings > 0 ? "var(--amber)" : "var(--primary-dark);"}">
-              ${currency.format(unpaidEarnings)}
-            </strong>
-          </td>
-          <td>
-            <span class="chip ${isAllPaid ? "" : "warning"}">
-              ${isAllPaid ? "Izplačano" : "Za izplačilo"}
-            </span>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
-}
-
-function renderCalendarMonthView(container, dateObj, logs) {
-  const year = dateObj.getFullYear();
-  const month = dateObj.getMonth();
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  const firstDay = new Date(year, month, 1);
-  const firstDayOfWeek = (firstDay.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-  // Index logs by date "YYYY-MM-DD"
-  const logsByDate = new Map();
-  logs.forEach((log) => {
-    if (!logsByDate.has(log.date)) logsByDate.set(log.date, []);
-    logsByDate.get(log.date).push(log);
-  });
-
-  let html = `<div class="cal-month-grid">`;
-
-  // Headers PON - NED
-  SLO_DAY_HEADERS.forEach((header) => {
-    html += `<div class="cal-month-day-header">${header}</div>`;
-  });
-
-  // Previous month padding days
-  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-    const prevDayNum = daysInPrevMonth - i;
-    const prevMonthStr = String(month === 0 ? 12 : month).padStart(2, "0");
-    const prevYear = month === 0 ? year - 1 : year;
-    const dateStr = `${prevYear}-${prevMonthStr}-${String(prevDayNum).padStart(2, "0")}`;
-    const dayLogs = logsByDate.get(dateStr) || [];
-    const totalDayHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-
-    html += `
-      <div class="cal-month-cell outside-month" onclick="openDayDetailModal('${dateStr}')">
-        <div class="cal-cell-top">
-          <span class="cal-day-num">${prevDayNum}</span>
-          ${totalDayHours > 0 ? `<span class="cal-day-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
-        </div>
-      </div>
-    `;
-  }
-
-  // Current month days
-  for (let d = 1; d <= daysInMonth; d++) {
-    const monthStr = String(month + 1).padStart(2, "0");
-    const dateStr = `${year}-${monthStr}-${String(d).padStart(2, "0")}`;
-    const dayLogs = logsByDate.get(dateStr) || [];
-    const totalDayHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-    const isToday = dateStr === todayStr;
-
-    let shiftsHtml = "";
-    if (dayLogs.length > 0) {
-      const visibleLogs = dayLogs.slice(0, 3);
-      shiftsHtml = visibleLogs
-        .map((log) => {
-          const color = log.color || "#56829d";
-          const timeText = log.startTime && log.endTime ? ` (${log.startTime}-${log.endTime})` : "";
-          return `
-            <div class="cal-shift-pill" title="${log.userName} · ${log.sectorName} · ${log.hours}h${log.note ? ` (${log.note})` : ""}">
-              <span class="cal-shift-pill-dot" style="background-color: ${color};"></span>
-              <span class="cal-shift-emp">${log.userName}</span>
-              <span class="cal-shift-hrs">${number.format(log.hours)}h</span>
-            </div>
-          `;
-        })
-        .join("");
-
-      if (dayLogs.length > 3) {
-        shiftsHtml += `<div class="cal-more-shifts">+${dayLogs.length - 3} več</div>`;
-      }
-    }
-
-    html += `
-      <div class="cal-month-cell ${isToday ? "is-today" : ""}" onclick="openDayDetailModal('${dateStr}')">
-        <div class="cal-cell-top">
-          <span class="cal-day-num" style="${totalDayHours > 0 ? "color: var(--primary-dark);" : ""}">${d}</span>
-          ${totalDayHours > 0 ? `<span class="cal-day-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
-        </div>
-        <div class="cal-cell-shifts">
-          ${shiftsHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  // Next month padding days to round up full grid (35 or 42 cells)
-  const totalCells = firstDayOfWeek + daysInMonth;
-  const remainingCells = (7 - (totalCells % 7)) % 7;
-  for (let d = 1; d <= remainingCells; d++) {
-    const nextMonthStr = String(month === 11 ? 1 : month + 2).padStart(2, "0");
-    const nextYear = month === 11 ? year + 1 : year;
-    const dateStr = `${nextYear}-${nextMonthStr}-${String(d).padStart(2, "0")}`;
-    const dayLogs = logsByDate.get(dateStr) || [];
-    const totalDayHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-
-    html += `
-      <div class="cal-month-cell outside-month" onclick="openDayDetailModal('${dateStr}')">
-        <div class="cal-cell-top">
-          <span class="cal-day-num">${d}</span>
-          ${totalDayHours > 0 ? `<span class="cal-day-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
-        </div>
-      </div>
-    `;
-  }
-
-  html += `</div>`;
-  container.innerHTML = html;
-}
-
-function renderCalendarWeekView(container, days, logs) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  // Index logs by date
-  const logsByDate = new Map();
-  logs.forEach((log) => {
-    if (!logsByDate.has(log.date)) logsByDate.set(log.date, []);
-    logsByDate.get(log.date).push(log);
-  });
-
-  let html = `<div class="cal-week-grid">`;
-
-  days.forEach((dayDate, idx) => {
-    const y = dayDate.getFullYear();
-    const m = String(dayDate.getMonth() + 1).padStart(2, "0");
-    const d = String(dayDate.getDate()).padStart(2, "0");
-    const dateStr = `${y}-${m}-${d}`;
-    const dayLogs = logsByDate.get(dateStr) || [];
-    const totalDayHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-    const isToday = dateStr === todayStr;
-
-    let shiftsHtml = "";
-    if (dayLogs.length === 0) {
-      shiftsHtml = `<div class="cal-empty-day-placeholder">Ni vpisanih ur</div>`;
-    } else {
-      shiftsHtml = dayLogs
-        .map((log) => {
-          const color = log.color || "#56829d";
-          const timeInterval = log.startTime && log.endTime ? `${log.startTime} – ${log.endTime}` : "Čas ni specificiran";
-          return `
-            <article class="cal-week-shift-card" onclick="openDayDetailModal('${dateStr}')">
-              <div class="cal-week-shift-header">
-                <span class="avatar" style="width: 28px; height: 28px; font-size: 11px;">${initials(log.userName)}</span>
-                <div style="min-width: 0; flex: 1;">
-                  <strong style="font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${log.userName}</strong>
-                  <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
-                    <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
-                    ${log.sectorName}
-                  </span>
-                </div>
-              </div>
-
-              <div class="cal-shift-time-badge">
-                <span>🕒</span>
-                <span>${timeInterval}</span>
-              </div>
-
-              <div class="cal-shift-stats-row">
-                <span class="cal-shift-hours-text">⚡ ${number.format(log.hours)} h</span>
-                <span class="cal-shift-earnings-text">${currency.format(log.earnings)}</span>
-              </div>
-
-              ${log.note ? `<div class="cal-shift-note-box">💬 ${log.note}</div>` : ""}
-
-              <div>
-                <span class="chip ${log.isPaid ? "" : "warning"}" style="font-size: 10px; min-height: 20px; padding: 2px 6px;">
-                  ${log.isPaid ? "Izplačano" : "Ni izplačano"}
-                </span>
-              </div>
-            </article>
-          `;
-        })
-        .join("");
-    }
-
-    html += `
-      <div class="cal-week-col ${isToday ? "is-today" : ""}">
-        <div class="cal-week-header">
-          <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>
-          <div class="cal-week-date-row">
-            <span class="cal-week-date-num">${dayDate.getDate()}. ${SLO_MONTH_NAMES[dayDate.getMonth()].slice(0, 3)}</span>
-            ${totalDayHours > 0 ? `<span class="cal-week-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
-          </div>
-        </div>
-        <div class="cal-week-body">
-          ${shiftsHtml}
-        </div>
-      </div>
-    `;
-  });
-
-  html += `</div>`;
-  container.innerHTML = html;
-}
-
-// Modal for detailed daily log view
-window.openDayDetailModal = function (dateStr) {
-  const modal = $("#dayDetailModal");
-  if (!modal) return;
-
-  const dayLogs = state.rawLogs.filter((l) => l.date === dateStr);
-  const formattedDate = formatSloDateString(dateStr);
-  const totalHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-  const totalEarnings = dayLogs.reduce((sum, l) => sum + l.earnings, 0);
-
-  $("#dayDetailModalTitle").textContent = formattedDate;
-  $("#dayDetailModalSubtitle").textContent = `${dayLogs.length} ${dayLogs.length === 1 ? "vnos" : "vnosov"} · ${number.format(totalHours)} h · ${currency.format(totalEarnings)}`;
-
-  const contentEl = $("#dayDetailModalContent");
-  if (dayLogs.length === 0) {
-    contentEl.innerHTML = `<p class="empty-state" style="padding: 24px;">Za ta dan ni zabeleženih delovnih ur v nobenem sektorju.</p>`;
-  } else {
-    contentEl.innerHTML = dayLogs
-      .map((log) => {
-        const color = log.color || "#56829d";
-        const timeInterval = log.startTime && log.endTime ? `${log.startTime} – ${log.endTime}` : "Celodnevno / Čas ni vpisan";
-        return `
-          <article class="day-detail-shift-card">
-            <div class="day-detail-shift-top">
-              <div class="person">
-                <span class="avatar">${initials(log.userName)}</span>
-                <div>
-                  <strong style="font-size: 15px;">${log.userName}</strong>
-                  <div style="margin-top: 4px;">
-                    <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35;">
-                      <span class="sector-color-dot" style="background-color: ${color};"></span>
-                      ${log.sectorName} · ${log.sectorCode}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <label class="paid-toggle" onclick="event.stopPropagation();">
-                <input type="checkbox" data-log-paid-id="${log.id}" ${log.isPaid ? "checked" : ""} />
-                ${paidChip(log.isPaid)}
-              </label>
-            </div>
-
-            <div class="day-detail-grid">
-              <div class="day-detail-stat">
-                <p>Delovni čas</p>
-                <strong>${timeInterval}</strong>
-              </div>
-              <div class="day-detail-stat">
-                <p>Število ur</p>
-                <strong>${number.format(log.hours)} h</strong>
-              </div>
-              <div class="day-detail-stat">
-                <p>Urna postavka</p>
-                <strong>${currency.format(log.rate)}/h</strong>
-              </div>
-              <div class="day-detail-stat">
-                <p>Potni stroški</p>
-                <strong>${currency.format(log.travelExpenses || 0)}</strong>
-              </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--line);">
-              <div style="font-size: 13px; color: var(--ink);">
-                ${log.note ? `<strong>Opomba:</strong> <em>${log.note}</em>` : `<span style="color: var(--muted);">Brez opomb</span>`}
-              </div>
-              <div style="font-size: 16px; font-weight: 800; color: var(--primary-dark);">
-                ${currency.format(log.earnings)}
-              </div>
-            </div>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  if (typeof modal.showModal === "function") {
-    modal.showModal();
-  } else {
-    modal.hidden = false;
-  }
-};
 
 // ==========================================================================
 // Urnik (Shift Scheduler) Implementation
@@ -2345,6 +2607,63 @@ window.setScheduleSectorFilter = function (sectorId) {
   renderSchedule();
 };
 
+function getSpotsLabel(n) {
+  if (n === 1) return "prosto mesto";
+  if (n === 2) return "prosti mesti";
+  if (n === 3 || n === 4) return "prosta mesta";
+  return "prostih mest";
+}
+
+function getEnrichedOpenShifts() {
+  const openShifts = state.openShifts || [];
+  const scheduleShifts = state.scheduleShifts || [];
+
+  return openShifts.map((os) => {
+    const signups = [...(os.signups || [])];
+
+    // Check if any schedule shift belongs to this open shift
+    const matchingShifts = scheduleShifts.filter((s) => {
+      if (s.openShiftId && s.openShiftId === os.id) return true;
+      if (s.note === "Odprta izmena" && s.date === os.date && s.sectorId === os.sectorId) return true;
+      return false;
+    });
+
+    matchingShifts.forEach((s) => {
+      const alreadyPresent = signups.some((su) => su.userId === s.userId || (su.userName && su.userName === s.userName));
+      if (!alreadyPresent) {
+        signups.push({
+          id: s.id,
+          userId: s.userId,
+          userName: s.userName || "Zaposleni",
+        });
+      }
+    });
+
+    return {
+      ...os,
+      signups,
+    };
+  });
+}
+
+function isShiftFromOpenShift(s, openShiftsOnDay) {
+  if (s.openShiftId) return true;
+  if (s.note === "Odprta izmena") return true;
+  if (openShiftsOnDay && openShiftsOnDay.length > 0) {
+    const match = openShiftsOnDay.some((os) => {
+      const userSignedUp = (os.signups || []).some(
+        (su) => su.userId === s.userId || (su.userName && su.userName === s.userName)
+      );
+      if (userSignedUp && (os.sectorId === s.sectorId || (os.startTime === s.startTime && os.endTime === s.endTime))) {
+        return true;
+      }
+      return false;
+    });
+    if (match) return true;
+  }
+  return false;
+}
+
 function renderScheduleMonthView(container, dateObj, shifts) {
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();
@@ -2362,34 +2681,118 @@ function renderScheduleMonthView(container, dateObj, shifts) {
   });
 
   let html = `<div class="cal-month-grid">`;
-  SLO_DAY_HEADERS.forEach((dayHeader) => {
-    html += `<div class="cal-month-day-header">${dayHeader}</div>`;
+  SLO_DAY_HEADERS.forEach((dayHeader, idx) => {
+    const isWeekend = idx === 5 || idx === 6;
+    html += `<div class="cal-month-day-header ${isWeekend ? "is-weekend" : ""}">${dayHeader}</div>`;
   });
 
   // Previous month trailing days
   for (let i = startDayIndex - 1; i >= 0; i--) {
     const dayNum = prevMonthDays - i;
-    const prevMonthIdx = month === 0 ? 11 : month - 1;
-    const prevYear = month === 0 ? year - 1 : year;
     html += `
       <div class="schedule-month-cell outside-month">
         <div class="schedule-cell-top">
-          <span class="cal-day-num">${dayNum}</span>
+          <span class="cal-day-num outside-num">${dayNum}</span>
         </div>
       </div>
     `;
   }
 
   // Current month days
+  const enrichedOpenShifts = getEnrichedOpenShifts();
+  const openShiftsByDate = new Map();
+  enrichedOpenShifts.forEach((os) => {
+    if (state.scheduleSectorFilter && state.scheduleSectorFilter !== "all" && os.sectorId !== state.scheduleSectorFilter) return;
+    if (state.scheduleEmployeeFilter && state.scheduleEmployeeFilter !== "all") {
+      const isSignedUp = (os.signups || []).some((su) => su.userId === state.scheduleEmployeeFilter);
+      if (!isSignedUp) return;
+    }
+    if (!openShiftsByDate.has(os.date)) openShiftsByDate.set(os.date, []);
+    openShiftsByDate.get(os.date).push(os);
+  });
+
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const dayShifts = shiftsByDate.get(dateStr) || [];
-    const totalDayHours = dayShifts.reduce((sum, s) => sum + (Number(s.hours) || 0), 0);
+    const dayOpenShifts = openShiftsByDate.get(dateStr) || [];
+    const regularDayShifts = dayShifts.filter((s) => !isShiftFromOpenShift(s, dayOpenShifts));
+    const totalDayHours = regularDayShifts.reduce((sum, s) => sum + (Number(s.hours) || 0), 0) +
+      dayOpenShifts.reduce((sum, os) => sum + ((os.signups ? os.signups.length : 0) * (Number(os.hours) || 0)), 0);
     const isToday = dateStr === todayStr;
 
+    const dayExtEvents = (state.showExternalEvents !== false && state.externalEvents)
+      ? state.externalEvents.filter((e) => e.date === dateStr)
+      : [];
+    let extEventsHtml = "";
+    if (dayExtEvents.length > 0) {
+      extEventsHtml = dayExtEvents
+        .map(
+          (ev) => `
+            <div class="cal-personal-event-chip" onclick="event.stopPropagation();" title="Osebni koledar: ${ev.title}${ev.startTime ? ` (${ev.startTime}–${ev.endTime})` : ''}">
+              <span style="font-size: 11px;">🔒</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</span>
+            </div>
+          `
+        )
+        .join("");
+    }
+
+    let openShiftsHtml = "";
+    if (dayOpenShifts.length > 0) {
+      openShiftsHtml = dayOpenShifts
+        .map((s) => {
+          const color = s.color || "#f59e0b";
+          const signupsCount = s.signups ? s.signups.length : 0;
+          const isFull = signupsCount >= s.requiredSpots;
+          return `
+            <div class="schedule-shift-chip is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 3.5px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.09)'};" onclick="event.stopPropagation(); openShiftModal('${s.id}', null, null, true)" title="Odprta izmena: ${signupsCount}/${s.requiredSpots} prijavljenih. Kliknite za podrobnosti.">
+              <div class="schedule-shift-chip-top">
+                <span class="schedule-shift-chip-emp" style="color: ${color}; font-weight: 800; font-size: 11px;">🔓 ${s.sectorName}</span>
+                <span style="font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${s.requiredSpots}</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                <span class="schedule-shift-chip-time">${s.startTime}–${s.endTime}</span>
+                <span style="font-size: 10px; font-weight: 700; color: var(--ink);">${number.format(s.hours)}h</span>
+              </div>
+              ${s.note && s.note !== "Odprta izmena" ? `<span style="font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.note}</span>` : ""}
+
+              ${signupsCount > 0 ? `
+                <div class="open-shift-signups-container" style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed ${color}50; display: flex; flex-direction: column; gap: 2.5px;">
+                  ${s.signups.map((su) => `
+                    <div class="open-shift-user-badge" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; background: #ffffff; padding: 2px 5px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.07); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                      <div style="display: flex; align-items: center; gap: 4px; min-width: 0;">
+                        <span class="avatar" style="width: 16px; height: 16px; font-size: 8px; font-weight: 700; background: ${color}20; color: ${color}; flex-shrink: 0;">${initials(su.userName)}</span>
+                        <span style="font-weight: 700; font-size: 10.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${su.userName}</span>
+                      </div>
+                      <span style="font-size: 8.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 0.5px 4px; border-radius: 3px; flex-shrink: 0;">Prijavljen</span>
+                    </div>
+                  `).join('')}
+                  ${!isFull ? `
+                    <div style="font-size: 9.5px; color: #b45309; font-weight: 600; padding: 1px 2px; display: flex; align-items: center; gap: 3px;">
+                      <span style="font-size: 9px;">➕</span>
+                      <span>Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}</span>
+                    </div>
+                  ` : `
+                    <div style="font-size: 9px; color: #15803d; font-weight: 700; padding: 1px 2px; display: flex; align-items: center; gap: 3px;">
+                      <span style="font-size: 9px;">✓</span>
+                      <span>Zasedeno</span>
+                    </div>
+                  `}
+                </div>
+              ` : `
+                <div style="font-size: 9.5px; color: #b45309; font-style: italic; margin-top: 3px; display: flex; align-items: center; gap: 3px;">
+                  <span>⏳</span><span>Čaka na prijave (${s.requiredSpots} ${getSpotsLabel(s.requiredSpots)})</span>
+                </div>
+              `}
+            </div>
+          `;
+        })
+        .join("");
+    }
+
     let shiftsHtml = "";
-    if (dayShifts.length > 0) {
-      shiftsHtml = dayShifts
+    if (regularDayShifts.length > 0) {
+      shiftsHtml = regularDayShifts
         .map((s) => {
           const color = s.color || "#56829d";
           return `
@@ -2412,13 +2815,20 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     html += `
       <div class="schedule-month-cell ${isToday ? "is-today" : ""}" onclick="openShiftModal(null, '${dateStr}')">
         <div class="schedule-cell-top">
-          <span class="cal-day-num">${d}</span>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            ${totalDayHours > 0 ? `<span class="cal-day-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
-            <button type="button" class="schedule-quick-add-btn" onclick="event.stopPropagation(); openShiftModal(null, '${dateStr}')" title="Dodaj izmeno za ta dan">+</button>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="cal-day-num ${isToday ? "is-today-badge" : ""}">${d}</span>
+            ${isToday ? `<span class="today-indicator-pill">Danes</span>` : ""}
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px;">
+            ${totalDayHours > 0 ? `<span class="cal-day-hours-badge" title="${number.format(totalDayHours)} načrtovanih ur">${number.format(totalDayHours)} h</span>` : ""}
+            <button type="button" class="schedule-quick-add-btn" onclick="event.stopPropagation(); openShiftModal(null, '${dateStr}')" title="Dodaj izmeno za ta dan">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
           </div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto;">
+        <div class="schedule-cell-shifts-wrap">
+          ${extEventsHtml}
+          ${openShiftsHtml}
           ${shiftsHtml}
         </div>
       </div>
@@ -2432,7 +2842,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     html += `
       <div class="schedule-month-cell outside-month">
         <div class="schedule-cell-top">
-          <span class="cal-day-num">${n}</span>
+          <span class="cal-day-num outside-num">${n}</span>
         </div>
       </div>
     `;
@@ -2459,14 +2869,109 @@ function renderScheduleWeekView(container, days, shifts) {
     const d = String(dayDate.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
     const dayShifts = shiftsByDate.get(dateStr) || [];
-    const totalDayHours = dayShifts.reduce((sum, s) => sum + (Number(s.hours) || 0), 0);
     const isToday = dateStr === todayStr;
 
+    const enrichedOpenShifts = getEnrichedOpenShifts();
+    const openShiftsForDay = enrichedOpenShifts.filter((os) => {
+      if (os.date !== dateStr) return false;
+      if (state.scheduleSectorFilter && state.scheduleSectorFilter !== "all" && os.sectorId !== state.scheduleSectorFilter) return false;
+      if (state.scheduleEmployeeFilter && state.scheduleEmployeeFilter !== "all") {
+        const isSignedUp = (os.signups || []).some((su) => su.userId === state.scheduleEmployeeFilter);
+        if (!isSignedUp) return false;
+      }
+      return true;
+    });
+
+    const regularDayShifts = dayShifts.filter((s) => !isShiftFromOpenShift(s, openShiftsForDay));
+    const totalDayHours = regularDayShifts.reduce((sum, s) => sum + (Number(s.hours) || 0), 0) +
+      openShiftsForDay.reduce((sum, os) => sum + ((os.signups ? os.signups.length : 0) * (Number(os.hours) || 0)), 0);
+
+    let openShiftsHtml = "";
+    if (openShiftsForDay.length > 0) {
+      openShiftsHtml = openShiftsForDay
+        .map((s) => {
+          const color = s.color || "#f59e0b";
+          const signupsCount = s.signups ? s.signups.length : 0;
+          const isFull = signupsCount >= s.requiredSpots;
+          return `
+            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="openShiftModal('${s.id}', null, null, true)">
+              <div class="schedule-week-shift-emp-row">
+                <span style="font-size: 11px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta izmena</span>
+                <span style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 100px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">
+                  ${signupsCount}/${s.requiredSpots} mest
+                </span>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
+                  <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
+                  ${s.sectorName}
+                </span>
+                <span class="schedule-week-shift-time-badge">${s.startTime} – ${s.endTime} (${number.format(s.hours)}h)</span>
+              </div>
+
+              ${s.note && s.note !== "Odprta izmena" ? `<div class="cal-shift-note-box" style="margin-top: 4px; font-size: 11px;">${s.note}</div>` : ""}
+
+              ${signupsCount > 0 ? `
+                <div class="open-shift-signups-container" style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed ${color}50; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;">Prijavljeni zaposleni:</div>
+                  ${s.signups.map((su) => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                      <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                        <span class="avatar" style="width: 20px; height: 20px; font-size: 9px; font-weight: 700; background: ${color}20; color: ${color}; flex-shrink: 0;">${initials(su.userName)}</span>
+                        <span style="font-weight: 700; font-size: 11.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${su.userName}</span>
+                      </div>
+                      <span style="font-size: 9.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">Prijavljen</span>
+                    </div>
+                  `).join('')}
+                  ${!isFull ? `
+                    <div style="font-size: 10px; color: #b45309; font-weight: 600; padding: 2px 4px; display: flex; align-items: center; gap: 4px;">
+                      <span style="font-size: 10px;">➕</span>
+                      <span>Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}</span>
+                    </div>
+                  ` : `
+                    <div style="font-size: 10px; color: #15803d; font-weight: 700; padding: 2px 4px; display: flex; align-items: center; gap: 4px;">
+                      <span style="font-size: 10px;">✓</span>
+                      <span>Vsa mesta zasedena</span>
+                    </div>
+                  `}
+                </div>
+              ` : `
+                <div style="font-size: 10.5px; color: #b45309; font-style: italic; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+                  <span>⏳</span><span>Čaka na prijave zaposlenih (${s.requiredSpots} ${getSpotsLabel(s.requiredSpots)})</span>
+                </div>
+              `}
+            </article>
+          `;
+        })
+        .join("");
+    }
+
+    const dayExtEvents = (state.showExternalEvents !== false && state.externalEvents)
+      ? state.externalEvents.filter((e) => e.date === dateStr)
+      : [];
+    let extEventsHtml = "";
+    if (dayExtEvents.length > 0) {
+      extEventsHtml = dayExtEvents
+        .map(
+          (ev) => `
+            <div class="cal-personal-event-chip" style="margin-bottom: 6px; padding: 6px 8px; border-left: 3px solid #94a3b8; background: #f8fafc;" title="Osebni koledar: ${ev.title}">
+              <span style="font-size: 12px;">🔒</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 700; color: #475569; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</div>
+                <div style="font-size: 10px; color: #94a3b8;">${ev.startTime ? `${ev.startTime}${ev.endTime ? ' – ' + ev.endTime : ''}` : 'Celodnevno'} · Osebno</div>
+              </div>
+            </div>
+          `
+        )
+        .join("");
+    }
+
     let shiftsHtml = "";
-    if (dayShifts.length === 0) {
+    if (regularDayShifts.length === 0 && openShiftsForDay.length === 0 && dayExtEvents.length === 0) {
       shiftsHtml = `<div class="cal-empty-day-placeholder" style="padding: 18px 8px; font-size: 11px;">Ni načrtovanih izmen</div>`;
     } else {
-      shiftsHtml = dayShifts
+      shiftsHtml = extEventsHtml + openShiftsHtml + regularDayShifts
         .map((s) => {
           const color = s.color || "#56829d";
           return `
@@ -2498,10 +3003,13 @@ function renderScheduleWeekView(container, days, shifts) {
 
     html += `
       <div class="cal-week-col ${isToday ? "is-today" : ""}">
-        <div class="cal-week-header">
-          <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>
+        <div class="cal-week-header ${isToday ? "is-today-header" : ""}">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>
+            ${isToday ? `<span class="today-indicator-pill">Danes</span>` : ""}
+          </div>
           <div class="cal-week-date-row">
-            <span class="cal-week-date-num">${dayDate.getDate()}. ${SLO_MONTH_NAMES[dayDate.getMonth()].slice(0, 3)}</span>
+            <span class="cal-week-date-num ${isToday ? "is-today-badge" : ""}">${dayDate.getDate()}. ${SLO_MONTH_NAMES[dayDate.getMonth()].slice(0, 3)}</span>
             ${totalDayHours > 0 ? `<span class="cal-week-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
           </div>
         </div>
@@ -2519,8 +3027,109 @@ function renderScheduleWeekView(container, days, shifts) {
   container.innerHTML = html;
 }
 
+
 // Modal open/close and presets for Shift Planner
-window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSectorId = null) {
+window.setShiftModalType = function (type) {
+  const modalShiftTypeInput = $("#modalShiftType");
+  if (modalShiftTypeInput) modalShiftTypeInput.value = type;
+
+  const btnAssigned = $("#shiftTypeAssigned");
+  const btnOpen = $("#shiftTypeOpen");
+  const empGroup = $("#shiftEmployeeGroup");
+  const spotsGroup = $("#shiftSpotsGroup");
+  const empSelect = $("#modalShiftEmployee");
+  const titleEl = $("#shiftModalTitle");
+  const saveBtn = $("#saveShiftBtn");
+  const isEditing = Boolean($("#modalShiftId")?.value);
+
+  if (type === "open") {
+    if (btnOpen) {
+      btnOpen.style.background = "#fff";
+      btnOpen.style.color = "var(--text-primary)";
+      btnOpen.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+    }
+    if (btnAssigned) {
+      btnAssigned.style.background = "transparent";
+      btnAssigned.style.color = "#64748b";
+      btnAssigned.style.boxShadow = "none";
+    }
+    if (empGroup) empGroup.style.display = "none";
+    if (spotsGroup) spotsGroup.style.display = "block";
+    if (empSelect) empSelect.removeAttribute("required");
+    if (titleEl) {
+      titleEl.textContent = isEditing ? "Uredi odprto izmeno" : "Objavi odprto izmeno";
+    }
+    if (saveBtn) saveBtn.textContent = "Objavi odprto izmeno";
+  } else {
+    if (btnAssigned) {
+      btnAssigned.style.background = "#fff";
+      btnAssigned.style.color = "var(--text-primary)";
+      btnAssigned.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+    }
+    if (btnOpen) {
+      btnOpen.style.background = "transparent";
+      btnOpen.style.color = "#64748b";
+      btnOpen.style.boxShadow = "none";
+    }
+    if (empGroup) empGroup.style.display = "block";
+    if (spotsGroup) spotsGroup.style.display = "none";
+    if (empSelect) empSelect.setAttribute("required", "required");
+    if (titleEl) {
+      titleEl.textContent = isEditing ? "Uredi izmeno na urniku" : "Dodaj zaposlenega na urnik";
+    }
+    if (saveBtn) saveBtn.textContent = "Shrani na urnik";
+  }
+};
+
+window.adjustShiftSpots = function (delta) {
+  const spotsInput = $("#modalShiftRequiredSpots");
+  if (!spotsInput) return;
+  let val = parseInt(spotsInput.value, 10) || 1;
+  val = Math.max(1, Math.min(50, val + delta));
+  spotsInput.value = val;
+};
+
+window.handleRemoveOpenShiftSignup = async function (openShiftId, signupId, employeeUserId) {
+  if (!confirm("Ali res želite odstraniti tega zaposlenega iz odprte izmene?")) return;
+  
+  // Optimistic local state update
+  state.openShifts = (state.openShifts || []).map((os) => {
+    if (os.id === openShiftId) {
+      return {
+        ...os,
+        signups: (os.signups || []).filter((su) => (signupId ? su.id !== signupId : true) && su.userId !== employeeUserId),
+      };
+    }
+    return os;
+  });
+  state.scheduleShifts = (state.scheduleShifts || []).filter(
+    (s) => !(s.openShiftId === openShiftId && s.userId === employeeUserId) &&
+           !(s.note === "Odprta izmena" && s.userId === employeeUserId)
+  );
+  localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+  localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
+
+  if (!supabaseClient) {
+    openShiftModal(openShiftId, null, null, true);
+    renderSchedule();
+    return;
+  }
+
+  try {
+    if (signupId) {
+      await supabaseClient.from("open_shift_signups").delete().eq("id", signupId);
+    }
+    await supabaseClient.from("schedule_shifts").delete().eq("open_shift_id", openShiftId).eq("user_id", employeeUserId);
+    await fetchOpenShifts();
+    await fetchScheduleShifts();
+    openShiftModal(openShiftId, null, null, true);
+    renderSchedule();
+  } catch (err) {
+    console.error("Napaka pri odstranjevanju prijave:", err);
+  }
+};
+
+window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSectorId = null, isOpenShift = false) {
   const modal = $("#shiftModal");
   if (!modal) return;
 
@@ -2533,6 +3142,10 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
   const startInput = $("#modalShiftStartTime");
   const endInput = $("#modalShiftEndTime");
   const noteInput = $("#modalShiftNote");
+  const spotsInput = $("#modalShiftRequiredSpots");
+  const signupsGroup = $("#shiftSignupsGroup");
+  const signupsList = $("#shiftSignupsList");
+  const signupsCount = $("#shiftSignupsCount");
   const deleteBtn = $("#deleteShiftBtn");
 
   // Populate Employee Select
@@ -2551,13 +3164,45 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
       .join("")}
   `;
 
-  if (shiftId) {
-    // Edit Mode
+  if (shiftId && isOpenShift) {
+    // Edit Open Shift Mode
+    const openShift = getEnrichedOpenShifts().find((s) => s.id === shiftId) || (state.openShifts || []).find((s) => s.id === shiftId);
+    if (!openShift) return;
+
+    if (idInput) idInput.value = openShift.id;
+    window.setShiftModalType("open");
+    if (secSelect) secSelect.value = openShift.sectorId;
+    if (dateInput) dateInput.value = openShift.date;
+    if (startInput) startInput.value = openShift.startTime || "08:00";
+    if (endInput) endInput.value = openShift.endTime || "16:00";
+    if (spotsInput) spotsInput.value = openShift.requiredSpots || 1;
+    if (noteInput) noteInput.value = openShift.note || "";
+    if (deleteBtn) deleteBtn.style.display = "inline-flex";
+
+    // Show signups
+    if (signupsGroup && signupsList && signupsCount) {
+      signupsGroup.style.display = "block";
+      const signups = openShift.signups || [];
+      signupsCount.textContent = `${signups.length} / ${openShift.requiredSpots}`;
+      if (signups.length === 0) {
+        signupsList.innerHTML = `<span style="font-size: 12px; color: var(--muted); font-style: italic;">Zaenkrat še ni prijavljenih zaposlenih.</span>`;
+      } else {
+        signupsList.innerHTML = signups.map((su) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+            <span><strong>${su.userName}</strong></span>
+            <button type="button" onclick="handleRemoveOpenShiftSignup('${openShift.id}', '${su.id || ''}', '${su.userId}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: 700;">Odstrani</button>
+          </div>
+        `).join("");
+      }
+    }
+  } else if (shiftId) {
+    // Edit Assigned Shift Mode
     const shift = (state.scheduleShifts || []).find((s) => s.id === shiftId);
     if (!shift) return;
 
-    if (titleEl) titleEl.textContent = "Uredi izmeno na urniku";
     if (idInput) idInput.value = shift.id;
+    window.setShiftModalType("assigned");
+    if (signupsGroup) signupsGroup.style.display = "none";
     if (empSelect) empSelect.value = shift.userId;
     if (secSelect) secSelect.value = shift.sectorId;
     if (dateInput) dateInput.value = shift.date;
@@ -2567,8 +3212,11 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
   } else {
     // Add Mode
-    if (titleEl) titleEl.textContent = "Dodaj zaposlenega na urnik";
     if (idInput) idInput.value = "";
+    window.setShiftModalType(isOpenShift ? "open" : "assigned");
+    if (signupsGroup) signupsGroup.style.display = "none";
+    if (spotsInput) spotsInput.value = 1;
+
     if (empSelect) {
       empSelect.value = state.employees.length > 0 ? state.employees[0].id : "";
     }
@@ -2595,6 +3243,7 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (deleteBtn) deleteBtn.style.display = "none";
   }
 
+  renderShiftModalPresets();
   updateShiftDurationDisplay();
 
   if (typeof modal.showModal === "function") {
@@ -2642,15 +3291,484 @@ window.setShiftPreset = function (startTime, endTime) {
   updateShiftDurationDisplay();
 };
 
-window.handleDeleteShiftModal = function () {
+function renderShiftModalPresets() {
+  const container = $("#shiftModalPresets");
+  if (!container) return;
+
+  const presets = state.shiftPresets && state.shiftPresets.length > 0
+    ? state.shiftPresets
+    : DEFAULT_SHIFT_PRESETS;
+
+  if (presets.length === 0) {
+    container.innerHTML = `<span style="font-size: 12px; color: var(--muted); font-style: italic;">Ni nastavljenih hitrih izbir. (Nastavite jih v Nastavitvah)</span>`;
+    return;
+  }
+
+  container.innerHTML = presets
+    .map((p) => {
+      const dur = calculateShiftDuration(p.startTime, p.endTime);
+      const labelPart = p.label ? `<span style="font-weight: 700; color: var(--primary-dark); margin-right: 4px;">${p.label}:</span>` : "";
+      return `
+        <button type="button" class="shift-preset-btn" onclick="setShiftPreset('${p.startTime}', '${p.endTime}')">
+          ${labelPart}${p.startTime} – ${p.endTime} (${number.format(dur)}h)
+        </button>
+      `;
+    })
+    .join("");
+}
+
+window.handleDeleteShiftModal = async function () {
   const id = $("#modalShiftId")?.value;
   if (!id) return;
-  if (confirm("Ali ste prepričani, da želite izbrisati to izmeno z urnika?")) {
-    state.scheduleShifts = (state.scheduleShifts || []).filter((s) => s.id !== id);
-    localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
-    closeShiftModal();
-    renderSchedule();
+  const isTypeOpen = $("#modalShiftType")?.value === "open";
+
+  const confirmText = isTypeOpen
+    ? "Ali ste prepričani, da želite izbrisati to odprto izmeno? S tem se bodo izbrisale tudi vse morebitne prijave zaposlenih."
+    : "Ali ste prepričani, da želite izbrisati to izmeno z urnika?";
+
+  if (confirm(confirmText)) {
+    if (isTypeOpen) {
+      state.openShifts = (state.openShifts || []).filter((s) => s.id !== id);
+      localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+      closeShiftModal();
+      renderSchedule();
+
+      if (supabaseClient && state.currentUser) {
+        try {
+          await supabaseClient.from("open_shifts").delete().eq("id", id);
+          await fetchOpenShifts();
+          renderSchedule();
+        } catch (e) {
+          console.warn("Supabase open_shift delete error:", e);
+        }
+      }
+      syncCalendarFeedToSupabase();
+    } else {
+      state.scheduleShifts = (state.scheduleShifts || []).filter((s) => s.id !== id);
+      localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
+      closeShiftModal();
+      renderSchedule();
+
+      if (supabaseClient && state.currentUser) {
+        try {
+          await supabaseClient.from("schedule_shifts").delete().eq("id", id);
+        } catch (e) {
+          console.warn("Supabase shift delete error:", e);
+        }
+      }
+      syncCalendarFeedToSupabase();
+    }
   }
+};
+
+// ============================================================================
+// Koledarska povezava (Google Koledar, Apple Koledar, iCal .ics)
+// ============================================================================
+
+function generateScheduleICalendar() {
+  const companyName = state.companyName || "Moje podjetje";
+  const calName = `Urnik 4P - ${companyName}`;
+  const now = new Date();
+  const dtstamp = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+
+  let lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Finance 4P//Urnik//SL",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${calName}`,
+    `X-WR-CALDESC:Delovne izmene podjetja ${companyName}`,
+    "X-WR-TIMEZONE:Europe/Ljubljana",
+    "BEGIN:VTIMEZONE",
+    "TZID:Europe/Ljubljana",
+    "BEGIN:STANDARD",
+    "DTSTART:19701025T030000",
+    "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
+    "TZOFFSETFROM:+0200",
+    "TZOFFSETTO:+0100",
+    "TZNAME:CET",
+    "END:STANDARD",
+    "BEGIN:DAYLIGHT",
+    "DTSTART:19700329T020000",
+    "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3",
+    "TZOFFSETFROM:+0100",
+    "TZOFFSETTO:+0200",
+    "TZNAME:CEST",
+    "END:DAYLIGHT",
+    "END:VTIMEZONE"
+  ];
+
+  // 1. Dodeljene izmene (Assigned shifts)
+  (state.scheduleShifts || []).forEach((s) => {
+    if (!s.date || !s.startTime || !s.endTime) return;
+    const cleanDate = s.date.slice(0, 10).replace(/-/g, "");
+    const [sh, sm] = s.startTime.split(":");
+    const [eh, em] = s.endTime.split(":");
+    const startStr = `${cleanDate}T${sh.padStart(2, "0")}${sm.padStart(2, "0")}00`;
+
+    // Preveri nočno izmeno (prehod v naslednji dan)
+    let endCleanDate = cleanDate;
+    const startMinutes = parseInt(sh, 10) * 60 + parseInt(sm, 10);
+    const endMinutes = parseInt(eh, 10) * 60 + parseInt(em, 10);
+    if (endMinutes <= startMinutes) {
+      const parts = s.date.slice(0, 10).split("-").map(Number);
+      const nextDay = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+      const ny = nextDay.getFullYear();
+      const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
+      const nd = String(nextDay.getDate()).padStart(2, "0");
+      endCleanDate = `${ny}${nm}${nd}`;
+    }
+    const endStr = `${endCleanDate}T${eh.padStart(2, "0")}${em.padStart(2, "0")}00`;
+
+    const uid = `shift-${s.id || Math.random().toString(36).slice(2)}@finance4p.si`;
+    const summary = `${s.userName || "Zaposleni"} · ${s.sectorName || "Delo"}`;
+    const desc = `Zaposleni: ${s.userName || "Zaposleni"}\\nDelovno mesto: ${s.sectorName || ""}\\nČas izmene: ${s.startTime} – ${s.endTime} (${s.hours || 0} ur)${s.note ? `\\nOpomba: ${s.note}` : ""}\\n\\nUrnik Finance 4P`;
+    const location = s.sectorName || "";
+
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${uid}`);
+    lines.push(`DTSTAMP:${dtstamp}`);
+    lines.push(`DTSTART;TZID=Europe/Ljubljana:${startStr}`);
+    lines.push(`DTEND;TZID=Europe/Ljubljana:${endStr}`);
+    lines.push(`SUMMARY:${summary.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    lines.push(`DESCRIPTION:${desc.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    if (location) lines.push(`LOCATION:${location.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    lines.push("STATUS:CONFIRMED");
+    if (s.color) lines.push(`X-APPLE-CALENDAR-COLOR:${s.color}`);
+    lines.push("END:VEVENT");
+  });
+
+  // 2. Odprte izmene (Open shifts)
+  (state.openShifts || []).forEach((os) => {
+    if (!os.date || !os.startTime || !os.endTime) return;
+    const cleanDate = os.date.slice(0, 10).replace(/-/g, "");
+    const [sh, sm] = os.startTime.split(":");
+    const [eh, em] = os.endTime.split(":");
+    const startStr = `${cleanDate}T${sh.padStart(2, "0")}${sm.padStart(2, "0")}00`;
+
+    let endCleanDate = cleanDate;
+    const startMinutes = parseInt(sh, 10) * 60 + parseInt(sm, 10);
+    const endMinutes = parseInt(eh, 10) * 60 + parseInt(em, 10);
+    if (endMinutes <= startMinutes) {
+      const parts = os.date.slice(0, 10).split("-").map(Number);
+      const nextDay = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+      const ny = nextDay.getFullYear();
+      const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
+      const nd = String(nextDay.getDate()).padStart(2, "0");
+      endCleanDate = `${ny}${nm}${nd}`;
+    }
+    const endStr = `${endCleanDate}T${eh.padStart(2, "0")}${em.padStart(2, "0")}00`;
+
+    const signupsCount = os.signups ? os.signups.length : 0;
+    const uid = `open-shift-${os.id || Math.random().toString(36).slice(2)}@finance4p.si`;
+    const summary = `🔓 Odprta izmena: ${os.sectorName || "Delo"} (${signupsCount}/${os.requiredSpots || 1})`;
+    const desc = `Odprta izmena: ${os.sectorName || ""}\\nPotrebno oseb: ${os.requiredSpots || 1}\\nPrijavljenih: ${signupsCount}\\nČas: ${os.startTime} – ${os.endTime} (${os.hours || 0} ur)${os.note ? `\\nOpomba: ${os.note}` : ""}\\n\\nUrnik Finance 4P`;
+
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${uid}`);
+    lines.push(`DTSTAMP:${dtstamp}`);
+    lines.push(`DTSTART;TZID=Europe/Ljubljana:${startStr}`);
+    lines.push(`DTEND;TZID=Europe/Ljubljana:${endStr}`);
+    lines.push(`SUMMARY:${summary.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    lines.push(`DESCRIPTION:${desc.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    if (os.sectorName) lines.push(`LOCATION:${os.sectorName.replace(/,/g, "\\,").replace(/;/g, "\\;")}`);
+    lines.push("STATUS:TENTATIVE");
+    lines.push("X-APPLE-CALENDAR-COLOR:#f59e0b");
+    lines.push("END:VEVENT");
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function getCalendarFeedToken() {
+  let token = localStorage.getItem(getUserStorageKey("calendar_feed_token"));
+  if (!token || token.length < 16) {
+    const randomHex = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID().replace(/-/g, "")
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    token = `4p_feed_${randomHex}`;
+    localStorage.setItem(getUserStorageKey("calendar_feed_token"), token);
+  }
+  return token;
+}
+
+function getCalendarFeedUrls() {
+  const token = getCalendarFeedToken();
+  const baseRpcUrl = `${state.supabaseUrl}/rest/v1/rpc/get_calendar_feed?feed_token=${token}&apikey=${state.supabaseKey}`;
+  const webcalUrl = baseRpcUrl.replace(/^https?:\/\//i, "webcal://");
+  return { httpUrl: baseRpcUrl, webcalUrl, token };
+}
+
+async function syncCalendarFeedToSupabase() {
+  if (!supabaseClient || !state.currentUser) return;
+  try {
+    const token = getCalendarFeedToken();
+    const icsData = generateScheduleICalendar();
+    await supabaseClient.from("calendar_feeds").upsert(
+      {
+        employer_id: state.currentUser.id,
+        token: token,
+        calendar_name: `Urnik 4P - ${state.companyName || "Moje podjetje"}`,
+        calendar_data: icsData,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "employer_id" }
+    );
+  } catch (err) {
+    console.warn("Koledarska sinhronizacija opozorilo:", err);
+  }
+}
+
+function parseICSContent(icsText) {
+  const events = [];
+  const lines = icsText.split(/\r\n|\n|\r/);
+  let inEvent = false;
+  let currentEvent = {};
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (line === "BEGIN:VEVENT") {
+      inEvent = true;
+      currentEvent = {};
+    } else if (line === "END:VEVENT") {
+      if (currentEvent.date && (currentEvent.title || currentEvent.summary)) {
+        events.push({
+          id: currentEvent.uid || "ext_" + Math.random().toString(36).slice(2),
+          title: currentEvent.title || currentEvent.summary || "Osebna obveznost",
+          date: currentEvent.date,
+          startTime: currentEvent.startTime || "",
+          endTime: currentEvent.endTime || "",
+          isExternal: true
+        });
+      }
+      inEvent = false;
+    } else if (inEvent) {
+      if (line.startsWith("SUMMARY:")) {
+        currentEvent.title = line.substring(8).replace(/\\,/g, ",").replace(/\\;/g, ";").trim();
+      } else if (line.startsWith("UID:")) {
+        currentEvent.uid = line.substring(4).trim();
+      } else if (line.startsWith("DTSTART")) {
+        const val = line.split(":").pop().trim();
+        if (val && val.length >= 8) {
+          const y = val.slice(0, 4);
+          const m = val.slice(4, 6);
+          const d = val.slice(6, 8);
+          currentEvent.date = `${y}-${m}-${d}`;
+          if (val.includes("T")) {
+            const timePart = val.split("T")[1];
+            currentEvent.startTime = `${timePart.slice(0, 2)}:${timePart.slice(2, 4)}`;
+          }
+        }
+      } else if (line.startsWith("DTEND")) {
+        const val = line.split(":").pop().trim();
+        if (val && val.includes("T")) {
+          const timePart = val.split("T")[1];
+          currentEvent.endTime = `${timePart.slice(0, 2)}:${timePart.slice(2, 4)}`;
+        }
+      }
+    }
+  }
+  return events;
+}
+
+function updateExternalCalStatusUI(corsWarning = false) {
+  const statusEl = $("#externalCalStatus");
+  const clearBtn = $("#clearExternalCalBtn");
+  const eventsCount = (state.externalEvents || []).length;
+  const savedUrl = localStorage.getItem(getUserStorageKey("external_cal_url")) || "";
+
+  if (clearBtn) {
+    clearBtn.style.display = eventsCount > 0 || savedUrl ? "inline-flex" : "none";
+  }
+
+  if (!statusEl) return;
+  if (eventsCount > 0) {
+    statusEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Naloženih ${eventsCount} osebnih dogodkov.</span> Prikažejo se na urniku kot zasedeni termini.`;
+  } else if (savedUrl && corsWarning) {
+    statusEl.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⚠ URL je shranjen.</span> Ker brskalniki zaradi varnosti (CORS) blokirajo neposredno branje zunanjih koledarjev, kliknite <em>Naloži .ics datoteko</em> za takojšen prikaz dogodkov.`;
+  } else if (savedUrl) {
+    statusEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ URL shranjen.</span>`;
+  } else {
+    statusEl.innerHTML = `Ni naloženih osebnih koledarjev.`;
+  }
+}
+
+window.openCalendarSyncModal = function () {
+  const modal = $("#calendarSyncModal");
+  if (!modal) return;
+
+  const { httpUrl, webcalUrl } = getCalendarFeedUrls();
+  const urlInput = $("#calSyncFeedUrl");
+  if (urlInput) urlInput.value = httpUrl;
+
+  const extUrlInput = $("#employerExternalCalUrl");
+  if (extUrlInput) {
+    extUrlInput.value = localStorage.getItem(getUserStorageKey("external_cal_url")) || "";
+  }
+
+  const toggleCheckbox = $("#toggleShowExternalEvents");
+  if (toggleCheckbox) {
+    toggleCheckbox.checked = state.showExternalEvents !== false;
+  }
+
+  updateExternalCalStatusUI();
+
+  // Takoj sinhroniziraj najnovejše stanje v Supabase
+  syncCalendarFeedToSupabase();
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.style.display = "block";
+  }
+};
+
+window.closeCalendarSyncModal = function () {
+  const modal = $("#calendarSyncModal");
+  if (!modal) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.style.display = "none";
+  }
+};
+
+window.copyCalendarFeedUrl = function () {
+  const urlInput = $("#calSyncFeedUrl");
+  if (!urlInput || !urlInput.value) return;
+
+  navigator.clipboard
+    .writeText(urlInput.value)
+    .then(() => {
+      const copyBtn = $("#copyCalSyncUrlBtn");
+      if (copyBtn) {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "✓ Kopirano!";
+        copyBtn.style.background = "#10b981";
+        copyBtn.style.borderColor = "#10b981";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.background = "";
+          copyBtn.style.borderColor = "";
+        }, 2500);
+      }
+      showToast("Povezava koledarja je kopirana v odložišče.", "success");
+    })
+    .catch(() => {
+      urlInput.select();
+      document.execCommand("copy");
+      showToast("Povezava kopirana.", "success");
+    });
+};
+
+window.downloadScheduleICS = function () {
+  const icsData = generateScheduleICalendar();
+  const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  const compSlug = slugify(state.companyName || "4p");
+  link.download = `Urnik_4P_${compSlug}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast("Datoteka koledarja (.ics) je bila uspešno prenesena.", "success");
+};
+
+window.subscribeAppleCalendar = function () {
+  const { webcalUrl } = getCalendarFeedUrls();
+  window.downloadScheduleICS();
+  try {
+    const hiddenIframe = document.createElement("iframe");
+    hiddenIframe.style.display = "none";
+    hiddenIframe.src = webcalUrl;
+    document.body.appendChild(hiddenIframe);
+    setTimeout(() => hiddenIframe.remove(), 2000);
+  } catch (e) {}
+  showToast("Datoteka za Apple Koledar je pripravljena. Ob uvozu izberite 'Nov koledar' za ločen prikaz.", "success");
+};
+
+window.openGoogleCalendarImport = function () {
+  window.copyCalendarFeedUrl();
+  window.open("https://calendar.google.com/calendar/r/settings/addbyurl", "_blank");
+  showToast("Odprt je Google Koledar. V polje 'URL koledarja' prilepite kopirano povezavo.", "success");
+};
+
+window.handleExternalICSFileUpload = function (e) {
+  const file = e.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (evt) {
+    try {
+      const text = evt.target.result;
+      const events = parseICSContent(text);
+      if (events.length === 0) {
+        showToast("V datoteki ni bilo mogoče najti nobenih dogodkov.", "error");
+        return;
+      }
+      state.externalEvents = events;
+      localStorage.setItem(getUserStorageKey("external_cal_events"), JSON.stringify(events));
+      updateExternalCalStatusUI();
+      renderSchedule();
+      showToast(`Uspešno uvoženih ${events.length} osebnih dogodkov.`, "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Napaka pri branju .ics datoteke.", "error");
+    }
+  };
+  reader.readAsText(file);
+};
+
+window.saveExternalCalendarUrl = async function () {
+  const input = $("#employerExternalCalUrl");
+  const val = input ? input.value.trim() : "";
+  localStorage.setItem(getUserStorageKey("external_cal_url"), val);
+
+  if (!val) {
+    updateExternalCalStatusUI();
+    showToast("Povezava osebnega koledarja odstranjena.", "info");
+    return;
+  }
+
+  showToast("Preverjam koledarsko povezavo...", "info");
+  const cleanUrl = val.replace(/^webcal:\/\//i, "https://");
+  try {
+    const res = await fetch(cleanUrl);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    const events = parseICSContent(text);
+    state.externalEvents = events;
+    localStorage.setItem(getUserStorageKey("external_cal_events"), JSON.stringify(events));
+    updateExternalCalStatusUI();
+    renderSchedule();
+    showToast(`Povezava potrjena! Naloženih ${events.length} osebnih dogodkov.`, "success");
+  } catch (err) {
+    console.warn("Neposredno branje URL ni uspelo (CORS):", err);
+    updateExternalCalStatusUI(true);
+    showToast("URL je shranjen. Za takojšen prikaz dogodkov uporabite gumb 'Naloži .ics datoteko'.", "info");
+  }
+};
+
+window.clearExternalCalendarEvents = function () {
+  state.externalEvents = [];
+  localStorage.removeItem(getUserStorageKey("external_cal_events"));
+  localStorage.removeItem(getUserStorageKey("external_cal_url"));
+  const input = $("#employerExternalCalUrl");
+  if (input) input.value = "";
+  const fileInput = $("#employerExternalCalFile");
+  if (fileInput) fileInput.value = "";
+  updateExternalCalStatusUI();
+  renderSchedule();
+  showToast("Osebni dogodki so odstranjeni z urnika.", "info");
+};
+
+window.toggleExternalEventsVisibility = function (e) {
+  state.showExternalEvents = e.target.checked;
+  localStorage.setItem(getUserStorageKey("show_external_cal"), String(state.showExternalEvents));
+  renderSchedule();
 };
 
 function renderAll() {
@@ -2659,7 +3777,6 @@ function renderAll() {
   renderSectors();
   renderFilters();
   renderEmployees();
-  renderCalendar();
   renderSchedule();
   renderSettings();
   renderPendingRequestsNotification();
@@ -2680,7 +3797,7 @@ function switchView(view) {
 
   const topbarMonthSwitcher = $(".month-switcher");
   if (topbarMonthSwitcher) {
-    topbarMonthSwitcher.style.display = (view === "calendar" || view === "schedule") ? "none" : "flex";
+    topbarMonthSwitcher.style.display = (view === "schedule") ? "none" : "flex";
   }
 
   if (view === "sectors") {
@@ -2696,13 +3813,6 @@ function switchView(view) {
       pageDesc.style.display = "block";
     }
     renderSchedule();
-  } else if (view === "calendar") {
-    if (addSectorBtn) addSectorBtn.style.display = "none";
-    if (pageDesc) {
-      pageDesc.textContent = "Dnevni pregled zabeleženih ur zaposlenih v tedenskem in mesečnem pogledu.";
-      pageDesc.style.display = "block";
-    }
-    renderCalendar();
   } else {
     if (addSectorBtn) addSectorBtn.style.display = "none";
     if (pageDesc) pageDesc.style.display = "none";
@@ -2967,6 +4077,21 @@ $("#addStatusForm")?.addEventListener("submit", (event) => {
   }
 });
 
+// Add Shift Preset Form
+$("#addShiftPresetForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const startInput = $("#newPresetStartTime");
+  const endInput = $("#newPresetEndTime");
+  const labelInput = $("#newPresetLabel");
+  const start = startInput ? startInput.value : "";
+  const end = endInput ? endInput.value : "";
+  const label = labelInput ? labelInput.value : "";
+  if (start && end) {
+    handleAddShiftPreset(start, end, label);
+    if (labelInput) labelInput.value = "";
+  }
+});
+
 // Update Password Form
 $("#passwordForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -3015,67 +4140,7 @@ $("#passwordForm")?.addEventListener("submit", async (event) => {
   }
 });
 
-// ==========================================================================
-// Calendar Event Listeners & Controls
-// ==========================================================================
-$$(".cal-toggle-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    state.calendarMode = btn.dataset.calMode;
-    renderCalendar();
-  });
-});
 
-$("#calSectorFilter")?.addEventListener("change", (e) => {
-  state.calSectorFilter = e.target.value;
-  renderCalendar();
-});
-
-$("#calEmployeeFilter")?.addEventListener("change", (e) => {
-  state.calEmployeeFilter = e.target.value;
-  renderCalendar();
-});
-
-$("#calPrevBtn")?.addEventListener("click", () => {
-  const d = new Date(state.calendarDate || currentDate);
-  if (state.calendarMode === "week") {
-    d.setDate(d.getDate() - 7);
-  } else {
-    d.setMonth(d.getMonth() - 1);
-  }
-  state.calendarDate = d;
-  renderCalendar();
-});
-
-$("#calNextBtn")?.addEventListener("click", () => {
-  const d = new Date(state.calendarDate || currentDate);
-  if (state.calendarMode === "week") {
-    d.setDate(d.getDate() + 7);
-  } else {
-    d.setMonth(d.getMonth() + 1);
-  }
-  state.calendarDate = d;
-  renderCalendar();
-});
-
-$("#calTodayBtn")?.addEventListener("click", () => {
-  state.calendarDate = new Date();
-  renderCalendar();
-});
-
-// Day detail modal close
-const dayModal = $("#dayDetailModal");
-$("#closeDayDetailModal")?.addEventListener("click", () => {
-  if (dayModal) {
-    if (typeof dayModal.close === "function") dayModal.close();
-    else dayModal.hidden = true;
-  }
-});
-$("#closeDayDetailModalBtn")?.addEventListener("click", () => {
-  if (dayModal) {
-    if (typeof dayModal.close === "function") dayModal.close();
-    else dayModal.hidden = true;
-  }
-});
 
 // Schedule Event Listeners & Controls
 // ==========================================================================
@@ -3121,7 +4186,7 @@ $("#scheduleTodayBtn")?.addEventListener("click", () => {
 $("#modalShiftStartTime")?.addEventListener("input", updateShiftDurationDisplay);
 $("#modalShiftEndTime")?.addEventListener("input", updateShiftDurationDisplay);
 
-$("#shiftModalForm")?.addEventListener("submit", (e) => {
+$("#shiftModalForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const idInput = $("#modalShiftId");
   const empSelect = $("#modalShiftEmployee");
@@ -3143,60 +4208,146 @@ $("#shiftModalForm")?.addEventListener("submit", (e) => {
     return;
   }
 
-  const emp = state.employees.find((item) => item.id === userId);
+  const typeInput = $("#modalShiftType");
+  const isTypeOpen = typeInput?.value === "open";
   const sec = state.sectors.find((item) => item.id === sectorId);
-  const userName = emp ? emp.name : "Zaposleni";
   const sectorName = sec ? sec.name : "Sektor";
   const color = sec ? sec.color || "#56829d" : "#56829d";
   const hours = calculateShiftDuration(startTime, endTime);
-
   const existingId = idInput.value;
+
+  if (isTypeOpen) {
+    const spotsInput = $("#modalShiftRequiredSpots");
+    const requiredSpots = parseInt(spotsInput?.value, 10) || 1;
+
+    if (!sectorId || !date || !startTime || !endTime) {
+      alert("Prosimo, izpolnite vsa obvezna polja.");
+      return;
+    }
+
+    const openShiftId = existingId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "os_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+
+    if (!state.openShifts) state.openShifts = [];
+    const openShiftRecord = {
+      id: openShiftId,
+      isOpenShift: true,
+      workplaceId: sectorId,
+      sectorId: sectorId,
+      sectorName: sectorName,
+      color: color,
+      date: date,
+      startTime: startTime,
+      endTime: endTime,
+      hours: hours,
+      requiredSpots: requiredSpots,
+      note: note,
+      signups: (state.openShifts.find(s => s.id === openShiftId)?.signups || [])
+    };
+
+    const exIndex = state.openShifts.findIndex(s => s.id === openShiftId);
+    if (exIndex >= 0) {
+      state.openShifts[exIndex] = openShiftRecord;
+    } else {
+      state.openShifts.push(openShiftRecord);
+    }
+    localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+    closeShiftModal();
+    renderSchedule();
+
+    if (supabaseClient && state.currentUser) {
+      try {
+        await supabaseClient.from("open_shifts").upsert({
+          id: openShiftId,
+          employer_id: state.currentUser.id,
+          workplace_id: sectorId,
+          date: date,
+          start_time: startTime,
+          end_time: endTime,
+          hours: hours,
+          required_spots: requiredSpots,
+          note: note
+        });
+        await fetchOpenShifts();
+        renderSchedule();
+      } catch (err) {
+        console.warn("Supabase open_shifts upsert error:", err);
+      }
+    }
+    syncCalendarFeedToSupabase();
+    return;
+  }
+
+  // Assigned shift
+  if (!userId || !sectorId || !date || !startTime || !endTime) {
+    alert("Prosimo, izpolnite vsa obvezna polja.");
+    return;
+  }
+
+  const emp = state.employees.find((item) => item.id === userId);
+  const userName = emp ? emp.name : "Zaposleni";
+
   if (!state.scheduleShifts) state.scheduleShifts = [];
 
+  const shiftId = existingId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "shift_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+  const shiftRecord = {
+    id: shiftId,
+    userId,
+    userName,
+    sectorId,
+    sectorName,
+    color,
+    date,
+    startTime,
+    endTime,
+    hours,
+    note,
+  };
+
   if (existingId) {
-    // Update existing shift
     const idx = state.scheduleShifts.findIndex((s) => s.id === existingId);
     if (idx !== -1) {
-      state.scheduleShifts[idx] = {
-        id: existingId,
-        userId,
-        userName,
-        sectorId,
-        sectorName,
-        color,
-        date,
-        startTime,
-        endTime,
-        hours,
-        note,
-      };
+      state.scheduleShifts[idx] = shiftRecord;
+    } else {
+      state.scheduleShifts.push(shiftRecord);
     }
   } else {
-    // Create new shift
-    const newShift = {
-      id: "shift_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-      userId,
-      userName,
-      sectorId,
-      sectorName,
-      color,
-      date,
-      startTime,
-      endTime,
-      hours,
-      note,
-    };
-    state.scheduleShifts.push(newShift);
+    state.scheduleShifts.push(shiftRecord);
   }
 
   localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
   closeShiftModal();
   renderSchedule();
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient.from("schedule_shifts").upsert({
+        id: shiftId,
+        employer_id: state.currentUser.id,
+        workplace_id: sectorId,
+        user_id: userId,
+        date: date,
+        start_time: startTime,
+        end_time: endTime,
+        hours: hours,
+        note: note || "",
+      });
+    } catch (err) {
+      console.warn("Supabase schedule_shifts upsert error:", err);
+    }
+  }
+  syncCalendarFeedToSupabase();
 });
 
 // Back button from Employee Detail
 $("#backToEmployeesList")?.addEventListener("click", () => {
   window.closeEmployeeDetail();
+});
+
+// Dismiss button from Employee Detail
+$("#dismissEmployeeBtn")?.addEventListener("click", () => {
+  if (state.selectedEmployeeId) {
+    handleDismissEmployee(state.selectedEmployeeId);
+  }
 });
 
 // Bootstrapping
