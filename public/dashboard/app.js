@@ -10,6 +10,13 @@ const SLO_MONTH_NAMES = [
 // Current active date (defaults to today's date)
 let currentDate = new Date();
 
+function formatLocalDate(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function getUserStorageKey(key) {
   const uid = state.currentUser ? state.currentUser.id : "guest";
   return `4p_${uid}_${key}`;
@@ -3541,7 +3548,7 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
     }
 
     // 2. Izbriši le PRIHODNJE dodeljene izmene v urniku tega sektorja / delodajalca (pretekle ostanejo za evidenco)
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayIso = formatLocalDate(new Date());
     const { error: shiftErr } = await supabaseClient
       .from("schedule_shifts")
       .delete()
@@ -4001,8 +4008,8 @@ function renderSchedule() {
     if ($("#schedulePeriodTitle")) $("#schedulePeriodTitle").textContent = periodLabel;
     renderScheduleWeekView(container, days, filteredShifts);
 
-    const monDateStr = monday.toISOString().slice(0, 10);
-    const sunDateStr = sunday.toISOString().slice(0, 10);
+    const monDateStr = formatLocalDate(monday);
+    const sunDateStr = formatLocalDate(sunday);
     periodShifts = filteredShifts.filter((s) => s.date >= monDateStr && s.date <= sunDateStr);
   }
 
@@ -4123,7 +4130,7 @@ function isShiftFromOpenShift(s, openShiftsOnDay) {
 function renderScheduleMonthView(container, dateObj, shifts) {
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = formatLocalDate(new Date());
 
   const firstDay = new Date(year, month, 1);
   const startDayIndex = (firstDay.getDay() + 6) % 7; // Mon = 0
@@ -4323,7 +4330,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
 }
 
 function renderScheduleWeekView(container, days, shifts) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = formatLocalDate(new Date());
 
   const shiftsByDate = new Map();
   shifts.forEach((shift) => {
@@ -4572,10 +4579,7 @@ function computeFridayOfWeek(dateStr) {
   let diff = 5 - day;
   if (diff < 0) diff += 7;
   const fri = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + diff);
-  const fy = fri.getFullYear();
-  const fm = String(fri.getMonth() + 1).padStart(2, "0");
-  const fd = String(fri.getDate()).padStart(2, "0");
-  return `${fy}-${fm}-${fd}`;
+  return formatLocalDate(fri);
 }
 
 function getDatesInRange(startStr, endStr, selectedDays) {
@@ -4622,7 +4626,7 @@ window.setShiftDateMode = function (mode) {
     if (endDateInput) endDateInput.setAttribute("required", "required");
 
     if (startDateInput && !startDateInput.value) {
-      const base = singleDateInput?.value || new Date().toISOString().slice(0, 10);
+      const base = singleDateInput?.value || formatLocalDate(new Date());
       startDateInput.value = base;
       if (endDateInput) endDateInput.value = computeFridayOfWeek(base);
     }
@@ -4922,7 +4926,7 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
 
     const startDateInput = $("#modalShiftStartDate");
     const endDateInput = $("#modalShiftEndDate");
-    const baseDate = defaultDate || (dateInput ? dateInput.value : "") || (new Date().toISOString().slice(0, 10));
+    const baseDate = defaultDate || (dateInput ? dateInput.value : "") || formatLocalDate(new Date());
     if (startDateInput) startDateInput.value = baseDate;
     if (endDateInput) endDateInput.value = computeFridayOfWeek(baseDate);
     window.selectShiftDaysPreset("workweek");
@@ -4963,7 +4967,7 @@ window.openDayDetailsModal = function (dateStr) {
   const formattedDate = formatSloDateString(dateStr);
   if (dateTitleEl) dateTitleEl.textContent = formattedDate;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = formatLocalDate(new Date());
   const isToday = dateStr === todayStr;
   if (todayBadgeEl) todayBadgeEl.style.display = isToday ? "inline-flex" : "none";
 
