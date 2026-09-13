@@ -2027,6 +2027,86 @@ function sectorStats(sectorId) {
   };
 }
 
+// Annual sector stats calculation (letna raven za izbrani sektor in leto)
+function annualSectorStats(sectorId, year) {
+  const targetYear = String(year || activeMonth().year);
+  let totalHours = 0;
+  let totalTravel = 0;
+  let totalEarnings = 0;
+  let totalUnpaid = 0;
+  let paidEmployeesCount = 0;
+
+  const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sectorId]));
+  const count = sectorEmployees.length;
+
+  const yearMonths = new Set();
+  state.rawLogs.forEach((l) => {
+    if (l.sectorId === sectorId && l.date && l.date.startsWith(targetYear + "-")) {
+      yearMonths.add(l.date.slice(0, 7));
+    }
+  });
+  sectorEmployees.forEach((emp) => {
+    const sec = emp.sectors[sectorId];
+    Object.keys(sec.hours || {}).forEach((k) => {
+      if (k.startsWith(targetYear + "-") && (sec.hours[k] || 0) > 0) yearMonths.add(k);
+    });
+    Object.keys(sec.earnings || {}).forEach((k) => {
+      if (k.startsWith(targetYear + "-") && (sec.earnings[k] || 0) > 0) yearMonths.add(k);
+    });
+  });
+  if (activeMonth().key.startsWith(targetYear + "-")) {
+    yearMonths.add(activeMonth().key);
+  }
+
+  sectorEmployees.forEach((employee) => {
+    const sec = employee.sectors[sectorId];
+    let empSecUnpaid = 0;
+
+    yearMonths.forEach((mKey) => {
+      const hours = sec.hours?.[mKey] ?? 0;
+      const travel = sec.travelExpenses?.[mKey] ?? 0;
+      const earnings = sec.earnings?.[mKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + travel) : (hours * (sec.rate || 0) + travel));
+
+      const secLogs = state.rawLogs.filter(
+        (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(mKey)
+      );
+      let isPaid = false;
+      if (sec.paid?.[mKey] !== undefined) {
+        isPaid = Boolean(sec.paid[mKey]);
+      } else if (secLogs.length > 0 && !sec.isFixed) {
+        const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+        isPaid = secUnpaid === 0;
+      } else {
+        isPaid = sec.paid?.[mKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+      }
+
+      totalHours += hours;
+      totalTravel += travel;
+      totalEarnings += earnings;
+      if (!isPaid && earnings > 0) {
+        empSecUnpaid += earnings;
+        totalUnpaid += earnings;
+      }
+    });
+
+    if (empSecUnpaid === 0) {
+      paidEmployeesCount += 1;
+    }
+  });
+
+  const paidPercentage = count > 0 ? Math.round((paidEmployeesCount / count) * 100) : 100;
+
+  return {
+    employees: count,
+    paidEmployees: paidEmployeesCount,
+    paidPercentage,
+    hours: totalHours,
+    travelExpenses: totalTravel,
+    earnings: totalEarnings,
+    unpaid: totalUnpaid,
+  };
+}
+
 function paidChip(paid) {
   return `<span class="chip ${paid ? "" : "warning"}">${paid ? "Izplačano" : "Ni izplačano"}</span>`;
 }
@@ -2048,65 +2128,44 @@ function renderEmployeeSectorsList(employeeSectors, showCode = false) {
   if (!employeeSectors || employeeSectors.length === 0) {
     return `<span class="chip neutral">Brez sektorja</span>`;
   }
-
-  if (employeeSectors.length <= 2) {
-    return `<div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">${employeeSectors.map((s) => sectorBadgeHTML(s, showCode)).join("")}</div>`;
-  }
-
-  const visibleSectors = employeeSectors.slice(0, 2);
-  const remainingSectors = employeeSectors.slice(2);
-  const remainingCount = remainingSectors.length;
-
   return `
-    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-      ${visibleSectors.map((s) => sectorBadgeHTML(s, showCode)).join("")}
-      <div class="sector-more-badge-wrap" onclick="event.stopPropagation();">
-        <span class="sector-more-badge">+${remainingCount}</span>
-        <div class="sector-more-popover">
-          <div class="sector-more-popover-title">Ostali sektorji (${remainingCount})</div>
-          <div class="sector-more-popover-list">
-            ${remainingSectors.map((s) => sectorBadgeHTML(s, false)).join("")}
-          </div>
-        </div>
-      </div>
+    <div class="employee-sectors-flow">
+      ${employeeSectors.map((sector) => sectorBadgeHTML(sector, showCode)).join("")}
     </div>
   `;
 }
 
-function employeeRow(employee, compact = false, specificSectorId = null) {
-  const month = employeeMonth(employee, specificSectorId);
+function employeeRow(employee) {
+  const month = employeeMonth(employee);
+  const employeeSectors = Object.values(employee.sectors || {});
+  const initialsText = initials(employee.name);
   const travelDisplay = month.travelExpenses > 0 ? currency.format(month.travelExpenses) : `<span style="color: var(--muted);">-</span>`;
-  const rateDisplay = formatHourlyRate(month, employee);
-  const statusBadge = `<span class="chip ${month.paid ? "" : "warning"}">${month.paid ? "Izplačano" : "Ni izplačano"}</span>`;
 
-  if (compact) {
-    const paidControl = `
-      <label class="paid-toggle" onclick="event.stopPropagation();">
-        <input type="checkbox" data-paid-id="${employee.id}" ${month.paid ? "checked" : ""} />
-        ${paidChip(month.paid)}
-      </label>
-    `;
-    return `
-      <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}')">
-        <td><div class="person"><span class="avatar">${initials(employee.name)}</span><strong>${employee.name}</strong></div></td>
-        <td>${employee.status || "Zaposlen"}</td>
-        <td>${number.format(month.hours)} h</td>
-        <td>${rateDisplay}</td>
-        <td>${travelDisplay}</td>
-        <td><strong>${currency.format(month.earnings)}</strong></td>
-        <td>${paidControl}</td>
-      </tr>
-    `;
+  let statusBadge = "";
+  if (employeeSectors.length > 0) {
+    const isFixedOnly = employeeSectors.every((s) => s.isFixed);
+    if (isFixedOnly) {
+      statusBadge = month.paid
+        ? `<span class="chip" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Izplačano</span>`
+        : `<span class="chip warning" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">Ni izplačano</span>`;
+    } else {
+      statusBadge = paidChip(month.paid);
+    }
+  } else {
+    statusBadge = paidChip(month.paid);
   }
 
-  // Display badges for sectors with max 2 visible and +X hover popover
-  const employeeSectors = Object.values(employee.sectors || {});
-  const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
-
   return `
-    <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}')">
-      <td><div class="person"><span class="avatar">${initials(employee.name)}</span><strong>${employee.name}</strong></div></td>
-      <td>${sectorBadgesHTML}</td>
+    <tr>
+      <td>
+        <div class="employee-cell">
+          <span class="avatar">${initialsText}</span>
+          <div>
+            <strong>${employee.name}</strong>
+          </div>
+        </div>
+      </td>
+      <td>${renderEmployeeSectorsList(employeeSectors, false)}</td>
       <td>${number.format(month.hours)} h</td>
       <td>${travelDisplay}</td>
       <td><strong>${currency.format(month.earnings)}</strong></td>
@@ -2117,9 +2176,10 @@ function employeeRow(employee, compact = false, specificSectorId = null) {
 
 function renderOverview() {
   const annualTotals = getAnnualTotals(activeMonth().year);
-  const monthTotals = currentTotals();
 
-  $("#activeMonth").textContent = activeMonth().label;
+  if ($("#activeYear")) $("#activeYear").textContent = annualTotals.year;
+  if ($("#activeMonth")) $("#activeMonth").textContent = activeMonth().label;
+
   $("#totalHours").textContent = `${number.format(annualTotals.hours)} h`;
   if ($("#totalHoursSub")) {
     $("#totalHoursSub").textContent = `Letna raven · ${annualTotals.year}`;
@@ -2145,13 +2205,13 @@ function renderOverview() {
   // Render Schedule widget in Overview
   renderOverviewSchedule();
 
-  // Overview Sectors list (right column)
+  // Overview Sectors list (right column) - prikaz na letni ravni
   if (state.sectors.length === 0) {
     $("#overviewSectorList").innerHTML = `<p class="empty-state">Ni vnesenih sektorjev.</p>`;
   } else {
     $("#overviewSectorList").innerHTML = state.sectors
       .map((sector) => {
-        const stats = sectorStats(sector.id);
+        const stats = annualSectorStats(sector.id, annualTotals.year);
         const color = sector.color || "#56829d";
         const paidPct = stats.paidPercentage;
         const isFull = paidPct === 100;
@@ -2180,29 +2240,45 @@ function renderOverview() {
       .join("");
   }
 
-  // Overview Payroll (lower on page)
+  // Overview Payroll (lower on page) - prikaz na letni ravni
   if ($("#overviewUnpaidBadge")) {
-    $("#overviewUnpaidBadge").textContent = `${currency.format(monthTotals.unpaid)} za izplačilo`;
+    $("#overviewUnpaidBadge").textContent = `${currency.format(annualTotals.unpaid)} za izplačilo (${annualTotals.year})`;
   }
   if ($("#overviewPayrollMonthLabel")) {
-    $("#overviewPayrollMonthLabel").textContent = activeMonth().label;
+    $("#overviewPayrollMonthLabel").textContent = `Leto ${annualTotals.year}`;
   }
 
-  const unpaidEmployees = state.employees.filter((employee) => !employeeMonth(employee).paid && employeeMonth(employee).earnings > 0);
-  if (unpaidEmployees.length === 0) {
-    $("#payrollList").innerHTML = `<p class="empty-state" style="grid-column: 1 / -1;">Vsa izplačila za ta mesec so urejena.</p>`;
+  // Unpaid employees for the target year
+  const unpaidEmployeesAnnual = [];
+  state.employees.forEach((employee) => {
+    let empUnpaid = 0;
+    let empHours = 0;
+    for (let m = 1; m <= 12; m++) {
+      const mKey = `${annualTotals.year}-${String(m).padStart(2, "0")}`;
+      const mData = employeeMonth(employee, null, mKey);
+      empHours += mData.hours;
+      if (!mData.paid && mData.earnings > 0) {
+        empUnpaid += mData.earnings;
+      }
+    }
+    if (empUnpaid > 0) {
+      unpaidEmployeesAnnual.push({ employee, unpaid: empUnpaid, hours: empHours });
+    }
+  });
+
+  if (unpaidEmployeesAnnual.length === 0) {
+    $("#payrollList").innerHTML = `<p class="empty-state" style="grid-column: 1 / -1;">Vsa izplačila za leto ${annualTotals.year} so urejena.</p>`;
   } else {
-    $("#payrollList").innerHTML = unpaidEmployees
-      .map((employee) => {
-        const month = employeeMonth(employee);
+    $("#payrollList").innerHTML = unpaidEmployeesAnnual
+      .map(({ employee, unpaid, hours }) => {
         const secNames = Object.values(employee.sectors || {}).map((s) => s.sectorName).join(", ") || "Zaposleni";
         return `
           <article class="payroll-row">
             <div>
               <h3>${employee.name}</h3>
-              <p>${secNames} · ${number.format(month.hours)} h</p>
+              <p>${secNames} · ${number.format(hours)} h</p>
             </div>
-            <div class="amount">${currency.format(month.earnings)}</div>
+            <div class="amount">${currency.format(unpaid)}</div>
           </article>
         `;
       })
@@ -5089,6 +5165,8 @@ window.toggleExternalEventsVisibility = function (e) {
 };
 
 function renderAll() {
+  if ($("#activeYear")) $("#activeYear").textContent = activeMonth().year;
+  if ($("#activeMonth")) $("#activeMonth").textContent = activeMonth().label;
   initDefaultScheduleShifts();
   renderOverview();
   renderSectors();
@@ -5368,7 +5446,18 @@ document.addEventListener("change", async (event) => {
   }
 });
 
-// Unlimited Month Navigation
+// Year Navigation (topbar desno zgoraj)
+$("#prevYear")?.addEventListener("click", () => {
+  currentDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1);
+  renderAll();
+});
+
+$("#nextYear")?.addEventListener("click", () => {
+  currentDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1);
+  renderAll();
+});
+
+// Month Navigation (Mesečni pregled zaposlenih)
 $("#prevMonth")?.addEventListener("click", () => {
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
   renderAll();

@@ -157,10 +157,10 @@
             </div>
             <p id="pageDescription" class="page-subtitle" style="display: none;"></p>
           </div>
-          <div class="month-switcher" aria-label="Preklop meseca">
-            <button class="icon-button" id="prevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
-            <div class="month-pill" id="activeMonth"></div>
-            <button class="icon-button" id="nextMonth" type="button" aria-label="Naslednji mesec">›</button>
+          <div class="month-switcher" aria-label="Preklop leta">
+            <button class="icon-button" id="prevYear" type="button" aria-label="Prejšnje leto">‹</button>
+            <div class="month-pill" id="activeYear">2026</div>
+            <button class="icon-button" id="nextYear" type="button" aria-label="Naslednje leto">›</button>
           </div>
         </header>
 
@@ -248,10 +248,15 @@
           </section>
 
           <section class="panel table-panel">
-            <div class="panel-header">
+            <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
               <div>
                 <h2>Mesečni pregled zaposlenih</h2>
                 <p>Ure, potni stroški, zaslužek in status izplačila</p>
+              </div>
+              <div class="month-switcher" aria-label="Preklop meseca">
+                <button class="icon-button" id="prevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
+                <div class="month-pill" id="activeMonth">September 2026</div>
+                <button class="icon-button" id="nextMonth" type="button" aria-label="Naslednji mesec">›</button>
               </div>
             </div>
             <div class="table-wrap">
@@ -1002,6 +1007,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=69"></script>
+    <script src="app.js?v=70"></script>
   </body>
 </html>
