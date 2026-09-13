@@ -782,6 +782,34 @@
       </div>
     </dialog>
 
+    <!-- Modal za pregled podrobnosti dneva (prazniki, osebni dogodki, izmene) -->
+    <dialog id="dayDetailsModal" class="modal" style="max-width: 540px; width: 100%;">
+      <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
+        <div class="modal-header" style="margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line);">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h2 id="dayModalDateTitle" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);">Podrobnosti dneva</h2>
+              <span id="dayModalTodayBadge" class="today-indicator-pill" style="display: none;">Danes</span>
+              <span id="dayModalHolidayBadge" class="cal-holiday-badge" style="display: none;"></span>
+            </div>
+            <p id="dayModalSubtitle" style="margin: 0; font-size: 13px; color: var(--muted);">Pregled vseh dogodkov, izmen in zasedenosti za ta dan.</p>
+          </div>
+          <button type="button" class="icon-button modal-close" onclick="closeDayDetailsModal()" aria-label="Zapri">✕</button>
+        </div>
+
+        <div id="dayModalBody" style="display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow-y: auto; padding-right: 2px;">
+          <!-- Dinamična vsebina -->
+        </div>
+
+        <div class="modal-actions" style="margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="ghost-button" onclick="closeDayDetailsModal()" style="padding: 8px 18px; font-size: 13px; font-weight: 700;">Zapri</button>
+          <button type="button" class="primary-button" id="dayModalAddShiftBtn" onclick="handleAddShiftFromDayModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-size: 13px; font-weight: 700;">
+            <span>+</span> Dodaj izmeno za ta dan
+          </button>
+        </div>
+      </div>
+    </dialog>
+
     <!-- Modal za uvoz osebnih dogodkov na urnik (Google & Apple koledar) -->
     <dialog id="calendarSyncModal" class="modal" style="max-width: 520px; width: 100%; border: none; border-radius: 18px; padding: 0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
       <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
@@ -918,6 +946,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=65"></script>
+    <script src="app.js?v=67"></script>
   </body>
 </html>

@@ -3207,7 +3207,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     }
 
     html += `
-      <div class="schedule-month-cell ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openShiftModal(null, '${dateStr}')">
+      <div class="schedule-month-cell ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
         <div class="schedule-cell-top">
           <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden;">
             <span class="cal-day-num ${isToday ? "is-today-badge" : ""}">${d}</span>
@@ -3295,7 +3295,7 @@ function renderScheduleWeekView(container, days, shifts) {
           const signupsCount = s.signups ? s.signups.length : 0;
           const isFull = signupsCount >= s.requiredSpots;
           return `
-            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="openShiftModal('${s.id}', null, null, true)">
+            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openShiftModal('${s.id}', null, null, true)">
               <div class="schedule-week-shift-emp-row">
                 <span style="font-size: 11px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta izmena</span>
                 <span style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 100px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">
@@ -3377,7 +3377,7 @@ function renderScheduleWeekView(container, days, shifts) {
         .map((s) => {
           const color = s.color || "#56829d";
           return `
-            <article class="schedule-week-shift-card" style="border-left-color: ${color};" onclick="openShiftModal('${s.id}')">
+            <article class="schedule-week-shift-card" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')">
               <div class="schedule-week-shift-emp-row">
                 <div class="schedule-week-shift-emp">
                   <span class="avatar" style="width: 26px; height: 26px; font-size: 10px;">${initials(s.userName)}</span>
@@ -3405,7 +3405,7 @@ function renderScheduleWeekView(container, days, shifts) {
 
     const holidayName = getSlovenianHolidayName(dateStr);
     html += `
-      <div class="cal-week-col ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}">
+      <div class="cal-week-col ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
         <div class="cal-week-header ${isToday ? "is-today-header" : ""}">
           <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>
@@ -3421,7 +3421,7 @@ function renderScheduleWeekView(container, days, shifts) {
         </div>
         <div class="cal-week-body" style="display: flex; flex-direction: column; gap: 8px;">
           ${shiftsHtml}
-          <button type="button" class="schedule-week-add-btn" onclick="openShiftModal(null, '${dateStr}')">
+          <button type="button" class="schedule-week-add-btn" onclick="event.stopPropagation(); openShiftModal(null, '${dateStr}')">
             <span>+</span> Dodaj izmeno
           </button>
         </div>
@@ -3878,6 +3878,228 @@ window.closeShiftModal = function () {
   } else {
     modal.hidden = true;
   }
+};
+
+window.openDayDetailsModal = function (dateStr) {
+  if (!dateStr) return;
+  state.selectedDayModalDate = dateStr;
+  const modal = $("#dayDetailsModal");
+  if (!modal) return;
+
+  const dateTitleEl = $("#dayModalDateTitle");
+  const todayBadgeEl = $("#dayModalTodayBadge");
+  const holidayBadgeEl = $("#dayModalHolidayBadge");
+  const bodyEl = $("#dayModalBody");
+
+  const formattedDate = formatSloDateString(dateStr);
+  if (dateTitleEl) dateTitleEl.textContent = formattedDate;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isToday = dateStr === todayStr;
+  if (todayBadgeEl) todayBadgeEl.style.display = isToday ? "inline-flex" : "none";
+
+  const holidayName = getSlovenianHolidayName(dateStr);
+  if (holidayBadgeEl) {
+    if (holidayName) {
+      holidayBadgeEl.style.display = "inline-flex";
+      holidayBadgeEl.textContent = `🇸🇮 ${holidayName}`;
+      holidayBadgeEl.title = `Praznik: ${holidayName}`;
+    } else {
+      holidayBadgeEl.style.display = "none";
+    }
+  }
+
+  // Filter shifts
+  const dayShifts = (state.scheduleShifts || []).filter((s) => s.date === dateStr);
+  const dayOpenShifts = (state.openShifts || []).filter((s) => s.date === dateStr);
+  const regularDayShifts = dayShifts.filter((s) => !isShiftFromOpenShift(s, dayOpenShifts));
+  const totalHours = regularDayShifts.reduce((sum, s) => sum + (Number(s.hours) || 0), 0) +
+    dayOpenShifts.reduce((sum, os) => sum + ((os.signups ? os.signups.length : 0) * (Number(os.hours) || 0)), 0);
+
+  // Filter personal external events
+  const dayExtEvents = (state.showExternalEvents !== false && state.externalEvents)
+    ? state.externalEvents.filter((e) => e.date === dateStr)
+    : [];
+
+  let html = "";
+
+  // 1. Summary Quick Stats Bar
+  html += `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Načrtovane ure</div>
+        <div style="font-size: 18px; font-weight: 800; color: var(--ink); margin-top: 2px;">${number.format(totalHours)} <span style="font-size: 12px; font-weight: 600; color: var(--muted);">ur</span></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Izmene</div>
+        <div style="font-size: 18px; font-weight: 800; color: var(--primary); margin-top: 2px;">${regularDayShifts.length + dayOpenShifts.length} <span style="font-size: 12px; font-weight: 600; color: var(--muted);">skupaj</span></div>
+      </div>
+      ${dayExtEvents.length > 0 ? `
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase;">Osebni dogodki</div>
+          <div style="font-size: 18px; font-weight: 800; color: #5b21b6; margin-top: 2px;">${dayExtEvents.length} <span style="font-size: 12px; font-weight: 600; color: #8b5cf6;">v koledarju</span></div>
+        </div>
+      ` : ""}
+    </div>
+  `;
+
+  // 2. Praznik kartica
+  if (holidayName) {
+    html += `
+      <div style="display: flex; align-items: center; gap: 10px; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 10px; padding: 10px 14px;">
+        <span style="font-size: 20px;">🎉</span>
+        <div>
+          <div style="font-weight: 800; font-size: 13.5px; color: #92400e;">${holidayName}</div>
+          <div style="font-size: 11.5px; color: #b45309;">Dela prost dan v Republiki Sloveniji</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Osebni koledarski dogodki (Google / Apple koledar)
+  if (dayExtEvents.length > 0) {
+    html += `
+      <div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="font-size: 12px; font-weight: 800; color: #5b21b6; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
+            <span>📅</span> Moji osebni dogodki (${dayExtEvents.length})
+          </div>
+          <span style="font-size: 11px; color: #7c3aed; font-weight: 600;">Iz povezanega koledarja</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          ${dayExtEvents.map((ev) => `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f5f3ff; border: 1px solid #ddd6fe; border-left: 3.5px solid #8b5cf6; border-radius: 8px; padding: 8px 12px;">
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                <span style="font-size: 14px;">🔒</span>
+                <span style="font-weight: 700; font-size: 13px; color: #4c1d95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</span>
+              </div>
+              <div style="font-size: 11.5px; font-weight: 700; color: #6d28d9; white-space: nowrap; flex-shrink: 0; background: #ede9fe; padding: 2px 8px; border-radius: 5px;">
+                ${ev.startTime ? `${ev.startTime} – ${ev.endTime || ''}` : 'Celodnevno'}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // 4. Odprte izmene (Open shifts)
+  if (dayOpenShifts.length > 0) {
+    html += `
+      <div>
+        <div style="font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;">
+          <span>🔓</span> Odprte izmene (${dayOpenShifts.length})
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${dayOpenShifts.map((os) => {
+            const color = os.color || "#f59e0b";
+            const signupsCount = os.signups ? os.signups.length : 0;
+            const isFull = signupsCount >= os.requiredSpots;
+            return `
+              <div style="background: #ffffff; border: 1px solid ${color}40; border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${os.id}', null, null, true);" title="Kliknite za urejanje odprte izmene">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-weight: 800; font-size: 13px; color: ${color};">🔓 ${os.sectorName}</span>
+                    <span style="font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${os.requiredSpots} mest</span>
+                  </div>
+                  <div style="font-size: 12px; font-weight: 700; color: var(--ink);">
+                    ${os.startTime} – ${os.endTime} (${number.format(os.hours)} h)
+                  </div>
+                </div>
+                ${os.signups && os.signups.length > 0 ? `
+                  <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">
+                    ${os.signups.map((su) => `
+                      <span style="display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--ink);">
+                        <span class="avatar" style="width: 14px; height: 14px; font-size: 8px;">${initials(su.userName)}</span>
+                        ${su.userName}
+                      </span>
+                    `).join("")}
+                  </div>
+                ` : `<div style="font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic;">Še ni prijavljenih zaposlenih</div>`}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. Redne izmene zaposlenih
+  html += `
+    <div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div style="font-size: 12px; font-weight: 800; color: var(--ink); text-transform: uppercase; letter-spacing: 0.5px;">
+          Načrtovane izmene (${regularDayShifts.length})
+        </div>
+        ${regularDayShifts.length > 0 ? `<span style="font-size: 11px; color: var(--muted);">Kliknite na izmeno za urejanje</span>` : ""}
+      </div>
+  `;
+
+  if (regularDayShifts.length === 0) {
+    html += `
+      <div style="background: #f8fafc; border: 1px dashed var(--line); border-radius: 10px; padding: 20px; text-align: center;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--muted);">Za ta dan ni načrtovanih rednih izmen.</div>
+        <button type="button" class="ghost-button" onclick="closeDayDetailsModal(); openShiftModal(null, '${dateStr}');" style="margin-top: 8px; font-size: 12px; font-weight: 700;">
+          + Dodaj prvo izmeno
+        </button>
+      </div>
+    `;
+  } else {
+    html += `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${regularDayShifts.map((s) => {
+          const color = s.color || "#56829d";
+          return `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff; border: 1px solid var(--line); border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${s.id}');" title="Kliknite za urejanje izmene">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <span class="avatar" style="width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; background: ${color}20; color: ${color}; font-weight: 700;">${initials(s.userName)}</span>
+                <div style="min-width: 0;">
+                  <div style="font-weight: 700; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.userName}</div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                    <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
+                      <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
+                      ${s.sectorName}
+                    </span>
+                    ${s.note ? `<span style="font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.note}</span>` : ""}
+                  </div>
+                </div>
+              </div>
+
+              <div style="text-align: right; flex-shrink: 0;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--ink);">${s.startTime} – ${s.endTime}</div>
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--primary);">${number.format(s.hours)} h</div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+  html += `</div>`;
+
+  if (bodyEl) bodyEl.innerHTML = html;
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.style.display = "block";
+  }
+};
+
+window.closeDayDetailsModal = function () {
+  const modal = $("#dayDetailsModal");
+  if (!modal) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.style.display = "none";
+  }
+};
+
+window.handleAddShiftFromDayModal = function () {
+  const dateStr = state.selectedDayModalDate;
+  closeDayDetailsModal();
+  openShiftModal(null, dateStr);
 };
 
 function updateShiftDurationDisplay() {
