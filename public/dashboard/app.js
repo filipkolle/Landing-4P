@@ -106,6 +106,21 @@ let supabaseClient = null;
 let realtimeChannel = null;
 let pollingInterval = null;
 
+let loadingScreenDismissed = false;
+
+function hideLoadingScreen() {
+  if (loadingScreenDismissed) return;
+  loadingScreenDismissed = true;
+  const loader = $("#appLoadingScreen");
+  if (!loader) return;
+
+  loader.classList.add("fade-out");
+  setTimeout(() => {
+    loader.hidden = true;
+    loader.style.display = "none";
+  }, 450);
+}
+
 // Initialize Supabase Client & Auth
 async function initSupabase() {
   if (window.supabase && state.supabaseUrl && state.supabaseKey) {
@@ -117,9 +132,11 @@ async function initSupabase() {
     } catch (err) {
       console.warn("Supabase init error:", err);
       updateConnectionStatus(false);
+      hideLoadingScreen();
     }
   } else {
     updateConnectionStatus(false);
+    hideLoadingScreen();
   }
 }
 
@@ -280,10 +297,14 @@ async function handleAuthState(session, companyNameOverride = null) {
       sessionStorage.removeItem("4p_sync_google_cal_on_load");
       switchView("schedule");
     }
+
+    // Odstrani loading zaslon z gladkim fadeout prehodom
+    hideLoadingScreen();
   } else {
     clearUserState();
     if (authScreen) authScreen.hidden = false;
     if (appShell) appShell.hidden = true;
+    hideLoadingScreen();
   }
 }
 
@@ -6623,6 +6644,9 @@ $("#dismissEmployeeBtn")?.addEventListener("click", () => {
 initSupabase();
 renderAll();
 switchView(state.activeView, true);
+
+// Varnostni izhod za loading screen v primeru počasne povezave
+setTimeout(hideLoadingScreen, 3000);
 
 window.addEventListener("hashchange", () => {
   const hash = (window.location.hash || "").replace(/^#/, "").trim();

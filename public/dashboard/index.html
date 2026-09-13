@@ -20,10 +20,26 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=57" />
+    <link rel="stylesheet" href="styles.css?v=58" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
+    <!-- 0. App Loading / Splash Screen with Smooth Fadeout -->
+    <div id="appLoadingScreen" class="app-loading-screen">
+      <div class="app-loading-card">
+        <div class="app-loading-logo-wrap">
+          <img src="logo.png" alt="Finance 4P" class="app-loading-logo" />
+        </div>
+        <div class="app-loading-text">
+          <h2 class="app-loading-title">Finance 4P</h2>
+          <p class="app-loading-subtitle">Nalaganje nadzorne plošče...</p>
+        </div>
+        <div class="app-loading-bar-wrap">
+          <div class="app-loading-bar"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 1. Professional Company Auth Screen -->
     <div id="authScreen" class="auth-screen">
       <div class="auth-card">
