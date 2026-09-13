@@ -3488,6 +3488,8 @@ window.closeSectorDetail = function () {
     sessionStorage.removeItem("4p_selected_sector_id");
   } catch (e) {}
 
+  $("#pageTitle").textContent = "Sektorji";
+
   const listContainer = $("#sectorsListContainer");
   const detailContainer = $("#sectorDetailContainer");
   const addSectorBtn = $("#openSectorModal");
@@ -3510,6 +3512,9 @@ function renderSectorDetail(sectorId) {
   const sector = state.sectors.find((item) => item.id === sectorId);
   if (!sector) return;
 
+  // Ime strani zamenjaj z imenom izbranega sektorja
+  $("#pageTitle").textContent = sector.name;
+
   const stats = sectorStats(sector.id);
   const color = sector.color || "#56829d";
   const monthObj = activeMonth();
@@ -3525,13 +3530,7 @@ function renderSectorDetail(sectorId) {
   const pageDesc = $("#pageDescription");
   if (pageDesc) pageDesc.style.display = "none";
 
-  $("#sectorDetailTitle").innerHTML = `
-    <span class="sector-title-wrap">
-      <span class="sector-color-dot" style="background-color: ${color};"></span>
-      ${sector.name}
-      <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35;">${sector.code}</span>
-    </span>
-  `;
+  $("#sectorDetailTitle").textContent = "Delovni zapisi zaposlenih";
   if ($("#sectorDetailActiveMonth")) {
     $("#sectorDetailActiveMonth").textContent = monthObj.label;
   }
@@ -5682,7 +5681,8 @@ function switchView(view, updateHash = true) {
     schedule: "Urnik BETA",
     settings: "Nastavitve",
   };
-  $("#pageTitle").textContent = viewTitles[view] || $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard";
+  const selectedSec = (view === "sectors" && state.selectedSectorId) ? state.sectors.find((s) => s.id === state.selectedSectorId) : null;
+  $("#pageTitle").textContent = selectedSec ? selectedSec.name : (viewTitles[view] || $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard");
 
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
