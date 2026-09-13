@@ -3539,6 +3539,36 @@ function renderSectorDetail(sectorId) {
     <strong style="color: var(--primary);">${monthObj.label}</strong> · ${formatEmployeeCount(stats.employees)} · ${number.format(stats.hours)} h · ${currency.format(stats.earnings)}${stats.travelExpenses > 0 ? ` (vključuje ${currency.format(stats.travelExpenses)} potnih stroškov)` : ""}${sector.notes ? ` · ${sector.notes}` : ""}
   `;
 
+  // Posodobi metrike za izbrani mesec
+  if ($("#sectorDetailTotalHours")) {
+    $("#sectorDetailTotalHours").textContent = `${number.format(stats.hours)} h`;
+  }
+  if ($("#sectorDetailTotalHoursSub")) {
+    $("#sectorDetailTotalHoursSub").textContent = `${monthObj.label} · Vsi zaposleni`;
+  }
+  if ($("#sectorDetailTotalEarnings")) {
+    $("#sectorDetailTotalEarnings").textContent = currency.format(stats.earnings);
+  }
+  if ($("#sectorDetailTotalEarningsSub")) {
+    $("#sectorDetailTotalEarningsSub").textContent = stats.travelExpenses > 0
+      ? `Vključuje ${currency.format(stats.travelExpenses)} potnih str.`
+      : `${monthObj.label} · Vsi zaposleni`;
+  }
+  if ($("#sectorDetailUnpaidTotal")) {
+    $("#sectorDetailUnpaidTotal").textContent = currency.format(stats.unpaid);
+  }
+  if ($("#sectorDetailUnpaidTotalSub")) {
+    $("#sectorDetailUnpaidTotalSub").textContent = stats.unpaid > 0
+      ? `Neoznačeno kot plačano (${stats.employees - stats.paidEmployees}/${stats.employees})`
+      : `Vsa izplačila poravnana`;
+  }
+  if ($("#sectorDetailEmployeeCount")) {
+    $("#sectorDetailEmployeeCount").textContent = stats.employees;
+  }
+  if ($("#sectorDetailEmployeeCountSub")) {
+    $("#sectorDetailEmployeeCountSub").textContent = `V sektorju ${sector.name}`;
+  }
+
   const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sector.id]));
   if (sectorEmployees.length === 0) {
     $("#sectorDetailRows").innerHTML = `<tr><td colspan="7" class="empty-cell">V tem sektorju še ni zaposlenih</td></tr>`;
