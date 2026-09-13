@@ -733,7 +733,8 @@ textarea:focus {
 
 .sector-stats {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 12px 18px;
 }
 
 .sector-stats strong {

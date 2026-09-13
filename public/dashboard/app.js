@@ -2040,21 +2040,26 @@ function sectorStats(sectorId) {
       (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(monthKey)
     );
     let isPaid = false;
-    if (sec.paid?.[monthKey] !== undefined) {
-      isPaid = Boolean(sec.paid[monthKey]);
+    let empSectorUnpaid = 0;
+    if (sec.paid?.[monthKey] === true) {
+      isPaid = true;
+      empSectorUnpaid = 0;
+    } else if (sec.paid?.[monthKey] === false) {
+      isPaid = false;
+      empSectorUnpaid = earnings;
     } else if (secLogs.length > 0 && !sec.isFixed) {
-      const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
-      isPaid = secUnpaid === 0;
+      empSectorUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+      isPaid = empSectorUnpaid === 0;
     } else {
       isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+      empSectorUnpaid = isPaid ? 0 : earnings;
     }
 
     totalHours += hours;
     totalTravel += travel;
     totalEarnings += earnings;
-    if (!isPaid && earnings > 0) {
-      totalUnpaid += earnings;
-    } else {
+    totalUnpaid += empSectorUnpaid;
+    if (isPaid) {
       paidEmployeesCount += 1;
     }
   });
@@ -2363,6 +2368,7 @@ function renderSectors() {
               <div><strong>${stats.employees}</strong><span>Zaposleni</span></div>
               <div><strong>${number.format(stats.hours)}</strong><span>Ure</span></div>
               <div><strong>${currency.format(stats.earnings)}</strong><span>Zaslužek</span></div>
+              <div><strong style="${stats.unpaid > 0 ? 'color: #ef4444;' : 'color: #10b981;'}">${currency.format(stats.unpaid)}</strong><span>Za izplačilo</span></div>
             </div>
             <button class="ghost-button" data-sector-id="${sector.id}" type="button">Odpri sektor</button>
           </article>
