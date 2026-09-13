@@ -157,10 +157,18 @@
             </div>
             <p id="pageDescription" class="page-subtitle" style="display: none;"></p>
           </div>
-          <div class="month-switcher" aria-label="Preklop leta">
+          <!-- Letni preklopnik (za Overview in letne poglede) -->
+          <div class="month-switcher" id="topbarYearSwitcher" aria-label="Preklop leta">
             <button class="icon-button" id="prevYear" type="button" aria-label="Prejšnje leto">‹</button>
             <div class="month-pill" id="activeYear">2026</div>
             <button class="icon-button" id="nextYear" type="button" aria-label="Naslednje leto">›</button>
+          </div>
+
+          <!-- Mesečni preklopnik (za sekcijo Zaposleni) -->
+          <div class="month-switcher" id="topbarMonthSwitcher" aria-label="Preklop meseca" style="display: none;">
+            <button class="icon-button" id="topbarPrevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
+            <div class="month-pill" id="topbarActiveMonth">September 2026</div>
+            <button class="icon-button" id="topbarNextMonth" type="button" aria-label="Naslednji mesec">›</button>
           </div>
         </header>
 
@@ -357,7 +365,11 @@
                     <div id="empDetailBadges" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
                   </div>
                 </div>
-                <div class="emp-profile-month-pill" id="empDetailMonthPill"></div>
+                <div class="month-switcher" style="margin: 0; background: #ffffff; border: 1px solid var(--line); border-radius: 10px; padding: 3px;" aria-label="Preklop meseca zaposlenega">
+                  <button class="icon-button" type="button" onclick="changeActiveMonth(-1)" aria-label="Prejšnji mesec" style="width: 26px; height: 26px; font-size: 13px;">‹</button>
+                  <div class="month-pill" id="empDetailMonthPill" style="min-width: 125px; text-align: center; font-size: 12.5px; font-weight: 700; padding: 4px 8px;">September 2026</div>
+                  <button class="icon-button" type="button" onclick="changeActiveMonth(1)" aria-label="Naslednji mesec" style="width: 26px; height: 26px; font-size: 13px;">›</button>
+                </div>
               </div>
 
               <div class="metric-grid" style="margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">

@@ -5422,6 +5422,8 @@ window.toggleExternalEventsVisibility = function (e) {
 function renderAll() {
   if ($("#activeYear")) $("#activeYear").textContent = activeMonth().year;
   if ($("#activeMonth")) $("#activeMonth").textContent = activeMonth().label;
+  if ($("#topbarActiveMonth")) $("#topbarActiveMonth").textContent = activeMonth().label;
+  if ($("#empDetailMonthPill")) $("#empDetailMonthPill").textContent = activeMonth().label;
   initDefaultScheduleShifts();
   renderOverview();
   renderSectors();
@@ -5432,6 +5434,11 @@ function renderAll() {
   renderPendingRequestsNotification();
   updateExternalCalStatusUI();
 }
+
+window.changeActiveMonth = function (offset) {
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
+  renderAll();
+};
 
 function switchView(view, updateHash = true) {
   const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
@@ -5463,9 +5470,20 @@ function switchView(view, updateHash = true) {
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
 
-  const topbarMonthSwitcher = $(".month-switcher");
-  if (topbarMonthSwitcher) {
-    topbarMonthSwitcher.style.display = (view === "schedule") ? "none" : "flex";
+  // Switch between Year switcher (Overview, Sectors, Settings) and Month switcher (Employees)
+  const yearSwitcher = $("#topbarYearSwitcher");
+  const monthSwitcher = $("#topbarMonthSwitcher");
+
+  if (view === "employees") {
+    if (yearSwitcher) yearSwitcher.style.display = "none";
+    if (monthSwitcher) monthSwitcher.style.display = "inline-flex";
+  } else if (view === "schedule") {
+    if (yearSwitcher) yearSwitcher.style.display = "none";
+    if (monthSwitcher) monthSwitcher.style.display = "none";
+  } else {
+    // overview, sectors, settings
+    if (yearSwitcher) yearSwitcher.style.display = "inline-flex";
+    if (monthSwitcher) monthSwitcher.style.display = "none";
   }
 
   if (view === "sectors") {
@@ -5712,15 +5730,21 @@ $("#nextYear")?.addEventListener("click", () => {
   renderAll();
 });
 
-// Month Navigation (Mesečni pregled zaposlenih)
+// Month Navigation (Mesečni pregled zaposlenih in sekcija Zaposleni)
 $("#prevMonth")?.addEventListener("click", () => {
-  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-  renderAll();
+  window.changeActiveMonth(-1);
 });
 
 $("#nextMonth")?.addEventListener("click", () => {
-  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-  renderAll();
+  window.changeActiveMonth(1);
+});
+
+$("#topbarPrevMonth")?.addEventListener("click", () => {
+  window.changeActiveMonth(-1);
+});
+
+$("#topbarNextMonth")?.addEventListener("click", () => {
+  window.changeActiveMonth(1);
 });
 
 $("#closeSectorDetail")?.addEventListener("click", () => {
