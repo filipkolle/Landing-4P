@@ -1865,19 +1865,19 @@ function renderOverviewSchedule() {
     periodLabel = `${dStart.getDate()}. ${SLO_MONTH_NAMES[dStart.getMonth()].slice(0, 3)} – ${dEnd.getDate()}. ${SLO_MONTH_NAMES[dEnd.getMonth()].slice(0, 3)} ${dEnd.getFullYear()}`;
     subtitle = "7 dni od današnjega dneva naprej";
   } else {
-    // Tedenski (ponedeljek – petek)
+    // Tedenski (ponedeljek – nedelja)
     const dayOfWeek = (today.getDay() + 6) % 7; // Monday = 0, Sunday = 6
     const monday = new Date(today);
     monday.setDate(today.getDate() - dayOfWeek);
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       days.push(d);
     }
     const dMon = days[0];
-    const dFri = days[4];
-    periodLabel = `${dMon.getDate()}. ${SLO_MONTH_NAMES[dMon.getMonth()].slice(0, 3)} – ${dFri.getDate()}. ${SLO_MONTH_NAMES[dFri.getMonth()].slice(0, 3)} ${dFri.getFullYear()}`;
-    subtitle = "Aktualni teden (ponedeljek – petek)";
+    const dSun = days[6];
+    periodLabel = `${dMon.getDate()}. ${SLO_MONTH_NAMES[dMon.getMonth()].slice(0, 3)} – ${dSun.getDate()}. ${SLO_MONTH_NAMES[dSun.getMonth()].slice(0, 3)} ${dSun.getFullYear()}`;
+    subtitle = "Aktualni teden (ponedeljek – nedelja)";
   }
 
   const periodLabelEl = $("#overviewSchedulePeriodLabel");

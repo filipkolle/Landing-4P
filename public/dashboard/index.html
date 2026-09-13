@@ -205,8 +205,8 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <!-- Hitri preklopnik med pogledoma -->
                   <div class="shift-type-selector" style="display: flex; gap: 3px; background: var(--surface-soft); padding: 3px; border-radius: 8px; border: 1px solid var(--line);">
-                    <button type="button" class="shift-type-btn active" id="overviewSchedBtnWorkweek" onclick="setOverviewScheduleViewMode('workweek')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Ponedeljek – Petek">
-                      Pon – Pet
+                    <button type="button" class="shift-type-btn active" id="overviewSchedBtnWorkweek" onclick="setOverviewScheduleViewMode('workweek')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Ponedeljek – Nedelja">
+                      Pon – Ned
                     </button>
                     <button type="button" class="shift-type-btn" id="overviewSchedBtnRolling7" onclick="setOverviewScheduleViewMode('rolling_7')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Naslednjih 7 dni od danes">
                       7 dni
@@ -585,7 +585,7 @@
                   <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600;">
                     Privzeti pogled urnika:
                     <select id="settingOverviewScheduleMode" onchange="saveOverviewScheduleSetting(this.value)" style="padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 13.5px; font-weight: 600; background: var(--surface);">
-                      <option value="workweek">Delovni teden (Ponedeljek – Petek)</option>
+                      <option value="workweek">Aktualni teden (Ponedeljek – Nedelja)</option>
                       <option value="rolling_7">Naslednjih 7 dni (od danes naprej)</option>
                     </select>
                   </label>
