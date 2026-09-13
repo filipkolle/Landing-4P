@@ -2376,7 +2376,7 @@ function renderSectors() {
       })
       .join("");
   }
-  if (state.selectedSectorId && !$("#sectorDetail")?.hidden) {
+  if (state.selectedSectorId && $("#sectorDetailContainer") && !$("#sectorDetailContainer").hidden) {
     renderSectorDetail(state.selectedSectorId);
   }
 }
@@ -3461,6 +3461,50 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   `;
 }
 
+window.openSectorDetail = function (sectorId) {
+  state.selectedSectorId = sectorId;
+  try {
+    sessionStorage.setItem("4p_selected_sector_id", sectorId);
+  } catch (e) {}
+
+  switchView("sectors");
+  const listContainer = $("#sectorsListContainer");
+  const detailContainer = $("#sectorDetailContainer");
+  const addSectorBtn = $("#openSectorModal");
+  const pageDesc = $("#pageDescription");
+
+  if (listContainer) listContainer.hidden = true;
+  if (detailContainer) detailContainer.hidden = false;
+  if (addSectorBtn) addSectorBtn.style.display = "none";
+  if (pageDesc) pageDesc.style.display = "none";
+
+  renderSectorDetail(sectorId);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+window.closeSectorDetail = function () {
+  state.selectedSectorId = null;
+  try {
+    sessionStorage.removeItem("4p_selected_sector_id");
+  } catch (e) {}
+
+  const listContainer = $("#sectorsListContainer");
+  const detailContainer = $("#sectorDetailContainer");
+  const addSectorBtn = $("#openSectorModal");
+  const pageDesc = $("#pageDescription");
+
+  if (listContainer) listContainer.hidden = false;
+  if (detailContainer) detailContainer.hidden = true;
+  if (addSectorBtn) addSectorBtn.style.display = "inline-flex";
+  if (pageDesc) {
+    pageDesc.textContent = "Ustvari sektorje in spremljaj rezultate za vsak del podjetja.";
+    pageDesc.style.display = "block";
+  }
+
+  renderSectors();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 function renderSectorDetail(sectorId) {
   state.selectedSectorId = sectorId;
   const sector = state.sectors.find((item) => item.id === sectorId);
@@ -3471,7 +3515,16 @@ function renderSectorDetail(sectorId) {
   const monthObj = activeMonth();
   const monthKey = monthObj.key;
 
-  $("#sectorDetail").hidden = false;
+  const listContainer = $("#sectorsListContainer");
+  const detailContainer = $("#sectorDetailContainer");
+  if (listContainer) listContainer.hidden = true;
+  if (detailContainer) detailContainer.hidden = false;
+
+  const addSectorBtn = $("#openSectorModal");
+  if (addSectorBtn) addSectorBtn.style.display = "none";
+  const pageDesc = $("#pageDescription");
+  if (pageDesc) pageDesc.style.display = "none";
+
   $("#sectorDetailTitle").innerHTML = `
     <span class="sector-title-wrap">
       <span class="sector-color-dot" style="background-color: ${color};"></span>
@@ -5621,10 +5674,21 @@ function switchView(view, updateHash = true) {
   }
 
   if (view === "sectors") {
-    if (addSectorBtn) addSectorBtn.style.display = "inline-flex";
-    if (pageDesc) {
-      pageDesc.textContent = "Ustvari sektorje in spremljaj rezultate za vsak del podjetja.";
-      pageDesc.style.display = "block";
+    const listContainer = $("#sectorsListContainer");
+    const detailContainer = $("#sectorDetailContainer");
+    if (state.selectedSectorId) {
+      if (listContainer) listContainer.hidden = true;
+      if (detailContainer) detailContainer.hidden = false;
+      if (addSectorBtn) addSectorBtn.style.display = "none";
+      if (pageDesc) pageDesc.style.display = "none";
+    } else {
+      if (listContainer) listContainer.hidden = false;
+      if (detailContainer) detailContainer.hidden = true;
+      if (addSectorBtn) addSectorBtn.style.display = "inline-flex";
+      if (pageDesc) {
+        pageDesc.textContent = "Ustvari sektorje in spremljaj rezultate za vsak del podjetja.";
+        pageDesc.style.display = "block";
+      }
     }
   } else if (view === "schedule") {
     if (addSectorBtn) addSectorBtn.style.display = "none";
@@ -5752,11 +5816,14 @@ document.addEventListener("click", (event) => {
     if (nav.dataset.view === "employees" && state.selectedEmployeeId) {
       window.closeEmployeeDetail();
     }
+    if (nav.dataset.view === "sectors" && state.selectedSectorId) {
+      window.closeSectorDetail();
+    }
     switchView(nav.dataset.view);
   }
 
   const sectorButton = event.target.closest("[data-sector-id]");
-  if (sectorButton) renderSectorDetail(sectorButton.dataset.sectorId);
+  if (sectorButton) window.openSectorDetail(sectorButton.dataset.sectorId);
 });
 
 document.addEventListener("change", async (event) => {
@@ -5931,8 +5998,11 @@ $("#sectorDetailNextMonth")?.addEventListener("click", () => {
 });
 
 $("#closeSectorDetail")?.addEventListener("click", () => {
-  $("#sectorDetail").hidden = true;
-  state.selectedSectorId = null;
+  window.closeSectorDetail();
+});
+
+$("#backToSectorsList")?.addEventListener("click", () => {
+  window.closeSectorDetail();
 });
 
 $("#employeeSearch")?.addEventListener("input", renderEmployees);
