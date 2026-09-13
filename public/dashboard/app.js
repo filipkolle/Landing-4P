@@ -2471,9 +2471,9 @@ function renderEmployees() {
 // ==========================================================================
 // Employee Detail View Management
 // ==========================================================================
-window.openEmployeeDetail = function (employeeId) {
+window.openEmployeeDetail = function (employeeId, initialSectorFilter = null, scrollToDailyLogs = false) {
   state.selectedEmployeeId = employeeId;
-  state.empDailyLogsSectorFilter = "all";
+  state.empDailyLogsSectorFilter = initialSectorFilter || "all";
   try {
     sessionStorage.setItem("4p_selected_employee_id", employeeId);
   } catch (e) {}
@@ -2483,7 +2483,19 @@ window.openEmployeeDetail = function (employeeId) {
   if (listContainer) listContainer.hidden = true;
   if (detailContainer) detailContainer.hidden = false;
   renderEmployeeDetail(employeeId);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  if (scrollToDailyLogs) {
+    setTimeout(() => {
+      const logsSection = $("#empDailyLogsSection") || $("#empDailyLogsTable")?.closest(".panel");
+      if (logsSection) {
+        logsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 120);
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 };
 
 window.closeEmployeeDetail = function () {
@@ -3428,7 +3440,7 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   `;
 
   return `
-    <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}')">
+    <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}', '${sectorId}', true)">
       <td>
         <div class="person">
           <span class="avatar">${initials(employee.name)}</span>
