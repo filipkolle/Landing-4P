@@ -293,7 +293,14 @@
                 <h2 id="sectorDetailTitle">Sektor</h2>
                 <p id="sectorDetailSubtitle">Pregled zaposlenih v sektorju</p>
               </div>
-              <button class="ghost-button" id="closeSectorDetail" type="button">Zapri</button>
+              <div class="panel-actions" style="display: flex; align-items: center; gap: 10px;">
+                <div class="month-switcher" id="sectorDetailMonthSwitcher" aria-label="Preklop meseca">
+                  <button class="icon-button" id="sectorDetailPrevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
+                  <div class="month-pill" id="sectorDetailActiveMonth">September 2026</div>
+                  <button class="icon-button" id="sectorDetailNextMonth" type="button" aria-label="Naslednji mesec">›</button>
+                </div>
+                <button class="ghost-button" id="closeSectorDetail" type="button">Zapri</button>
+              </div>
             </div>
             <div class="table-wrap">
               <table>

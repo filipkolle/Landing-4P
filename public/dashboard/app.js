@@ -3340,6 +3340,79 @@ function renderFilters() {
   if ($("#calEmployeeFilter")) $("#calEmployeeFilter").innerHTML = employeeOptions;
 }
 
+function renderSectorEmployeeRow(employee, sectorId, monthKey) {
+  const sec = employee.sectors?.[sectorId];
+  if (!sec) return "";
+
+  const secLogs = state.rawLogs.filter(
+    (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(monthKey)
+  );
+
+  const hours = sec.hours?.[monthKey] ?? secLogs.reduce((sum, l) => sum + l.hours, 0);
+  const travel = sec.travelExpenses?.[monthKey] ?? secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
+
+  const baseEarnings = sec.isFixed
+    ? ((Number(sec.netSalary) || 0) + travel)
+    : (sec.isProject && Number(sec.netSalary) > 0 && hours === 0
+        ? (Number(sec.netSalary) + travel)
+        : (hours * (sec.rate || 0) + travel));
+  const earnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
+
+  let isPaid = false;
+  if (sec.paid?.[monthKey] !== undefined) {
+    isPaid = Boolean(sec.paid[monthKey]);
+  } else if (secLogs.length > 0 && !sec.isFixed) {
+    const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+    isPaid = secUnpaid === 0;
+  } else {
+    isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+  }
+
+  const effectiveRate = sec.rate || secLogs.find((l) => l.rate > 0)?.rate || (hours > 0 ? Math.round(((earnings - travel) / hours) * 100) / 100 : 0);
+
+  let rateDisplay = "-";
+  if (sec.isFixed) {
+    const amt = Number(sec.netSalary) || 0;
+    rateDisplay = `<span class="pay-type-badge pay-type-fixed" style="font-size: 11px; padding: 2px 7px;">💼 Fiksna${amt > 0 ? ` (${currency.format(amt)})` : ""}</span>`;
+  } else if (sec.isProject) {
+    const amt = Number(sec.netSalary) || 0;
+    rateDisplay = `<span class="pay-type-badge pay-type-project" style="font-size: 11px; padding: 2px 7px;">🚀 Projekt${amt > 0 ? ` (${currency.format(amt)})` : (effectiveRate > 0 ? ` (${currency.format(effectiveRate)}/h)` : "")}</span>`;
+  } else {
+    rateDisplay = effectiveRate > 0 ? `${currency.format(effectiveRate)}/h` : `<span style="color: var(--muted);">-</span>`;
+  }
+
+  const travelDisplay = travel > 0 ? currency.format(travel) : `<span style="color: var(--muted);">-</span>`;
+  const status = employee.status || "Zaposlen";
+
+  const paidControl = `
+    <label class="paid-toggle" onclick="event.stopPropagation();">
+      <input type="checkbox" data-paid-sector-id="${sectorId}" data-paid-emp-id="${employee.id}" ${isPaid ? "checked" : ""} />
+      ${paidChip(isPaid)}
+    </label>
+  `;
+
+  return `
+    <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}')">
+      <td>
+        <div class="person">
+          <span class="avatar">${initials(employee.name)}</span>
+          <strong>${employee.name}</strong>
+        </div>
+      </td>
+      <td>
+        <span class="chip" style="background: ${employee.isDisconnected ? '#fef2f2' : 'var(--primary-light)'}; color: ${employee.isDisconnected ? '#dc2626' : 'var(--primary-dark)'}; font-size: 11px; padding: 2px 8px;">
+          ● ${status}
+        </span>
+      </td>
+      <td>${number.format(hours)} h</td>
+      <td>${rateDisplay}</td>
+      <td>${travelDisplay}</td>
+      <td><strong>${currency.format(earnings)}</strong></td>
+      <td>${paidControl}</td>
+    </tr>
+  `;
+}
+
 function renderSectorDetail(sectorId) {
   state.selectedSectorId = sectorId;
   const sector = state.sectors.find((item) => item.id === sectorId);
@@ -3347,6 +3420,9 @@ function renderSectorDetail(sectorId) {
 
   const stats = sectorStats(sector.id);
   const color = sector.color || "#56829d";
+  const monthObj = activeMonth();
+  const monthKey = monthObj.key;
+
   $("#sectorDetail").hidden = false;
   $("#sectorDetailTitle").innerHTML = `
     <span class="sector-title-wrap">
@@ -3355,14 +3431,19 @@ function renderSectorDetail(sectorId) {
       <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35;">${sector.code}</span>
     </span>
   `;
-  $("#sectorDetailSubtitle").textContent = `${formatEmployeeCount(stats.employees)} · ${number.format(stats.hours)} h · ${currency.format(stats.earnings)}${stats.travelExpenses > 0 ? ` (vključuje ${currency.format(stats.travelExpenses)} potnih stroškov)` : ""}${sector.notes ? ` · ${sector.notes}` : ""}`;
+  if ($("#sectorDetailActiveMonth")) {
+    $("#sectorDetailActiveMonth").textContent = monthObj.label;
+  }
+  $("#sectorDetailSubtitle").innerHTML = `
+    <strong style="color: var(--primary);">${monthObj.label}</strong> · ${formatEmployeeCount(stats.employees)} · ${number.format(stats.hours)} h · ${currency.format(stats.earnings)}${stats.travelExpenses > 0 ? ` (vključuje ${currency.format(stats.travelExpenses)} potnih stroškov)` : ""}${sector.notes ? ` · ${sector.notes}` : ""}
+  `;
 
   const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sector.id]));
   if (sectorEmployees.length === 0) {
-    $("#sectorDetailRows").innerHTML = `<tr><td colspan="7" class="empty-cell">V tem sektorju še ni zabeleženih ur za ta mesec</td></tr>`;
+    $("#sectorDetailRows").innerHTML = `<tr><td colspan="7" class="empty-cell">V tem sektorju še ni zaposlenih</td></tr>`;
   } else {
     $("#sectorDetailRows").innerHTML = sectorEmployees
-      .map((employee) => employeeRow(employee, true, sector.id))
+      .map((employee) => renderSectorEmployeeRow(employee, sector.id, monthKey))
       .join("");
   }
 }
@@ -5428,6 +5509,7 @@ function renderAll() {
   if ($("#activeMonth")) $("#activeMonth").textContent = activeMonth().label;
   if ($("#topbarActiveMonth")) $("#topbarActiveMonth").textContent = activeMonth().label;
   if ($("#empDetailMonthPill")) $("#empDetailMonthPill").textContent = activeMonth().label;
+  if ($("#sectorDetailActiveMonth")) $("#sectorDetailActiveMonth").textContent = activeMonth().label;
   initDefaultScheduleShifts();
   renderOverview();
   renderSectors();
@@ -5719,6 +5801,47 @@ document.addEventListener("change", async (event) => {
       } catch (err) {
         console.error("Exception pri skupinskem is_paid:", err);
       }
+      return;
+    }
+
+    // 3. Toggle single employee sector monthly payout status
+    const sectorPaidToggle = event.target.closest("[data-paid-sector-id]");
+    if (sectorPaidToggle) {
+      const secId = sectorPaidToggle.dataset.paidSectorId;
+      const empId = sectorPaidToggle.dataset.paidEmpId;
+      const isPaid = sectorPaidToggle.checked;
+      const monthKey = activeMonth().key;
+
+      const employee = state.employees.find((item) => item.id === empId);
+      if (!employee) return;
+
+      if (employee.sectors?.[secId]) {
+        if (!employee.sectors[secId].paid) employee.sectors[secId].paid = {};
+        employee.sectors[secId].paid[monthKey] = isPaid;
+      }
+
+      const secMonthLogs = state.rawLogs.filter(
+        (l) => l.userId === empId && l.sectorId === secId && l.date.startsWith(monthKey)
+      );
+      secMonthLogs.forEach((l) => {
+        l.isPaid = isPaid;
+      });
+
+      const savedPayouts = loadSectorPayoutStatus();
+      savedPayouts[getSectorPayoutKey(empId, secId, monthKey)] = isPaid;
+      saveSectorPayoutStatus(savedPayouts);
+
+      renderAll();
+
+      if (supabaseClient && secMonthLogs.length > 0) {
+        try {
+          const logIds = secMonthLogs.map((l) => l.id);
+          await supabaseClient.from("work_logs").update({ is_paid: isPaid }).in("id", logIds);
+        } catch (err) {
+          console.error("Exception pri sector is_paid:", err);
+        }
+      }
+      return;
     }
   }
 });
@@ -5748,6 +5871,14 @@ $("#topbarPrevMonth")?.addEventListener("click", () => {
 });
 
 $("#topbarNextMonth")?.addEventListener("click", () => {
+  window.changeActiveMonth(1);
+});
+
+$("#sectorDetailPrevMonth")?.addEventListener("click", () => {
+  window.changeActiveMonth(-1);
+});
+
+$("#sectorDetailNextMonth")?.addEventListener("click", () => {
   window.changeActiveMonth(1);
 });
 
