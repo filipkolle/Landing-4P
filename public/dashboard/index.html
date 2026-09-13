@@ -172,17 +172,17 @@
             <article class="metric">
               <p>Skupne ure</p>
               <strong id="totalHours">0 h</strong>
-              <span>Za izbrani mesec</span>
+              <span id="totalHoursSub">Letna raven</span>
             </article>
             <article class="metric">
               <p>Skupni zaslužek</p>
               <strong id="totalEarnings">0 €</strong>
-              <span>Vsi zaposleni skupaj</span>
+              <span id="totalEarningsSub">Letna raven</span>
             </article>
             <article class="metric">
               <p>Za izplačilo</p>
               <strong id="unpaidTotal">0 €</strong>
-              <span>Neoznačeno kot plačano</span>
+              <span id="unpaidTotalSub">Neoznačeno kot plačano</span>
             </article>
             <article class="metric">
               <p>Zaposleni</p>
@@ -191,8 +191,40 @@
             </article>
           </div>
 
-          <div class="content-grid">
-            <section class="panel">
+          <div class="content-grid" style="grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr); gap: 18px; margin-bottom: 18px;">
+            <!-- 1. URNIK (Zavzame pozicijo in širino sektorjev) -->
+            <section class="panel" id="overviewSchedulePanel">
+              <div class="panel-header" style="align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h2 style="margin: 0; font-size: 19px;">Urnik</h2>
+                    <span class="status-pill" id="overviewSchedulePeriodLabel" style="font-size: 11px; font-weight: 700; padding: 2px 8px;"></span>
+                  </div>
+                  <p id="overviewScheduleSubtitle" style="margin: 3px 0 0; font-size: 12px; color: var(--muted);">Pregled izmen za prihajajoče dni</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <!-- Hitri preklopnik med pogledoma -->
+                  <div class="shift-type-selector" style="display: flex; gap: 3px; background: var(--surface-soft); padding: 3px; border-radius: 8px; border: 1px solid var(--line);">
+                    <button type="button" class="shift-type-btn active" id="overviewSchedBtnWorkweek" onclick="setOverviewScheduleViewMode('workweek')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Ponedeljek – Petek">
+                      Pon – Pet
+                    </button>
+                    <button type="button" class="shift-type-btn" id="overviewSchedBtnRolling7" onclick="setOverviewScheduleViewMode('rolling_7')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Naslednjih 7 dni od danes">
+                      7 dni
+                    </button>
+                  </div>
+                  <button type="button" class="ghost-button" onclick="switchView('schedule')" style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 6px 10px;" title="Odpri celoten urnik">
+                    <span>Celoten urnik</span>
+                    <span style="font-size: 13px;">→</span>
+                  </button>
+                </div>
+              </div>
+              <div id="overviewScheduleContainer" style="margin-top: 4px;">
+                <div id="overviewScheduleGrid" class="overview-sched-grid"></div>
+              </div>
+            </section>
+
+            <!-- 2. SEKTORJI (Skrčeno in pozicionirano desno od urnika) -->
+            <section class="panel" id="overviewSectorsPanel">
               <div class="panel-header">
                 <div>
                   <h2>Sektorji</h2>
@@ -201,17 +233,19 @@
               </div>
               <div class="sector-list" id="overviewSectorList"></div>
             </section>
-
-            <section class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Izplačila</h2>
-                  <p>Status po zaposlenih</p>
-                </div>
-              </div>
-              <div class="payroll-list" id="payrollList"></div>
-            </section>
           </div>
+
+          <!-- 3. IZPLAČILA (Porinjeno nižje na strani) -->
+          <section class="panel" style="margin-bottom: 18px;">
+            <div class="panel-header" style="justify-content: space-between; align-items: center;">
+              <div>
+                <h2>Izplačila</h2>
+                <p>Status po zaposlenih za izbrani mesec</p>
+              </div>
+              <span id="overviewUnpaidBadge" style="font-size: 12px; font-weight: 700; color: var(--primary-dark); background: rgba(86, 130, 157, 0.1); padding: 4px 10px; border-radius: 6px;"></span>
+            </div>
+            <div class="payroll-list" id="payrollList"></div>
+          </section>
 
           <section class="panel table-panel">
             <div class="panel-header">
@@ -532,6 +566,28 @@
                 </form>
 
                 <div class="shift-presets-manage-list" id="shiftPresetsManageList"></div>
+              </section>
+
+              <!-- Nastavitev urnika v Overview -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Prikaz urnika v Overview</h2>
+                    <p>Izberite privzeti način prikaza urnika na nadzorni plošči (Overview).</p>
+                  </div>
+                </div>
+                <div class="settings-form" style="display: flex; flex-direction: column; gap: 10px;">
+                  <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600;">
+                    Privzeti pogled urnika:
+                    <select id="settingOverviewScheduleMode" onchange="saveOverviewScheduleSetting(this.value)" style="padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 13.5px; font-weight: 600; background: var(--surface);">
+                      <option value="workweek">Delovni teden (Ponedeljek – Petek)</option>
+                      <option value="rolling_7">Naslednjih 7 dni (od danes naprej)</option>
+                    </select>
+                  </label>
+                  <p style="font-size: 12px; color: var(--muted); margin: 0;">
+                    Določa, kateri dnevi se samodejno prikažejo v polju urnika na prvi strani.
+                  </p>
+                </div>
               </section>
             </div>
 
@@ -946,6 +1002,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=67"></script>
+    <script src="app.js?v=69"></script>
   </body>
 </html>
