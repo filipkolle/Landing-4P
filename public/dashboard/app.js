@@ -3461,11 +3461,25 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   `;
 }
 
+function formatSectorPageTitle(sector) {
+  const color = sector.color || "#56829d";
+  return `
+    <span class="sector-title-wrap" style="display: inline-flex; align-items: center; gap: 10px;">
+      <span class="sector-color-dot" style="background-color: ${color}; width: 14px; height: 14px;"></span>
+      <span>${sector.name}</span>
+      <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 15px; padding: 3px 9px;">${sector.code}</span>
+    </span>
+  `;
+}
+
 window.openSectorDetail = function (sectorId) {
   state.selectedSectorId = sectorId;
   try {
     sessionStorage.setItem("4p_selected_sector_id", sectorId);
   } catch (e) {}
+
+  const filterEl = $("#sectorDetailEmployeeFilter");
+  if (filterEl) filterEl.value = "all";
 
   switchView("sectors");
   const listContainer = $("#sectorsListContainer");
@@ -3512,8 +3526,8 @@ function renderSectorDetail(sectorId) {
   const sector = state.sectors.find((item) => item.id === sectorId);
   if (!sector) return;
 
-  // Ime strani zamenjaj z imenom izbranega sektorja
-  $("#pageTitle").textContent = sector.name;
+  // Ime strani zamenjaj z imenom izbranega sektorja z barvno piko in kodo
+  $("#pageTitle").innerHTML = formatSectorPageTitle(sector);
 
   const stats = sectorStats(sector.id);
   const color = sector.color || "#56829d";
@@ -3534,45 +3548,107 @@ function renderSectorDetail(sectorId) {
   if ($("#sectorDetailActiveMonth")) {
     $("#sectorDetailActiveMonth").textContent = monthObj.label;
   }
-  $("#sectorDetailSubtitle").innerHTML = `
-    <strong style="color: var(--primary);">${monthObj.label}</strong> · ${formatEmployeeCount(stats.employees)} · ${number.format(stats.hours)} h · ${currency.format(stats.earnings)}${stats.travelExpenses > 0 ? ` (vključuje ${currency.format(stats.travelExpenses)} potnih stroškov)` : ""}${sector.notes ? ` · ${sector.notes}` : ""}
-  `;
+
+  const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sector.id]));
+
+  // Posodobi izbirni filter zaposlenih
+  const filterEl = $("#sectorDetailEmployeeFilter");
+  let selectedEmpId = "all";
+  if (filterEl) {
+    const prevVal = filterEl.value || "all";
+    filterEl.innerHTML = `
+      <option value="all">Vsi zaposleni (${sectorEmployees.length})</option>
+      ${sectorEmployees.map((emp) => `<option value="${emp.id}">${emp.name}</option>`).join("")}
+    `;
+    if (prevVal === "all" || sectorEmployees.some((e) => e.id === prevVal)) {
+      filterEl.value = prevVal;
+      selectedEmpId = prevVal;
+    } else {
+      filterEl.value = "all";
+      selectedEmpId = "all";
+    }
+  }
+
+  let displayedEmployees = sectorEmployees;
+  let dispHours = stats.hours;
+  let dispEarnings = stats.earnings;
+  let dispTravel = stats.travelExpenses;
+  let dispUnpaid = stats.unpaid;
+  let dispEmpCount = stats.employees;
+  let hoursSub = `${monthObj.label} · Vsi zaposleni`;
+  let earningsSub = dispTravel > 0 ? `Vključuje ${currency.format(dispTravel)} potnih str.` : `${monthObj.label} · Vsi zaposleni`;
+  let unpaidSub = dispUnpaid > 0 ? `Neoznačeno kot plačano (${stats.employees - stats.paidEmployees}/${stats.employees})` : `Vsa izplačila poravnana`;
+  let empCountSub = `V sektorju ${sector.name}`;
+
+  if (selectedEmpId !== "all") {
+    const singleEmp = sectorEmployees.find((e) => e.id === selectedEmpId);
+    if (singleEmp) {
+      displayedEmployees = [singleEmp];
+      const sec = singleEmp.sectors?.[sector.id];
+      const secLogs = state.rawLogs.filter(
+        (l) => l.userId === singleEmp.id && l.sectorId === sector.id && l.date.startsWith(monthKey)
+      );
+      dispHours = sec.hours?.[monthKey] ?? secLogs.reduce((sum, l) => sum + l.hours, 0);
+      dispTravel = sec.travelExpenses?.[monthKey] ?? secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
+      const baseEarnings = sec.isFixed
+        ? ((Number(sec.netSalary) || 0) + dispTravel)
+        : (sec.isProject && Number(sec.netSalary) > 0 && dispHours === 0
+            ? (Number(sec.netSalary) + dispTravel)
+            : (dispHours * (sec.rate || 0) + dispTravel));
+      dispEarnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
+
+      let isPaid = false;
+      if (sec.paid?.[monthKey] !== undefined) {
+        isPaid = Boolean(sec.paid[monthKey]);
+      } else if (secLogs.length > 0 && !sec.isFixed) {
+        const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+        isPaid = secUnpaid === 0;
+      } else {
+        isPaid = sec.paid?.[monthKey] ?? ((dispHours === 0 && dispTravel === 0 && !sec.isFixed) ? true : false);
+      }
+      dispUnpaid = isPaid ? 0 : dispEarnings;
+      dispEmpCount = 1;
+      hoursSub = `${monthObj.label} · ${singleEmp.name}`;
+      earningsSub = dispTravel > 0 ? `Vključuje ${currency.format(dispTravel)} potnih str.` : `${monthObj.label} · ${singleEmp.name}`;
+      unpaidSub = isPaid ? `Izplačano` : `Neoznačeno kot plačano`;
+      empCountSub = `Izbrani zaposleni`;
+    }
+  }
+
+  $("#sectorDetailSubtitle").innerHTML = selectedEmpId === "all"
+    ? `<strong style="color: var(--primary);">${monthObj.label}</strong> · ${formatEmployeeCount(stats.employees)} · ${number.format(stats.hours)} h · ${currency.format(stats.earnings)}${stats.travelExpenses > 0 ? ` (vključuje ${currency.format(stats.travelExpenses)} potnih stroškov)` : ""}${sector.notes ? ` · ${sector.notes}` : ""}`
+    : `<strong style="color: var(--primary);">${monthObj.label}</strong> · <strong>${displayedEmployees[0]?.name || ""}</strong> · ${number.format(dispHours)} h · ${currency.format(dispEarnings)}${dispTravel > 0 ? ` (vključuje ${currency.format(dispTravel)} potnih stroškov)` : ""}`;
 
   // Posodobi metrike za izbrani mesec
   if ($("#sectorDetailTotalHours")) {
-    $("#sectorDetailTotalHours").textContent = `${number.format(stats.hours)} h`;
+    $("#sectorDetailTotalHours").textContent = `${number.format(dispHours)} h`;
   }
   if ($("#sectorDetailTotalHoursSub")) {
-    $("#sectorDetailTotalHoursSub").textContent = `${monthObj.label} · Vsi zaposleni`;
+    $("#sectorDetailTotalHoursSub").textContent = hoursSub;
   }
   if ($("#sectorDetailTotalEarnings")) {
-    $("#sectorDetailTotalEarnings").textContent = currency.format(stats.earnings);
+    $("#sectorDetailTotalEarnings").textContent = currency.format(dispEarnings);
   }
   if ($("#sectorDetailTotalEarningsSub")) {
-    $("#sectorDetailTotalEarningsSub").textContent = stats.travelExpenses > 0
-      ? `Vključuje ${currency.format(stats.travelExpenses)} potnih str.`
-      : `${monthObj.label} · Vsi zaposleni`;
+    $("#sectorDetailTotalEarningsSub").textContent = earningsSub;
   }
   if ($("#sectorDetailUnpaidTotal")) {
-    $("#sectorDetailUnpaidTotal").textContent = currency.format(stats.unpaid);
+    $("#sectorDetailUnpaidTotal").textContent = currency.format(dispUnpaid);
   }
   if ($("#sectorDetailUnpaidTotalSub")) {
-    $("#sectorDetailUnpaidTotalSub").textContent = stats.unpaid > 0
-      ? `Neoznačeno kot plačano (${stats.employees - stats.paidEmployees}/${stats.employees})`
-      : `Vsa izplačila poravnana`;
+    $("#sectorDetailUnpaidTotalSub").textContent = unpaidSub;
   }
   if ($("#sectorDetailEmployeeCount")) {
-    $("#sectorDetailEmployeeCount").textContent = stats.employees;
+    $("#sectorDetailEmployeeCount").textContent = dispEmpCount;
   }
   if ($("#sectorDetailEmployeeCountSub")) {
-    $("#sectorDetailEmployeeCountSub").textContent = `V sektorju ${sector.name}`;
+    $("#sectorDetailEmployeeCountSub").textContent = empCountSub;
   }
 
-  const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sector.id]));
-  if (sectorEmployees.length === 0) {
+  if (displayedEmployees.length === 0) {
     $("#sectorDetailRows").innerHTML = `<tr><td colspan="7" class="empty-cell">V tem sektorju še ni zaposlenih</td></tr>`;
   } else {
-    $("#sectorDetailRows").innerHTML = sectorEmployees
+    $("#sectorDetailRows").innerHTML = displayedEmployees
       .map((employee) => renderSectorEmployeeRow(employee, sector.id, monthKey))
       .join("");
   }
@@ -5682,7 +5758,11 @@ function switchView(view, updateHash = true) {
     settings: "Nastavitve",
   };
   const selectedSec = (view === "sectors" && state.selectedSectorId) ? state.sectors.find((s) => s.id === state.selectedSectorId) : null;
-  $("#pageTitle").textContent = selectedSec ? selectedSec.name : (viewTitles[view] || $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard");
+  if (selectedSec) {
+    $("#pageTitle").innerHTML = formatSectorPageTitle(selectedSec);
+  } else {
+    $("#pageTitle").textContent = viewTitles[view] || $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard";
+  }
 
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
@@ -6037,6 +6117,12 @@ $("#closeSectorDetail")?.addEventListener("click", () => {
 
 $("#backToSectorsList")?.addEventListener("click", () => {
   window.closeSectorDetail();
+});
+
+$("#sectorDetailEmployeeFilter")?.addEventListener("change", () => {
+  if (state.selectedSectorId) {
+    renderSectorDetail(state.selectedSectorId);
+  }
 });
 
 $("#employeeSearch")?.addEventListener("input", renderEmployees);

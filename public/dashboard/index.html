@@ -332,10 +332,15 @@
             </div>
 
             <section class="panel sector-detail" id="sectorDetail">
-              <div class="panel-header">
+              <div class="panel-header" style="align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
                   <h2 id="sectorDetailTitle">Delovni zapisi zaposlenih</h2>
                   <p id="sectorDetailSubtitle">Pregled zaposlenih v sektorju</p>
+                </div>
+                <div class="panel-actions" style="display: flex; align-items: center; gap: 10px;">
+                  <select id="sectorDetailEmployeeFilter" class="cal-select" style="min-width: 190px;" aria-label="Filtriraj po zaposlenem">
+                    <option value="all">Vsi zaposleni</option>
+                  </select>
                 </div>
               </div>
               <div class="table-wrap">
