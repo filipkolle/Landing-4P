@@ -5657,20 +5657,24 @@ function switchView(view, updateHash = true) {
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
 
-  // Switch between Year switcher (Overview, Settings) and Month switcher (Employees, Sectors)
+  // Switch between Year switcher (Overview, Settings), Month switcher (Employees, Sectors), and Schedule nav group (Schedule)
   const yearSwitcher = $("#topbarYearSwitcher");
   const monthSwitcher = $("#topbarMonthSwitcher");
+  const scheduleNavGroup = $("#topbarScheduleNavGroup");
 
   if (view === "employees" || view === "sectors") {
     if (yearSwitcher) yearSwitcher.style.display = "none";
     if (monthSwitcher) monthSwitcher.style.display = "inline-flex";
+    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
   } else if (view === "schedule") {
     if (yearSwitcher) yearSwitcher.style.display = "none";
     if (monthSwitcher) monthSwitcher.style.display = "none";
+    if (scheduleNavGroup) scheduleNavGroup.style.display = "inline-flex";
   } else {
     // overview, settings
     if (yearSwitcher) yearSwitcher.style.display = "inline-flex";
     if (monthSwitcher) monthSwitcher.style.display = "none";
+    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
   }
 
   if (view === "sectors") {

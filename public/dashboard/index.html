@@ -170,6 +170,14 @@
             <div class="month-pill" id="topbarActiveMonth">September 2026</div>
             <button class="icon-button" id="topbarNextMonth" type="button" aria-label="Naslednji mesec">›</button>
           </div>
+
+          <!-- Navigacija po obdobju (za Urnik) -->
+          <div class="cal-nav-group" id="topbarScheduleNavGroup" style="display: none;">
+            <button type="button" class="icon-button" id="schedulePrevBtn" aria-label="Prejšnje obdobje">‹</button>
+            <button type="button" class="cal-today-btn" id="scheduleTodayBtn">Danes</button>
+            <div class="cal-period-pill" id="schedulePeriodTitle"></div>
+            <button type="button" class="icon-button" id="scheduleNextBtn" aria-label="Naslednje obdobje">›</button>
+          </div>
         </header>
 
         <!-- Obvestila o novih zahtevah za povezavo -->
@@ -521,14 +529,6 @@
               <select id="scheduleEmployeeFilter" class="cal-select">
                 <option value="all">Vsi zaposleni</option>
               </select>
-            </div>
-
-            <!-- Navigacija po obdobju -->
-            <div class="cal-nav-group">
-              <button type="button" class="icon-button" id="schedulePrevBtn" aria-label="Prejšnje obdobje">‹</button>
-              <button type="button" class="cal-today-btn" id="scheduleTodayBtn">Danes</button>
-              <div class="cal-period-pill" id="schedulePeriodTitle"></div>
-              <button type="button" class="icon-button" id="scheduleNextBtn" aria-label="Naslednje obdobje">›</button>
             </div>
 
             <!-- Gumbi za urnik (osebni dogodki in dodajanje izmene) -->
