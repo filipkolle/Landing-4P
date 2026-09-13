@@ -695,7 +695,9 @@ async function fetchOpenShifts() {
             return {
               id: su.id,
               userId: su.user_id,
-              userName: su.user_name || emp?.name || state.userProfiles.get(su.user_id) || "Zaposleni",
+              userName: (state.userProfiles.get(su.user_id) && state.userProfiles.get(su.user_id) !== "Neznan uporabnik")
+                ? state.userProfiles.get(su.user_id)
+                : (su.user_name || emp?.name || "Zaposleni"),
               createdAt: su.created_at,
             };
           }),
@@ -943,7 +945,8 @@ function renderPendingRequestsNotification() {
   container.hidden = false;
   container.innerHTML = state.pendingRequests
     .map((req) => {
-      const userName = req.user_name || state.userProfiles.get(req.user_id) || "Uporabnik";
+      const liveProfileName = state.userProfiles.get(req.user_id);
+      const userName = (liveProfileName && liveProfileName !== "Neznan uporabnik") ? liveProfileName : (req.user_name || "Uporabnik");
       const workplaceName = req.workplaces?.name || req.workplace_name || "delovnim mestom";
       const sectorNameText = req.workplaces?.sector_name ? ` (${req.workplaces.sector_name})` : "";
 
@@ -1057,8 +1060,10 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     }
 
     const userStatus = state.employeeCustomStatuses?.[userId] || "Zaposlen";
+    const liveName = state.userProfiles.get(userId);
+    const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
+
     if (!empMap.has(userId)) {
-      const userName = req.user_name || state.userProfiles.get(userId) || "Zaposleni";
       empMap.set(userId, {
         id: userId,
         name: userName,
@@ -1074,7 +1079,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const emp = empMap.get(userId);
     if (emp) {
       emp.status = userStatus;
-      if (req.user_name && emp.name === "Zaposleni") {
+      if (liveName && liveName !== "Neznan uporabnik") {
+        emp.name = liveName;
+      } else if (req.user_name && emp.name === "Zaposleni") {
         emp.name = req.user_name;
       }
         if (!emp.sectors[matchedSector.id]) {
