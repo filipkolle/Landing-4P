@@ -63,6 +63,7 @@ const state = {
   employeeWorkTypes: {},
   externalEvents: [],
   showExternalEvents: true,
+  selectedSettingsCategory: sessionStorage.getItem("4p_selected_settings_category") || null,
   supabaseConnected: false,
 };
 
@@ -3007,6 +3008,83 @@ function renderEmployeeDetail(employeeId) {
   }
 }
 
+window.openSettingsCategory = function (categoryKey) {
+  state.selectedSettingsCategory = categoryKey;
+  try {
+    sessionStorage.setItem("4p_selected_settings_category", categoryKey);
+  } catch (e) {}
+
+  const hubContainer = $("#settingsCategoriesHub");
+  const detailContainer = $("#settingsCategoryDetail");
+  const catAccount = $("#settingsCatAccount");
+  const catOrg = $("#settingsCatOrganization");
+  const catSched = $("#settingsCatSchedule");
+  const catTitle = $("#settingsCategoryTitle");
+
+  if (hubContainer) hubContainer.hidden = true;
+  if (detailContainer) detailContainer.hidden = false;
+
+  if (catAccount) catAccount.style.display = categoryKey === "account" ? "grid" : "none";
+  if (catOrg) catOrg.style.display = categoryKey === "organization" ? "grid" : "none";
+  if (catSched) catSched.style.display = categoryKey === "schedule" ? "grid" : "none";
+
+  const titles = {
+    account: {
+      name: "Račun",
+      desc: "Upravljanje profila podjetja in prijavnih podatkov",
+    },
+    organization: {
+      name: "Organizacija",
+      desc: "Statusi zaposlenih in delovni sektorji s povezovalnimi kodami",
+    },
+    schedule: {
+      name: "Urnik",
+      desc: "Hitre izbire delovnih izmen in povezava z Google ali Apple koledarjem",
+    },
+  };
+
+  const info = titles[categoryKey] || titles.account;
+  if (catTitle) catTitle.textContent = info.name;
+  $("#pageTitle").textContent = `Nastavitve · ${info.name}`;
+  if ($("#pageDescription")) {
+    $("#pageDescription").textContent = info.desc;
+    $("#pageDescription").style.display = "block";
+  }
+
+  // Preklopnik za leto je v nastavitvah vedno skrit
+  if ($("#topbarYearSwitcher")) $("#topbarYearSwitcher").style.display = "none";
+  if ($("#topbarMonthSwitcher")) $("#topbarMonthSwitcher").style.display = "none";
+  if ($("#topbarScheduleNavGroup")) $("#topbarScheduleNavGroup").style.display = "none";
+
+  renderSettings();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+window.closeSettingsCategory = function () {
+  state.selectedSettingsCategory = null;
+  try {
+    sessionStorage.removeItem("4p_selected_settings_category");
+  } catch (e) {}
+
+  const hubContainer = $("#settingsCategoriesHub");
+  const detailContainer = $("#settingsCategoryDetail");
+  if (hubContainer) hubContainer.hidden = false;
+  if (detailContainer) detailContainer.hidden = true;
+
+  $("#pageTitle").textContent = "Nastavitve";
+  if ($("#pageDescription")) {
+    $("#pageDescription").textContent = "Izberite kategorijo za urejanje nastavitev vašega podjetja in aplikacije.";
+    $("#pageDescription").style.display = "block";
+  }
+
+  // Preklopnik za leto je v nastavitvah vedno skrit
+  if ($("#topbarYearSwitcher")) $("#topbarYearSwitcher").style.display = "none";
+  if ($("#topbarMonthSwitcher")) $("#topbarMonthSwitcher").style.display = "none";
+  if ($("#topbarScheduleNavGroup")) $("#topbarScheduleNavGroup").style.display = "none";
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 function renderSettings() {
   if ($("#companyName")) $("#companyName").value = state.companyName;
   if ($("#accountEmail")) $("#accountEmail").value = state.currentUser?.email || "";
@@ -5924,7 +6002,7 @@ function switchView(view, updateHash = true) {
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
 
-  // Switch between Year switcher (Overview, Settings), Month switcher (Employees, Sectors), and Schedule nav group (Schedule)
+  // Switch between Year switcher (Overview), Month switcher (Employees, Sectors), Schedule nav group (Schedule), and Settings (none)
   const yearSwitcher = $("#topbarYearSwitcher");
   const monthSwitcher = $("#topbarMonthSwitcher");
   const scheduleNavGroup = $("#topbarScheduleNavGroup");
@@ -5937,8 +6015,12 @@ function switchView(view, updateHash = true) {
     if (yearSwitcher) yearSwitcher.style.display = "none";
     if (monthSwitcher) monthSwitcher.style.display = "none";
     if (scheduleNavGroup) scheduleNavGroup.style.display = "inline-flex";
+  } else if (view === "settings") {
+    if (yearSwitcher) yearSwitcher.style.display = "none";
+    if (monthSwitcher) monthSwitcher.style.display = "none";
+    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
   } else {
-    // overview, settings
+    // overview
     if (yearSwitcher) yearSwitcher.style.display = "inline-flex";
     if (monthSwitcher) monthSwitcher.style.display = "none";
     if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
@@ -5968,6 +6050,13 @@ function switchView(view, updateHash = true) {
       pageDesc.style.display = "block";
     }
     renderSchedule();
+  } else if (view === "settings") {
+    if (addSectorBtn) addSectorBtn.style.display = "none";
+    if (state.selectedSettingsCategory) {
+      window.openSettingsCategory(state.selectedSettingsCategory);
+    } else {
+      window.closeSettingsCategory();
+    }
   } else {
     if (addSectorBtn) addSectorBtn.style.display = "none";
     if (pageDesc) pageDesc.style.display = "none";
@@ -6089,6 +6178,9 @@ document.addEventListener("click", (event) => {
     }
     if (nav.dataset.view === "sectors" && state.selectedSectorId) {
       window.closeSectorDetail();
+    }
+    if (nav.dataset.view === "settings") {
+      window.closeSettingsCategory();
     }
     switchView(nav.dataset.view);
   }

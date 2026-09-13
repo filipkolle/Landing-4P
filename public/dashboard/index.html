@@ -582,240 +582,285 @@
         </section>
 
         <section class="view" id="settingsView">
-          <div class="settings-categories-wrap">
-            
-            <!-- 1. KATEGORIJA: RAČUN -->
-            <div class="settings-category-group">
-              <div class="settings-category-header">
-                <span class="settings-category-num">1</span>
-                <div class="settings-category-info">
-                  <h2>Račun</h2>
-                  <p>Upravljanje profila podjetja in prijavnih podatkov</p>
-                </div>
-              </div>
-              
-              <div class="settings-category-grid single-card">
-                <!-- Podatki o računu -->
-                <section class="panel settings-panel">
-                  <div class="panel-header">
-                    <div>
-                      <h2>Podatki o računu</h2>
-                      <p>Upravljanje profila podjetja in prijavnih podatkov</p>
-                    </div>
-                    <div id="connectionStatus" class="status-pill online">
-                      <span class="status-dot"></span> Povezava vzpostavljena
-                    </div>
+          <!-- 1. Glavni pogled: Kartice kategorij nastavitev (Settings Hub) -->
+          <div id="settingsCategoriesHub">
+            <div class="settings-hub-grid">
+              <!-- Kartica 1: Račun -->
+              <article class="settings-hub-card" onclick="openSettingsCategory('account')">
+                <div class="settings-hub-card-header">
+                  <div class="settings-hub-card-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
                   </div>
+                  <span class="settings-hub-card-badge">Kategorija 1</span>
+                </div>
+                <div class="settings-hub-card-body">
+                  <h3>Račun</h3>
+                  <p>Upravljanje profila podjetja, naziva blagovne znamke in prijavnih podatkov.</p>
+                </div>
+                <div class="settings-hub-card-footer">
+                  <span class="settings-hub-card-action">Odpri nastavitve računa <span>›</span></span>
+                </div>
+              </article>
 
-                  <form id="companyForm" class="settings-form">
-                    <div id="accountAlert" class="auth-alert success" hidden></div>
-                    <label>
-                      Ime podjetja / blagovne znamke
-                      <input id="companyName" type="text" placeholder="Ime podjetja" required />
-                    </label>
-                    <label>
-                      Prijavni e-naslov
-                      <input id="accountEmail" type="email" placeholder="email@podjetje.si" readonly style="background: var(--surface-soft); color: var(--muted); cursor: not-allowed;" />
-                    </label>
-                    <button class="primary-button" type="submit">Shrani podatke podjetja</button>
-                  </form>
-                </section>
+              <!-- Kartica 2: Organizacija -->
+              <article class="settings-hub-card" onclick="openSettingsCategory('organization')">
+                <div class="settings-hub-card-header">
+                  <div class="settings-hub-card-icon" style="background: #f0fdf4; color: #16a34a;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                  </div>
+                  <span class="settings-hub-card-badge">Kategorija 2</span>
+                </div>
+                <div class="settings-hub-card-body">
+                  <h3>Organizacija</h3>
+                  <p>Statusi zaposlenih in ustvarjeni delovni sektorji z unikatnimi povezovalnimi kodami.</p>
+                </div>
+                <div class="settings-hub-card-footer">
+                  <span class="settings-hub-card-action">Odpri nastavitve organizacije <span>›</span></span>
+                </div>
+              </article>
+
+              <!-- Kartica 3: Urnik -->
+              <article class="settings-hub-card" onclick="openSettingsCategory('schedule')">
+                <div class="settings-hub-card-header">
+                  <div class="settings-hub-card-icon" style="background: #faf5ff; color: #9333ea;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <span class="settings-hub-card-badge">Kategorija 3</span>
+                </div>
+                <div class="settings-hub-card-body">
+                  <h3>Urnik</h3>
+                  <p>Hitre izbire terminov delovnih izmen in povezava z Google ali Apple koledarjem.</p>
+                </div>
+                <div class="settings-hub-card-footer">
+                  <span class="settings-hub-card-action">Odpri nastavitve urnika <span>›</span></span>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 2. Podrobni pogled izbrane kategorije (odpre se ob kliku na kartico) -->
+          <div id="settingsCategoryDetail" hidden>
+            <!-- Navigacijska vrstica za vrnitev -->
+            <div class="settings-category-detail-nav">
+              <button type="button" class="ghost-button" onclick="closeSettingsCategory()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; padding: 8px 14px; border-radius: 8px; background: var(--surface);">
+                <span>‹</span> Nazaj na nastavitve
+              </button>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="settingsCategoryBreadcrumb" style="font-size: 13px; font-weight: 600; color: var(--muted);">Nastavitve › <strong id="settingsCategoryTitle" style="color: var(--ink);">Kategorija</strong></span>
               </div>
             </div>
 
-            <!-- 2. KATEGORIJA: ORGANIZACIJA -->
-            <div class="settings-category-group">
-              <div class="settings-category-header">
-                <span class="settings-category-num">2</span>
-                <div class="settings-category-info">
-                  <h2>Organizacija</h2>
-                  <p>Upravljanje statusov zaposlenih in delovnih sektorjev s povezovalnimi kodami</p>
+            <!-- Podstran: RAČUN -->
+            <div id="settingsCatAccount" class="settings-category-grid single-card" style="display: none;">
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Podatki o računu</h2>
+                    <p>Upravljanje profila podjetja in prijavnih podatkov</p>
+                  </div>
+                  <div id="connectionStatus" class="status-pill online">
+                    <span class="status-dot"></span> Povezava vzpostavljena
+                  </div>
                 </div>
-              </div>
 
-              <div class="settings-category-grid">
-                <!-- Ustvarjeni sektorji in povezovalne kode -->
-                <section class="panel settings-panel">
-                  <div class="panel-header">
-                    <div>
-                      <h2>Ustvarjeni sektorji in povezovalne kode</h2>
-                      <p>Vsak sektor ima unikatno 6-mestno kodo za povezavo zaposlenih.</p>
-                    </div>
-                    <button type="button" class="primary-button add-sector-small-btn" onclick="openSectorModalDialog()">+ Dodaj sektor</button>
-                  </div>
-                  <div class="job-code-list" id="jobCodeList"></div>
-                </section>
-
-                <!-- Statusi zaposlenih -->
-                <section class="panel settings-panel">
-                  <div class="panel-header">
-                    <div>
-                      <h2>Statusi zaposlenih</h2>
-                      <p>Ustvarite in upravljajte statuse, ki jih lahko dodelite zaposlenim.</p>
-                    </div>
-                  </div>
-
-                  <!-- Obrazec za dodajanje novega statusa -->
-                  <form id="addStatusForm" class="add-status-inline-form" style="margin-bottom: 16px;">
-                    <div style="display: flex; gap: 8px; width: 100%;">
-                      <input type="text" id="newStatusInput" placeholder="npr. Študent, Pogodbenik, Poskusno delo" required style="flex: 1;" />
-                      <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 8px 14px;">+ Dodaj status</button>
-                    </div>
-                  </form>
-
-                  <div class="custom-status-list" id="customStatusList"></div>
-                </section>
-              </div>
+                <form id="companyForm" class="settings-form">
+                  <div id="accountAlert" class="auth-alert success" hidden></div>
+                  <label>
+                    Ime podjetja / blagovne znamke
+                    <input id="companyName" type="text" placeholder="Ime podjetja" required />
+                  </label>
+                  <label>
+                    Prijavni e-naslov
+                    <input id="accountEmail" type="email" placeholder="email@podjetje.si" readonly style="background: var(--surface-soft); color: var(--muted); cursor: not-allowed;" />
+                  </label>
+                  <button class="primary-button" type="submit">Shrani podatke podjetja</button>
+                </form>
+              </section>
             </div>
 
-            <!-- 3. KATEGORIJA: URNIK -->
-            <div class="settings-category-group">
-              <div class="settings-category-header">
-                <span class="settings-category-num">3</span>
-                <div class="settings-category-info">
-                  <h2>Urnik</h2>
-                  <p>Prednastavljeni termini delovnih izmen in povezava s koledarji</p>
+            <!-- Podstran: ORGANIZACIJA -->
+            <div id="settingsCatOrganization" class="settings-category-grid" style="display: none;">
+              <!-- Ustvarjeni sektorji in povezovalne kode -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Ustvarjeni sektorji in povezovalne kode</h2>
+                    <p>Vsak sektor ima unikatno 6-mestno kodo za povezavo zaposlenih.</p>
+                  </div>
+                  <button type="button" class="primary-button add-sector-small-btn" onclick="openSectorModalDialog()">+ Dodaj sektor</button>
                 </div>
-              </div>
+                <div class="job-code-list" id="jobCodeList"></div>
+              </section>
 
-              <div class="settings-category-grid">
-                <!-- Hitre izbire izmene -->
-                <section class="panel settings-panel">
-                  <div class="panel-header">
-                    <div>
-                      <h2>Hitre izbire izmene</h2>
-                      <p>Nastavite pogoste termine delovnih izmen za hiter vnos na urniku.</p>
+              <!-- Statusi zaposlenih -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Statusi zaposlenih</h2>
+                    <p>Ustvarite in upravljajte statuse, ki jih lahko dodelite zaposlenim.</p>
+                  </div>
+                </div>
+
+                <!-- Obrazec za dodajanje novega statusa -->
+                <form id="addStatusForm" class="add-status-inline-form" style="margin-bottom: 16px;">
+                  <div style="display: flex; gap: 8px; width: 100%;">
+                    <input type="text" id="newStatusInput" placeholder="npr. Študent, Pogodbenik, Poskusno delo" required style="flex: 1;" />
+                    <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 8px 14px;">+ Dodaj status</button>
+                  </div>
+                </form>
+
+                <div class="custom-status-list" id="customStatusList"></div>
+              </section>
+            </div>
+
+            <!-- Podstran: URNIK -->
+            <div id="settingsCatSchedule" class="settings-category-grid" style="display: none;">
+              <!-- Hitre izbire izmene -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Hitre izbire izmene</h2>
+                    <p>Nastavite pogoste termine delovnih izmen za hiter vnos na urniku.</p>
+                  </div>
+                </div>
+
+                <!-- Obrazec za dodajanje nove hitre izbire -->
+                <form id="addShiftPresetForm" class="settings-form" style="background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label style="font-size: 12px; font-weight: 600;">
+                      Začetek (Od)
+                      <input type="time" id="newPresetStartTime" value="08:00" required style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                    <label style="font-size: 12px; font-weight: 600;">
+                      Zaključek (Do)
+                      <input type="time" id="newPresetEndTime" value="16:00" required style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                  </div>
+
+                  <!-- Obseg veljavnosti: Posamezen dan ali Celoten teden -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                      <span style="font-size: 12px; font-weight: 600;">Veljavnost / Dnevi izmene:</span>
+                      <div class="preset-scope-toggle" style="display: inline-flex; gap: 3px; background: var(--surface); padding: 2px; border-radius: 8px; border: 1px solid var(--line);">
+                        <button type="button" class="preset-scope-btn active" data-scope="single" onclick="setPresetScopeMode('single')">1 dan</button>
+                        <button type="button" class="preset-scope-btn" data-scope="workweek" onclick="setPresetScopeMode('workweek')">Pon – Pet</button>
+                        <button type="button" class="preset-scope-btn" data-scope="fullweek" onclick="setPresetScopeMode('fullweek')">Cel teden (Pon–Ned)</button>
+                        <button type="button" class="preset-scope-btn" data-scope="custom" onclick="setPresetScopeMode('custom')">Po meri</button>
+                      </div>
+                    </div>
+
+                    <!-- Vrstica za izbiro dni v tednu -->
+                    <div id="newPresetDaysRow" style="display: none; margin-top: 6px; background: var(--surface); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Izbrani dnevi za to tedensko izbiro:</span>
+                        <span id="newPresetDaysSummary" style="font-size: 11px; font-weight: 700; color: var(--primary-dark);">5 dni (40 ur/teden)</span>
+                      </div>
+                      <div class="shift-days-pills-row" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                        <button type="button" class="preset-day-pill active" data-day="1" onclick="togglePresetDayPill(1)">Pon</button>
+                        <button type="button" class="preset-day-pill active" data-day="2" onclick="togglePresetDayPill(2)">Tor</button>
+                        <button type="button" class="preset-day-pill active" data-day="3" onclick="togglePresetDayPill(3)">Sre</button>
+                        <button type="button" class="preset-day-pill active" data-day="4" onclick="togglePresetDayPill(4)">Čet</button>
+                        <button type="button" class="preset-day-pill active" data-day="5" onclick="togglePresetDayPill(5)">Pet</button>
+                        <button type="button" class="preset-day-pill" data-day="6" onclick="togglePresetDayPill(6)">Sob</button>
+                        <button type="button" class="preset-day-pill" data-day="0" onclick="togglePresetDayPill(0)">Ned</button>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Obrazec za dodajanje nove hitre izbire -->
-                  <form id="addShiftPresetForm" class="settings-form" style="background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                      <label style="font-size: 12px; font-weight: 600;">
-                        Začetek (Od)
-                        <input type="time" id="newPresetStartTime" value="08:00" required style="padding: 6px 10px; font-size: 13px;" />
-                      </label>
-                      <label style="font-size: 12px; font-weight: 600;">
-                        Zaključek (Do)
-                        <input type="time" id="newPresetEndTime" value="16:00" required style="padding: 6px 10px; font-size: 13px;" />
-                      </label>
-                    </div>
-
-                    <!-- Obseg veljavnosti: Posamezen dan ali Celoten teden -->
-                    <div>
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <span style="font-size: 12px; font-weight: 600;">Veljavnost / Dnevi izmene:</span>
-                        <div class="preset-scope-toggle" style="display: inline-flex; gap: 3px; background: var(--surface); padding: 2px; border-radius: 8px; border: 1px solid var(--line);">
-                          <button type="button" class="preset-scope-btn active" data-scope="single" onclick="setPresetScopeMode('single')">1 dan</button>
-                          <button type="button" class="preset-scope-btn" data-scope="workweek" onclick="setPresetScopeMode('workweek')">Pon – Pet</button>
-                          <button type="button" class="preset-scope-btn" data-scope="fullweek" onclick="setPresetScopeMode('fullweek')">Cel teden (Pon–Ned)</button>
-                          <button type="button" class="preset-scope-btn" data-scope="custom" onclick="setPresetScopeMode('custom')">Po meri</button>
-                        </div>
-                      </div>
-
-                      <!-- Vrstica za izbiro dni v tednu -->
-                      <div id="newPresetDaysRow" style="display: none; margin-top: 6px; background: var(--surface); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                          <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Izbrani dnevi za to tedensko izbiro:</span>
-                          <span id="newPresetDaysSummary" style="font-size: 11px; font-weight: 700; color: var(--primary-dark);">5 dni (40 ur/teden)</span>
-                        </div>
-                        <div class="shift-days-pills-row" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
-                          <button type="button" class="preset-day-pill active" data-day="1" onclick="togglePresetDayPill(1)">Pon</button>
-                          <button type="button" class="preset-day-pill active" data-day="2" onclick="togglePresetDayPill(2)">Tor</button>
-                          <button type="button" class="preset-day-pill active" data-day="3" onclick="togglePresetDayPill(3)">Sre</button>
-                          <button type="button" class="preset-day-pill active" data-day="4" onclick="togglePresetDayPill(4)">Čet</button>
-                          <button type="button" class="preset-day-pill active" data-day="5" onclick="togglePresetDayPill(5)">Pet</button>
-                          <button type="button" class="preset-day-pill" data-day="6" onclick="togglePresetDayPill(6)">Sob</button>
-                          <button type="button" class="preset-day-pill" data-day="0" onclick="togglePresetDayPill(0)">Ned</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style="display: flex; gap: 8px; align-items: flex-end;">
-                      <label style="flex: 1; font-size: 12px; font-weight: 600; margin-bottom: 0;">
-                        Poimenovanje / Oznaka (neobvezno)
-                        <input type="text" id="newPresetLabel" placeholder="npr. Jutranja, Delovni teden, Vikend..." style="padding: 6px 10px; font-size: 13px;" />
-                      </label>
-                      <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 7px 14px; height: 38px;">+ Dodaj izbiro</button>
-                    </div>
-                  </form>
-
-                  <div class="shift-presets-manage-list" id="shiftPresetsManageList"></div>
-                </section>
-
-                <!-- Povezava z Google ali Apple koledarjem -->
-                <section class="panel settings-panel">
-                  <div class="panel-header">
-                    <div>
-                      <h2>Povezava z Google ali Apple koledarjem</h2>
-                      <p>Sinhronizirajte delovne izmene ali prikažite osebne koledarske dogodke.</p>
-                    </div>
-                    <div id="settingsCalStatusBadge" class="status-pill" style="font-size: 11px; padding: 4px 10px;">
-                      <span class="status-dot"></span> Pripravljeno
-                    </div>
+                  <div style="display: flex; gap: 8px; align-items: flex-end;">
+                    <label style="flex: 1; font-size: 12px; font-weight: 600; margin-bottom: 0;">
+                      Poimenovanje / Oznaka (neobvezno)
+                      <input type="text" id="newPresetLabel" placeholder="npr. Jutranja, Delovni teden, Vikend..." style="padding: 6px 10px; font-size: 13px;" />
+                    </label>
+                    <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 7px 14px; height: 38px;">+ Dodaj izbiro</button>
                   </div>
+                </form>
 
-                  <div class="settings-cal-sync-box" style="display: flex; flex-direction: column; gap: 14px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                      <!-- Google Koledar -->
-                      <div class="settings-cal-provider-card" style="background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                          <div class="cal-provider-icon-circle google-theme" style="width: 34px; height: 34px; margin-bottom: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
-                            <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
-                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path>
-                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path>
-                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"></path>
-                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"></path>
-                            </svg>
-                          </div>
-                          <div>
-                            <div style="font-weight: 700; font-size: 13.5px; color: var(--ink);">Google Koledar</div>
-                            <div style="font-size: 11.5px; color: var(--muted);">Osebni dogodki na urniku</div>
-                          </div>
-                        </div>
-                        <p style="font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4;">
-                          Prenesite dogodke iz Google koledarja neposredno na delovni urnik.
-                        </p>
-                        <button type="button" class="primary-button" onclick="connectGoogleCalendarOAuth()" style="width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; gap: 6px;">
-                          <span>Poveži Google račun</span>
-                        </button>
-                      </div>
+                <div class="shift-presets-manage-list" id="shiftPresetsManageList"></div>
+              </section>
 
-                      <!-- Apple Koledar / iCal -->
-                      <div class="settings-cal-provider-card" style="background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                          <div class="cal-provider-icon-circle apple-theme" style="width: 34px; height: 34px; margin-bottom: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #f3f4f6;">
-                            🍎
-                          </div>
-                          <div>
-                            <div style="font-weight: 700; font-size: 13.5px; color: var(--ink);">Apple & iCal</div>
-                            <div style="font-size: 11.5px; color: var(--muted);">Živa naročnina na izmene</div>
-                          </div>
+              <!-- Povezava z Google ali Apple koledarjem -->
+              <section class="panel settings-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Povezava z Google ali Apple koledarjem</h2>
+                    <p>Sinhronizirajte delovne izmene ali prikažite osebne koledarske dogodke.</p>
+                  </div>
+                  <div id="settingsCalStatusBadge" class="status-pill" style="font-size: 11px; padding: 4px 10px;">
+                    <span class="status-dot"></span> Pripravljeno
+                  </div>
+                </div>
+
+                <div class="settings-cal-sync-box" style="display: flex; flex-direction: column; gap: 14px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <!-- Google Koledar -->
+                    <div class="settings-cal-provider-card" style="background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="cal-provider-icon-circle google-theme" style="width: 34px; height: 34px; margin-bottom: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                          <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"></path>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"></path>
+                          </svg>
                         </div>
-                        <p style="font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4;">
-                          Uvozite .ics ali dodajte živo naročnino v Apple koledar ali Outlook.
-                        </p>
-                        <button type="button" class="ghost-button" onclick="openCalendarSyncModal()" style="width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; background: var(--surface); border-color: var(--line);">
-                          Koledarske možnosti ›
-                        </button>
+                        <div>
+                          <div style="font-weight: 700; font-size: 13.5px; color: var(--ink);">Google Koledar</div>
+                          <div style="font-size: 11.5px; color: var(--muted);">Osebni dogodki na urniku</div>
+                        </div>
                       </div>
+                      <p style="font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4;">
+                        Prenesite dogodke iz Google koledarja neposredno na delovni urnik.
+                      </p>
+                      <button type="button" class="primary-button" onclick="connectGoogleCalendarOAuth()" style="width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; gap: 6px;">
+                        <span>Poveži Google račun</span>
+                      </button>
                     </div>
 
-                    <!-- Prikaz stanja povezave -->
-                    <div id="settingsCalEventsSummary" style="display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 12.5px; gap: 10px; flex-wrap: wrap;">
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 15px;">🗓️</span>
-                        <span id="settingsCalEventsText" style="color: var(--ink); font-weight: 600;">Koledarska sinhronizacija na voljo</span>
+                    <!-- Apple Koledar / iCal -->
+                    <div class="settings-cal-provider-card" style="background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="cal-provider-icon-circle apple-theme" style="width: 34px; height: 34px; margin-bottom: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #f3f4f6;">
+                          🍎
+                        </div>
+                        <div>
+                          <div style="font-weight: 700; font-size: 13.5px; color: var(--ink);">Apple & iCal</div>
+                          <div style="font-size: 11.5px; color: var(--muted);">Živa naročnina na izmene</div>
+                        </div>
                       </div>
-                      <button type="button" class="ghost-button" onclick="openCalendarSyncModal()" style="font-size: 11.5px; padding: 5px 12px;">
-                        Upravljaj povezavo ›
+                      <p style="font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4;">
+                        Uvozite .ics ali dodajte živo naročnino v Apple koledar ali Outlook.
+                      </p>
+                      <button type="button" class="ghost-button" onclick="openCalendarSyncModal()" style="width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; background: var(--surface); border-color: var(--line);">
+                        Koledarske možnosti ›
                       </button>
                     </div>
                   </div>
-                </section>
-              </div>
-            </div>
 
+                  <!-- Prikaz stanja povezave -->
+                  <div id="settingsCalEventsSummary" style="display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 12.5px; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 15px;">🗓️</span>
+                      <span id="settingsCalEventsText" style="color: var(--ink); font-weight: 600;">Koledarska sinhronizacija na voljo</span>
+                    </div>
+                    <button type="button" class="ghost-button" onclick="openCalendarSyncModal()" style="font-size: 11.5px; padding: 5px 12px;">
+                      Upravljaj povezavo ›
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
 
