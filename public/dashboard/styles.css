@@ -749,6 +749,82 @@ textarea:focus {
   font-weight: 700;
 }
 
+.settings-categories-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.settings-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-category-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid rgba(86, 130, 157, 0.18);
+}
+
+.settings-category-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 14px;
+  font-weight: 800;
+  border: 1.5px solid #bae6fd;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.settings-category-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-category-info h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.settings-category-info p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.settings-category-grid.single-card {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 680px;
+}
+
+.settings-cal-provider-card {
+  transition: all 0.2s ease;
+}
+
+.settings-cal-provider-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -924,11 +1000,18 @@ textarea:focus {
 
   .metric-grid,
   .sector-card-grid,
-  .settings-grid {
+  .settings-grid,
+  .settings-category-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-category-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -940,7 +1023,8 @@ textarea:focus {
 
   .metric-grid,
   .sector-card-grid,
-  .settings-grid {
+  .settings-grid,
+  .settings-category-grid {
     grid-template-columns: 1fr;
   }
 

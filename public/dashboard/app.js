@@ -3067,6 +3067,38 @@ function renderSettings() {
 
   // Render Shift Presets List
   renderShiftPresetsSettings();
+
+  // Render Calendar Sync Status Summary
+  updateSettingsCalSummary();
+}
+
+function updateSettingsCalSummary() {
+  const badge = $("#settingsCalStatusBadge");
+  const text = $("#settingsCalEventsText");
+  const eventsCount = (state.externalEvents || []).length;
+  const calType = localStorage.getItem(getUserStorageKey("connected_calendar_type")) || "google";
+
+  if (eventsCount > 0) {
+    if (badge) {
+      badge.className = "status-pill online";
+      badge.style.background = "";
+      badge.style.color = "";
+      badge.innerHTML = `<span class="status-dot"></span> Povezano (${eventsCount} dogodkov)`;
+    }
+    if (text) {
+      text.textContent = `Povezano z ${calType === "apple" ? "Apple" : "Google"} koledarjem · ${eventsCount} dogodkov na urniku`;
+    }
+  } else {
+    if (badge) {
+      badge.className = "status-pill";
+      badge.style.background = "var(--surface-soft)";
+      badge.style.color = "var(--muted)";
+      badge.innerHTML = `<span class="status-dot" style="background: var(--muted);"></span> Pripravljeno`;
+    }
+    if (text) {
+      text.textContent = "Koledar ni povezan · Izberite možnost zgoraj";
+    }
+  }
 }
 
 function renderCustomStatuses() {
@@ -5666,6 +5698,8 @@ function updateExternalCalStatusUI(corsWarning = false) {
       mainBtn.style.color = "";
     }
   }
+
+  updateSettingsCalSummary();
 }
 
 
