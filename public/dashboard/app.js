@@ -7,8 +7,8 @@ const SLO_MONTH_NAMES = [
   "Julij", "Avgust", "September", "Oktober", "November", "December"
 ];
 
-// Current active date (defaults to August 2026)
-let currentDate = new Date(2026, 7, 1);
+// Current active date (defaults to today's date)
+let currentDate = new Date();
 
 function getUserStorageKey(key) {
   const uid = state.currentUser ? state.currentUser.id : "guest";
@@ -23,14 +23,27 @@ const DEFAULT_SHIFT_PRESETS = [
   { id: "def-5", startTime: "09:00", endTime: "17:00", label: "" },
 ];
 
+function getInitialView() {
+  const hash = (window.location.hash || "").replace(/^#/, "").trim();
+  const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
+  if (validViews.includes(hash)) {
+    return hash;
+  }
+  const saved = sessionStorage.getItem("4p_active_view") || localStorage.getItem("4p_active_view");
+  if (validViews.includes(saved)) {
+    return saved;
+  }
+  return "overview";
+}
+
 const state = {
   companyName: "Moje podjetje",
   supabaseUrl: localStorage.getItem("4p_supabase_url") || SUPABASE_DEFAULT_URL,
   supabaseKey: localStorage.getItem("4p_supabase_key") || SUPABASE_DEFAULT_KEY,
   currentUser: null,
-  activeView: "overview",
-  scheduleMode: "month", // "month" | "week"
-  scheduleDate: new Date(2026, 7, 1),
+  activeView: getInitialView(),
+  scheduleMode: sessionStorage.getItem("4p_schedule_mode") || localStorage.getItem("4p_schedule_mode") || "month",
+  scheduleDate: new Date(),
   scheduleSectorFilter: "all",
   scheduleEmployeeFilter: "all",
   scheduleShifts: null,
@@ -256,6 +269,17 @@ async function handleAuthState(session, companyNameOverride = null) {
 
     setupRealtimeListeners();
     await loadAllData();
+
+    if (session?.provider_token) {
+      localStorage.setItem(getUserStorageKey("google_cal_access_token"), session.provider_token);
+      await fetchAndSyncGoogleCalendarEvents(session.provider_token);
+    }
+    updateExternalCalStatusUI();
+
+    if (sessionStorage.getItem("4p_sync_google_cal_on_load") === "true") {
+      sessionStorage.removeItem("4p_sync_google_cal_on_load");
+      switchView("schedule");
+    }
   } else {
     clearUserState();
     if (authScreen) authScreen.hidden = false;
@@ -854,6 +878,58 @@ async function fetchPendingRequests() {
   }
 }
 
+// Helpers for Employment & Pay Type (Fixed, Hourly, Project)
+function getPayTypeInfo(type, isFixed = false, isProject = false) {
+  if (isFixed || type === "fixed" || type === "recurring") {
+    return {
+      key: "fixed",
+      label: "Fiksna plača",
+      shortLabel: "Fiksno",
+      icon: "💼",
+      badgeClass: "pay-type-fixed",
+    };
+  }
+  if (isProject || type === "project") {
+    return {
+      key: "project",
+      label: "Projekt",
+      shortLabel: "Projekt",
+      icon: "🚀",
+      badgeClass: "pay-type-project",
+    };
+  }
+  return {
+    key: "hourly",
+    label: "Urna postavka",
+    shortLabel: "Urno",
+    icon: "⏱️",
+    badgeClass: "pay-type-hourly",
+  };
+}
+
+function renderPayTypeBadge(type, isFixed = false, isProject = false) {
+  const info = getPayTypeInfo(type, isFixed, isProject);
+  return `<span class="pay-type-badge ${info.badgeClass}" title="${info.label}"><span class="pay-type-icon">${info.icon}</span>${info.label}</span>`;
+}
+
+function getSectorPayoutKey(empId, sectorId, monthKey) {
+  return `${empId}_${sectorId}_${monthKey}`;
+}
+
+function loadSectorPayoutStatus() {
+  try {
+    return JSON.parse(localStorage.getItem(getUserStorageKey("sector_payout_status")) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveSectorPayoutStatus(statusObj) {
+  try {
+    localStorage.setItem(getUserStorageKey("sector_payout_status"), JSON.stringify(statusObj));
+  } catch (e) {}
+}
+
 function renderPendingRequestsNotification() {
   const container = $("#requestsNotificationArea");
   if (!container) return;
@@ -871,12 +947,34 @@ function renderPendingRequestsNotification() {
       const workplaceName = req.workplaces?.name || req.workplace_name || "delovnim mestom";
       const sectorNameText = req.workplaces?.sector_name ? ` (${req.workplaces.sector_name})` : "";
 
+      // Find matching income source for pay type details
+      const src = (state.incomeSources || []).find((s) => {
+        if (s.user_id !== req.user_id) return false;
+        if (req.workplace_id && (s.workplace_id === req.workplace_id || s.workplace_id === req.workplaces?.id)) return true;
+        if (req.workplaces?.join_code && s.join_code === req.workplaces.join_code) return true;
+        return false;
+      });
+
+      let payTypeInfoHTML = "";
+      if (src) {
+        const pInfo = getPayTypeInfo(src.type, src.type === "fixed", src.type === "project");
+        let amountText = "";
+        if (src.type === "fixed") {
+          amountText = Number(src.net_salary) > 0 ? ` (${currency.format(src.net_salary)} / mesec)` : "";
+        } else if (src.type === "project") {
+          amountText = Number(src.net_salary) > 0 ? ` (${currency.format(src.net_salary)})` : (Number(src.hourly_rate) > 0 ? ` (${currency.format(src.hourly_rate)}/h)` : "");
+        } else {
+          amountText = Number(src.hourly_rate) > 0 ? ` (${currency.format(src.hourly_rate)}/h)` : "";
+        }
+        payTypeInfoHTML = `<span class="pay-type-badge ${pInfo.badgeClass}" style="margin-left: 8px;">${pInfo.icon} ${pInfo.label}${amountText}</span>`;
+      }
+
       return `
         <div class="request-banner" id="request-${req.id}">
           <div class="request-content-wrap">
             <div class="request-icon">🔔</div>
             <p class="request-text">
-              <strong>${userName}</strong> se želi povezati z delovnim mestom <strong>${workplaceName}${sectorNameText}</strong>
+              <strong>${userName}</strong> se želi povezati z delovnim mestom <strong>${workplaceName}${sectorNameText}</strong>${payTypeInfoHTML}
             </p>
           </div>
           <div class="request-actions">
@@ -888,6 +986,7 @@ function renderPendingRequestsNotification() {
     })
     .join("");
 }
+
 
 // 4. Update request status (approved / denied)
 window.handleRequestApproval = async function (requestId, newStatus) {
@@ -942,6 +1041,21 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     if (!matchedSector) return;
 
+    // Check if the user has actively disconnected this workplace in their income sources:
+    // If the user has income sources, but none of them are linked to this sector (e.g. user removed the code in app),
+    // they are no longer connected!
+    const userSources = sources.filter((s) => s.user_id === userId);
+    if (userSources.length > 0) {
+      const hasActiveConnection = userSources.some(
+        (s) =>
+          (s.workplace_id && (s.workplace_id === matchedSector.id || s.workplace_id === req.workplace_id)) ||
+          (s.join_code && (s.join_code === matchedSector.code || s.join_code === wp.join_code))
+      );
+      if (!hasActiveConnection) {
+        return; // User disconnected from this sector in the app
+      }
+    }
+
     const userStatus = state.employeeCustomStatuses?.[userId] || "Zaposlen";
     if (!empMap.has(userId)) {
       const userName = req.user_name || state.userProfiles.get(userId) || "Zaposleni";
@@ -963,14 +1077,16 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       if (req.user_name && emp.name === "Zaposleni") {
         emp.name = req.user_name;
       }
-      if (!emp.sectors[matchedSector.id]) {
+        if (!emp.sectors[matchedSector.id]) {
         emp.sectors[matchedSector.id] = {
           sectorId: matchedSector.id,
           sectorName: matchedSector.name,
           sectorCode: matchedSector.code,
           color: matchedSector.color || "#56829d",
+          type: "hourly",
           rate: 0,
           isFixed: false,
+          isProject: false,
           netSalary: 0,
           jobName: wp.name || matchedSector.name,
           hours: {},
@@ -994,13 +1110,18 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     if (matchedSector && src.user_id) {
       const emp = empMap.get(src.user_id);
-      const isFixed = src.type === "fixed";
+      const payType = src.type || "hourly";
+      const isFixed = payType === "fixed" || payType === "recurring";
+      const isProject = payType === "project";
+      const netSalary = Number(src.net_salary) || 0;
       const srcRate = isFixed ? 0 : (Number(src.hourly_rate) || 0);
 
       if (emp && emp.sectors[matchedSector.id]) {
+        emp.sectors[matchedSector.id].type = payType;
         emp.sectors[matchedSector.id].rate = srcRate;
         emp.sectors[matchedSector.id].isFixed = isFixed;
-        emp.sectors[matchedSector.id].netSalary = Number(src.net_salary) || 0;
+        emp.sectors[matchedSector.id].isProject = isProject;
+        emp.sectors[matchedSector.id].netSalary = netSalary;
         if (src.name) {
           emp.sectors[matchedSector.id].jobName = src.name;
         }
@@ -1011,9 +1132,11 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         sectorName: matchedSector.name,
         sectorCode: matchedSector.code,
         color: matchedSector.color || "#56829d",
+        type: payType,
         hourlyRate: srcRate,
         isFixed: isFixed,
-        netSalary: Number(src.net_salary) || 0,
+        isProject: isProject,
+        netSalary: netSalary,
         jobName: src.name || matchedSector.name,
         workplaceId: src.workplace_id || matchedSector.id,
       });
@@ -1026,6 +1149,13 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const userId = log.user_id;
     if (!empMap.has(userId)) return;
 
+    // Check if the log belongs to a disconnected source
+    const sourceObj = sources.find((s) => s.id === log.source_id);
+    if (sourceObj && !sourceObj.workplace_id && !sourceObj.join_code) {
+      // Disconnected source: user deleted employer code in app, do not show under employer dashboard
+      return;
+    }
+
     // Find the exact sector for this work log
     let matchedSectorInfo = null;
     if (log.source_id && sourceToSectorMap.has(log.source_id)) {
@@ -1037,8 +1167,10 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         sectorName: sec.name,
         sectorCode: sec.code,
         color: sec.color || "#56829d",
+        type: "hourly",
         hourlyRate: 0,
         isFixed: false,
+        isProject: false,
         netSalary: 0,
       };
     }
@@ -1049,22 +1181,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const targetSectorId = matchedSectorInfo.sectorId;
     const emp = empMap.get(userId);
 
-    // Ensure the employee sector entry exists
+    // If the employee is NOT actively connected to this sector, do NOT add it!
     if (!emp.sectors[targetSectorId]) {
-      emp.sectors[targetSectorId] = {
-        sectorId: targetSectorId,
-        sectorName: matchedSectorInfo.sectorName,
-        sectorCode: matchedSectorInfo.sectorCode,
-        color: matchedSectorInfo.color || "#56829d",
-        rate: matchedSectorInfo.hourlyRate || 0,
-        isFixed: matchedSectorInfo.isFixed || false,
-        netSalary: matchedSectorInfo.netSalary || 0,
-        jobName: matchedSectorInfo.jobName || matchedSectorInfo.sectorName,
-        hours: {},
-        travelExpenses: {},
-        earnings: {},
-        paid: {},
-      };
+      return;
     }
 
     const secEntry = emp.sectors[targetSectorId];
@@ -1075,11 +1194,14 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     const h = Number(log.hours || 0);
     const travel = Number(log.travel_expenses || 0);
-    const fixedRate = Number(secEntry.rate) || Number(matchedSectorInfo.hourlyRate) || 0;
+    const isFixed = Boolean(secEntry.isFixed || matchedSectorInfo.isFixed);
+    const fixedRate = isFixed ? 0 : (Number(secEntry.rate) || Number(matchedSectorInfo.hourlyRate) || 0);
     
     // Base work earnings + travel expenses
     let totalLogEarnings = Number(log.earnings || 0);
-    if (totalLogEarnings === 0 && h > 0 && fixedRate > 0) {
+    if (isFixed) {
+      totalLogEarnings = travel;
+    } else if (totalLogEarnings === 0 && h > 0 && fixedRate > 0) {
       totalLogEarnings = (h * fixedRate) + travel;
     } else if (totalLogEarnings === 0 && travel > 0) {
       totalLogEarnings = travel;
@@ -1124,11 +1246,71 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       endTime: log.end_time || "",
       note: log.note || "",
       isPaid: log.is_paid !== false,
-      rate: fixedRate, // Fixed rate from income_sources
+      isFixed: isFixed,
+      payType: matchedSectorInfo.type || "hourly",
+      rate: isFixed ? 0 : fixedRate,
     });
   });
 
-  state.employees = Array.from(empMap.values());
+  // 4. Calculate fixed salary monthly earnings and apply payment persistence
+  const activeMKey = activeMonth().key;
+  const savedPayouts = loadSectorPayoutStatus();
+
+  empMap.forEach((emp) => {
+    Object.values(emp.sectors).forEach((sec) => {
+      const allMonths = new Set([...Object.keys(sec.hours), ...Object.keys(sec.travelExpenses), activeMKey]);
+      allMonths.forEach((mKey) => {
+        const sTravel = sec.travelExpenses[mKey] || 0;
+        if (sec.isFixed) {
+          sec.earnings[mKey] = (Number(sec.netSalary) || 0) + sTravel;
+        } else if (sec.isProject && Number(sec.netSalary) > 0 && (sec.hours[mKey] || 0) === 0) {
+          sec.earnings[mKey] = Number(sec.netSalary) + sTravel;
+        }
+
+        const payoutKey = getSectorPayoutKey(emp.id, sec.sectorId, mKey);
+        if (savedPayouts[payoutKey] !== undefined) {
+          sec.paid[mKey] = savedPayouts[payoutKey];
+        } else if (sec.isFixed && (sec.earnings[mKey] || 0) > 0 && sec.paid[mKey] === undefined) {
+          sec.paid[mKey] = false;
+        }
+      });
+    });
+
+    // Recompute employee monthly totals across sectors
+    const allEmpMonths = new Set([
+      ...Object.keys(emp.hours),
+      ...Object.keys(emp.travelExpenses),
+      ...Object.keys(emp.earnings),
+      activeMKey,
+    ]);
+
+    allEmpMonths.forEach((mKey) => {
+      const sList = Object.values(emp.sectors);
+      if (sList.length > 0) {
+        let mEarnings = 0;
+        let mAllPaid = true;
+        sList.forEach((sec) => {
+          const sEarnings = sec.earnings[mKey] || 0;
+          mEarnings += sEarnings;
+          const sPaid = sec.paid[mKey] ?? (((sec.hours[mKey] || 0) === 0 && (sec.travelExpenses[mKey] || 0) === 0 && !sec.isFixed) ? true : false);
+          if (!sPaid && sEarnings > 0) {
+            mAllPaid = false;
+          }
+        });
+        emp.earnings[mKey] = mEarnings;
+        const empPayoutKey = `emp_${emp.id}_${mKey}`;
+        if (savedPayouts[empPayoutKey] !== undefined) {
+          emp.paid[mKey] = savedPayouts[empPayoutKey];
+        } else {
+          emp.paid[mKey] = mAllPaid;
+        }
+      }
+    });
+  });
+
+  state.employees = Array.from(empMap.values()).filter(
+    (emp) => Object.keys(emp.sectors).length > 0
+  );
 }
 
 // Helpers & Notifications
@@ -1294,43 +1476,66 @@ function getMondayOfWeekKey(dateStr) {
   return `${my}-${mm}-${md}`;
 }
 
-function calculateEmployeeWeeklyOvertime(empAllLogs, weeklyThreshold) {
-  // Združevanje po koledarskih tednih (ponedeljek - nedelja)
-  const weeksMap = new Map();
-  empAllLogs.forEach((log) => {
-    if (!log.date) return;
-    const weekKey = getMondayOfWeekKey(log.date);
-    if (!weeksMap.has(weekKey)) weeksMap.set(weekKey, []);
-    weeksMap.get(weekKey).push(log);
+// --- Mesečna norma delovnih ur in nadure po slovenski zakonodaji ---
+// Norma se določa glede na koledarske delovne dni (PON-PET brez praznikov):
+// - polni delovni čas (40h/teden): 8 ur / delovni dan
+// - polovični delovni čas (20h/teden): 4 ure / delovni dan
+function getMonthlyWorkNorm(year, monthIndex, workType = "full_time") {
+  const dailyHours = workType === "part_time" ? 4 : 8;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  let workingDaysCount = 0;
+  let holidaysOnWorkdays = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayDate = new Date(year, monthIndex, d);
+    const dayOfWeek = dayDate.getDay();
+    const isMonFri = dayOfWeek >= 1 && dayOfWeek <= 5;
+    const dateStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const isHoliday = Boolean(getSlovenianHolidayName(dateStr));
+
+    if (isMonFri) {
+      if (isHoliday) {
+        holidaysOnWorkdays++;
+      } else {
+        workingDaysCount++;
+      }
+    }
+  }
+
+  const requiredHours = workingDaysCount * dailyHours;
+  return {
+    workingDaysCount,
+    holidaysOnWorkdays,
+    dailyHours,
+    requiredHours,
+  };
+}
+
+function calculateEmployeeMonthlyOvertime(empMonthLogs, monthlyRequiredHours) {
+  const sortedLogs = empMonthLogs.slice().sort((a, b) => {
+    const cmp = (a.date || "").localeCompare(b.date || "");
+    if (cmp !== 0) return cmp;
+    return (a.startTime || "").localeCompare(b.startTime || "");
   });
 
   const logOvertimeMap = new Map();
+  let cumulativeHours = 0;
 
-  weeksMap.forEach((weekLogs) => {
-    // Kronološka razvrstitev znotraj tedna
-    weekLogs.sort((a, b) => {
-      const cmp = a.date.localeCompare(b.date);
-      if (cmp !== 0) return cmp;
-      return (a.startTime || "").localeCompare(b.startTime || "");
-    });
+  for (const log of sortedLogs) {
+    const prev = cumulativeHours;
+    const logH = Number(log.hours) || 0;
+    cumulativeHours += logH;
 
-    let cumulativeHours = 0;
-    for (const log of weekLogs) {
-      const prev = cumulativeHours;
-      const logH = Number(log.hours) || 0;
-      cumulativeHours += logH;
-
-      let ot = 0;
-      if (cumulativeHours <= weeklyThreshold) {
-        ot = 0;
-      } else if (prev < weeklyThreshold) {
-        ot = cumulativeHours - weeklyThreshold;
-      } else {
-        ot = logH;
-      }
-      logOvertimeMap.set(log.id, Math.round(ot * 100) / 100);
+    let ot = 0;
+    if (cumulativeHours <= monthlyRequiredHours) {
+      ot = 0;
+    } else if (prev < monthlyRequiredHours) {
+      ot = cumulativeHours - monthlyRequiredHours;
+    } else {
+      ot = logH;
     }
-  });
+    logOvertimeMap.set(log.id, Math.round(ot * 100) / 100);
+  }
 
   return logOvertimeMap;
 }
@@ -1394,36 +1599,85 @@ function employeeMonth(employee, specificSectorId = null) {
     const sec = employee.sectors[specificSectorId];
     const hours = sec.hours?.[monthKey] ?? 0;
     const travelExpenses = sec.travelExpenses?.[monthKey] ?? 0;
-    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate || 0) + travelExpenses);
-    const paid = sec.paid?.[monthKey] ?? (hours === 0 && travelExpenses === 0 ? true : false);
-    return { hours, travelExpenses, earnings, paid, rate: sec.rate || 0, isFixed: sec.isFixed, netSalary: sec.netSalary };
+    const baseEarnings = sec.isFixed
+      ? ((Number(sec.netSalary) || 0) + travelExpenses)
+      : (sec.isProject && Number(sec.netSalary) > 0 && !sec.hours?.[monthKey]
+          ? (Number(sec.netSalary) + travelExpenses)
+          : (hours * (sec.rate || 0) + travelExpenses));
+    const earnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
+    const paid = sec.paid?.[monthKey] ?? ((hours === 0 && travelExpenses === 0 && !sec.isFixed) ? true : false);
+    return {
+      hours,
+      travelExpenses,
+      earnings,
+      paid,
+      rate: sec.rate || 0,
+      isFixed: sec.isFixed,
+      isProject: sec.isProject,
+      type: sec.type || "hourly",
+      netSalary: sec.netSalary,
+    };
   }
 
   const hours = employee.hours?.[monthKey] ?? 0;
   const travelExpenses = employee.travelExpenses?.[monthKey] ?? 0;
   const sectorList = Object.values(employee.sectors || {});
+
+  let earnings = 0;
+  let allPaid = true;
+  if (sectorList.length > 0) {
+    earnings = sectorList.reduce((sum, sec) => {
+      const sEarnings = sec.earnings?.[monthKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + (sec.travelExpenses?.[monthKey] || 0)) : ((sec.hours?.[monthKey] || 0) * (sec.rate || 0) + (sec.travelExpenses?.[monthKey] || 0)));
+      const sPaid = sec.paid?.[monthKey] ?? (((sec.hours?.[monthKey] || 0) === 0 && (sec.travelExpenses?.[monthKey] || 0) === 0 && !sec.isFixed) ? true : false);
+      if (!sPaid && sEarnings > 0) allPaid = false;
+      return sum + sEarnings;
+    }, 0);
+  } else {
+    earnings = employee.earnings?.[monthKey] ?? (hours * (sectorList[0]?.rate || 0) + travelExpenses);
+    allPaid = employee.paid?.[monthKey] ?? ((hours === 0 && travelExpenses === 0) ? true : false);
+  }
+
+  if (employee.paid?.[monthKey] !== undefined) {
+    allPaid = employee.paid[monthKey];
+  }
+
   const defaultRate = sectorList.length > 0 ? (sectorList[0].rate || 0) : 0;
-  const earnings = employee.earnings?.[monthKey] ?? (hours * defaultRate + travelExpenses);
-  const paid = employee.paid?.[monthKey] ?? (hours === 0 && travelExpenses === 0 ? true : false);
-
-  const rate = defaultRate;
   const isFixed = sectorList.length > 0 && sectorList.every((s) => s.isFixed);
-  const rates = sectorList.map((s) => ({ sectorName: s.sectorName, rate: s.rate || 0, isFixed: s.isFixed }));
+  const isProject = sectorList.length > 0 && sectorList.every((s) => s.isProject);
+  const rates = sectorList.map((s) => ({
+    sectorName: s.sectorName,
+    rate: s.rate || 0,
+    isFixed: s.isFixed,
+    isProject: s.isProject,
+    type: s.type || "hourly",
+    netSalary: s.netSalary || 0,
+  }));
 
-  return { hours, travelExpenses, earnings, paid, rate, rates, isFixed };
+  return { hours, travelExpenses, earnings, paid: allPaid, rate: defaultRate, rates, isFixed, isProject };
 }
 
 function formatHourlyRate(month, employee) {
   if (month.isFixed) {
-    return `<span class="chip" style="font-size: 11px; padding: 2px 7px; background: #e0e7ff; color: #3730a3; font-weight: 700;">Polna zaposlitev</span>`;
+    const fixedAmount = month.netSalary || (month.rates?.[0]?.netSalary) || 0;
+    const amountText = fixedAmount > 0 ? ` (${currency.format(fixedAmount)})` : "";
+    return `<span class="pay-type-badge pay-type-fixed" style="font-size: 11px; padding: 2px 7px;">💼 Fiksna${amountText}</span>`;
+  }
+  if (month.isProject) {
+    return `<span class="pay-type-badge pay-type-project" style="font-size: 11px; padding: 2px 7px;">🚀 Projekt</span>`;
   }
   if (month.rates && month.rates.length > 1) {
-    const uniqueRates = [...new Set(month.rates.map((r) => r.rate))];
-    if (uniqueRates.length === 1) {
-      return uniqueRates[0] > 0 ? `${currency.format(uniqueRates[0])}/h` : `<span style="color: var(--muted);">-</span>`;
-    }
     return month.rates
-      .map((r) => `${r.sectorName}: ${r.isFixed ? "Polna zaposlitev" : (r.rate > 0 ? `${currency.format(r.rate)}/h` : "-")}`)
+      .map((r) => {
+        if (r.isFixed) {
+          const amt = r.netSalary > 0 ? ` (${currency.format(r.netSalary)})` : "";
+          return `${r.sectorName}: Fiksna${amt}`;
+        }
+        if (r.isProject) {
+          const amt = r.netSalary > 0 ? ` (${currency.format(r.netSalary)})` : (r.rate > 0 ? ` (${currency.format(r.rate)}/h)` : "");
+          return `${r.sectorName}: Projekt${amt}`;
+        }
+        return `${r.sectorName}: ${r.rate > 0 ? `${currency.format(r.rate)}/h` : "-"}`;
+      })
       .join("<br/>");
   }
   return month.rate > 0 ? `${currency.format(month.rate)}/h` : `<span style="color: var(--muted);">-</span>`;
@@ -1460,24 +1714,26 @@ function sectorStats(sectorId) {
     const sec = employee.sectors[sectorId];
     const hours = sec.hours?.[monthKey] ?? 0;
     const travel = sec.travelExpenses?.[monthKey] ?? 0;
-    const earnings = sec.earnings?.[monthKey] ?? (hours * (sec.rate || 0) + travel);
+    const earnings = sec.earnings?.[monthKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + travel) : (hours * (sec.rate || 0) + travel));
 
     // Calculate whether this employee's work in this sector is paid
     const secLogs = state.rawLogs.filter(
       (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(monthKey)
     );
     let isPaid = false;
-    if (secLogs.length > 0) {
+    if (sec.paid?.[monthKey] !== undefined) {
+      isPaid = Boolean(sec.paid[monthKey]);
+    } else if (secLogs.length > 0 && !sec.isFixed) {
       const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
       isPaid = secUnpaid === 0;
     } else {
-      isPaid = sec.paid?.[monthKey] ?? (hours === 0 && travel === 0 ? true : false);
+      isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
     }
 
     totalHours += hours;
     totalTravel += travel;
     totalEarnings += earnings;
-    if (!isPaid) {
+    if (!isPaid && earnings > 0) {
       totalUnpaid += earnings;
     } else {
       paidEmployeesCount += 1;
@@ -1773,8 +2029,14 @@ function renderEmployees() {
   }
 
   // If a specific employee profile is open, update their detail view
-  if (state.selectedEmployeeId) {
-    renderEmployeeDetail(state.selectedEmployeeId);
+  const targetEmployeeId = state.selectedEmployeeId || sessionStorage.getItem("4p_selected_employee_id");
+  if (targetEmployeeId && state.employees.some((e) => e.id === targetEmployeeId)) {
+    state.selectedEmployeeId = targetEmployeeId;
+    const listContainer = $("#employeesListContainer");
+    const detailContainer = $("#employeeDetailContainer");
+    if (listContainer) listContainer.hidden = true;
+    if (detailContainer) detailContainer.hidden = false;
+    renderEmployeeDetail(targetEmployeeId);
   }
 }
 
@@ -1783,6 +2045,9 @@ function renderEmployees() {
 // ==========================================================================
 window.openEmployeeDetail = function (employeeId) {
   state.selectedEmployeeId = employeeId;
+  try {
+    sessionStorage.setItem("4p_selected_employee_id", employeeId);
+  } catch (e) {}
   switchView("employees");
   const listContainer = $("#employeesListContainer");
   const detailContainer = $("#employeeDetailContainer");
@@ -1794,6 +2059,9 @@ window.openEmployeeDetail = function (employeeId) {
 
 window.closeEmployeeDetail = function () {
   state.selectedEmployeeId = null;
+  try {
+    sessionStorage.removeItem("4p_selected_employee_id");
+  } catch (e) {}
   const listContainer = $("#employeesListContainer");
   const detailContainer = $("#employeeDetailContainer");
   if (listContainer) listContainer.hidden = false;
@@ -1859,8 +2127,41 @@ function renderEmployeeDetail(employeeId) {
   const empMonthLogs = state.rawLogs.filter((l) => l.userId === employeeId && l.date.startsWith(monthKey));
   const totalHours = empMonthLogs.reduce((sum, l) => sum + l.hours, 0);
   const totalTravel = empMonthLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
-  const totalEarnings = empMonthLogs.reduce((sum, l) => sum + l.earnings, 0);
-  const unpaidAmount = empMonthLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+
+  let totalEarnings = 0;
+  let unpaidAmount = 0;
+
+  if (employeeSectors.length > 0) {
+    employeeSectors.forEach((sec) => {
+      const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
+      const secTravel = secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
+      const secLogEarnings = secLogs.reduce((sum, l) => sum + l.earnings, 0);
+
+      const effectiveSecEarnings = sec.isFixed
+        ? ((Number(sec.netSalary) || 0) + secTravel)
+        : (sec.isProject && Number(sec.netSalary) > 0 && secLogs.length === 0
+            ? (Number(sec.netSalary) + secTravel)
+            : secLogEarnings);
+
+      let isSecPaid = false;
+      if (sec.paid?.[monthKey] !== undefined) {
+        isSecPaid = Boolean(sec.paid[monthKey]);
+      } else if (secLogs.length > 0 && !sec.isFixed) {
+        const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+        isSecPaid = secUnpaid === 0;
+      } else {
+        isSecPaid = sec.paid?.[monthKey] ?? ((secLogs.length === 0 && !sec.isFixed) ? true : false);
+      }
+
+      totalEarnings += effectiveSecEarnings;
+      if (!isSecPaid && effectiveSecEarnings > 0) {
+        unpaidAmount += effectiveSecEarnings;
+      }
+    });
+  } else {
+    totalEarnings = empMonthLogs.reduce((sum, l) => sum + l.earnings, 0);
+    unpaidAmount = empMonthLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+  }
 
   // --- Nedelje & Prazniki v izbranem mesecu ---
   const sundayLogs = empMonthLogs.filter((l) => isSunday(l.date));
@@ -1873,28 +2174,26 @@ function renderEmployeeDetail(employeeId) {
   const holidayCount = holidayDates.size;
   const holidayHours = holidayLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
 
-  // --- Nadure (tedenski prag: 40h za polni ali 20h za polovični delovni čas) ---
-  const weeklyThreshold = currentWorkType === "part_time" ? 20 : 40;
-  const empAllLogs = state.rawLogs.filter((l) => l.userId === employeeId);
-  const logOvertimeMap = calculateEmployeeWeeklyOvertime(empAllLogs, weeklyThreshold);
-
-  let totalMonthOvertime = 0;
-  empMonthLogs.forEach((l) => {
-    totalMonthOvertime += logOvertimeMap.get(l.id) || 0;
-  });
+  // --- Nadure (mesečna norma: koledarski delovni dnevi PON-PET brez praznikov * 8h ali 4h) ---
+  const activeM = activeMonth();
+  const workNorm = getMonthlyWorkNorm(activeM.year, activeM.month, currentWorkType);
+  const logOvertimeMap = calculateEmployeeMonthlyOvertime(empMonthLogs, workNorm.requiredHours);
+  const totalMonthOvertime = Math.max(0, Math.round((totalHours - workNorm.requiredHours) * 100) / 100);
 
   if ($("#empDetailTotalHours")) $("#empDetailTotalHours").textContent = `${number.format(totalHours)} h`;
   if ($("#empDetailHourlyRate")) {
     const isAnyFixed = employeeSectors.some((s) => s.isFixed);
     if (isAnyFixed && employeeSectors.every((s) => s.isFixed)) {
-      $("#empDetailHourlyRate").textContent = "Polna zaposlitev (fiksna plača)";
+      const salaries = employeeSectors.map((s) => s.netSalary || 0).filter((amt) => amt > 0);
+      const salaryText = salaries.length > 0 ? ` (${salaries.map((amt) => currency.format(amt)).join(" + ")})` : "";
+      $("#empDetailHourlyRate").textContent = `Fiksna plača${salaryText}`;
     } else {
-      const rates = employeeSectors.map((s) => s.rate || 0);
-      const uniqueRates = [...new Set(rates)];
-      $("#empDetailHourlyRate").textContent =
-        uniqueRates.length === 1
-          ? (uniqueRates[0] > 0 ? `${currency.format(uniqueRates[0])}/h` : (isAnyFixed ? "Polna zaposlitev" : "-"))
-          : employeeSectors.map((s) => `${s.sectorName}: ${s.isFixed ? "Polna zaposlitev" : (s.rate > 0 ? `${currency.format(s.rate)}/h` : "-")}`).join(" · ");
+      const descriptions = employeeSectors.map((s) => {
+        if (s.isFixed) return `${s.sectorName}: Fiksna (${currency.format(s.netSalary || 0)})`;
+        if (s.isProject) return `${s.sectorName}: Projekt${s.netSalary ? ` (${currency.format(s.netSalary)})` : ""}`;
+        return `${s.sectorName}: ${s.rate > 0 ? `${currency.format(s.rate)}/h` : "-"}`;
+      });
+      $("#empDetailHourlyRate").textContent = descriptions.join(" · ") || "-";
     }
   }
   if ($("#empDetailTravel")) $("#empDetailTravel").textContent = currency.format(totalTravel);
@@ -1912,16 +2211,23 @@ function renderEmployeeDetail(employeeId) {
   if ($("#empDetailHolidayHours")) $("#empDetailHolidayHours").textContent = `${number.format(holidayHours)} h ob praznikih`;
 
   if ($("#empDetailOvertimeBadge")) {
-    $("#empDetailOvertimeBadge").textContent = currentWorkType === "part_time" ? "20h / teden (polovični)" : "40h / teden (polni)";
+    const typeLabel = currentWorkType === "part_time" ? "polovični čas" : "polni čas";
+    $("#empDetailOvertimeBadge").textContent = `Norma: ${workNorm.requiredHours} h`;
+    $("#empDetailOvertimeBadge").title = `Mesečna norma: ${workNorm.workingDaysCount} delovnih dni × ${workNorm.dailyHours}h (${typeLabel}). Prazniki med tednom: ${workNorm.holidaysOnWorkdays}.`;
   }
   if ($("#empDetailOvertime")) {
     $("#empDetailOvertime").textContent = `${number.format(totalMonthOvertime)} h`;
     $("#empDetailOvertime").style.color = totalMonthOvertime > 0 ? "#b45309" : "var(--ink)";
   }
   if ($("#empDetailOvertimeSub")) {
-    $("#empDetailOvertimeSub").textContent = totalMonthOvertime > 0
-      ? `Presežek nad ${weeklyThreshold}h/teden`
-      : `Brez nadur (do ${weeklyThreshold}h/t)`;
+    if (totalMonthOvertime > 0) {
+      $("#empDetailOvertimeSub").textContent = `Presežek: ${number.format(totalHours)} h / ${workNorm.requiredHours} h norme`;
+    } else if (totalHours === workNorm.requiredHours && totalHours > 0) {
+      $("#empDetailOvertimeSub").textContent = `Norma dosežena (${number.format(totalHours)} h / ${workNorm.requiredHours} h)`;
+    } else {
+      const remaining = Math.max(0, workNorm.requiredHours - totalHours);
+      $("#empDetailOvertimeSub").textContent = `Oddelano ${number.format(totalHours)} h od ${workNorm.requiredHours} h (${number.format(remaining)} h do norme)`;
+    }
   }
 
   // Sector breakdown cards
@@ -1936,23 +2242,52 @@ function renderEmployeeDetail(employeeId) {
           const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
           const secHours = secLogs.reduce((sum, l) => sum + l.hours, 0);
           const secTravel = secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
-          const secEarnings = secLogs.reduce((sum, l) => sum + l.earnings, 0);
-          const secPaid = secLogs.filter((l) => l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
-          const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
-          const isPaid = (secHours > 0 || secTravel > 0) ? secUnpaid === 0 : true;
+          const secLogEarnings = secLogs.reduce((sum, l) => sum + l.earnings, 0);
           const rate = sec.rate || 0;
 
+          const effectiveSecEarnings = sec.isFixed
+            ? ((Number(sec.netSalary) || 0) + secTravel)
+            : (sec.isProject && Number(sec.netSalary) > 0 && secLogs.length === 0
+                ? (Number(sec.netSalary) + secTravel)
+                : secLogEarnings);
+
+          let isPaid = false;
+          if (sec.paid?.[monthKey] !== undefined) {
+            isPaid = Boolean(sec.paid[monthKey]);
+          } else if (secLogs.length > 0 && !sec.isFixed) {
+            const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+            isPaid = secUnpaid === 0;
+          } else {
+            isPaid = sec.paid?.[monthKey] ?? ((secHours === 0 && secTravel === 0 && !sec.isFixed) ? true : false);
+          }
+
+          const secPaid = isPaid ? effectiveSecEarnings : 0;
+          const secUnpaid = isPaid ? 0 : effectiveSecEarnings;
+
           let paidPct = 100;
-          if (secEarnings > 0) {
-            paidPct = Math.round((secPaid / secEarnings) * 100);
+          if (effectiveSecEarnings > 0) {
+            paidPct = Math.round((secPaid / effectiveSecEarnings) * 100);
           } else if (secHours > 0) {
             paidPct = isPaid ? 100 : 0;
           } else {
             paidPct = 100;
           }
 
-          const isFull = paidPct === 100 && secEarnings > 0;
-          const isZero = secEarnings === 0 && secHours === 0;
+          const isFull = paidPct === 100 && effectiveSecEarnings > 0;
+          const isZero = effectiveSecEarnings === 0 && secHours === 0;
+
+          // Pay type badge
+          const payTypeBadgeHTML = renderPayTypeBadge(sec.type, sec.isFixed, sec.isProject);
+
+          // Postavka stat text
+          let postavkaText = "-";
+          if (sec.isFixed) {
+            postavkaText = `${currency.format(sec.netSalary || 0)} / mesec`;
+          } else if (sec.isProject) {
+            postavkaText = Number(sec.netSalary) > 0 ? `${currency.format(sec.netSalary)} (Projekt)` : (rate > 0 ? `${currency.format(rate)}/h` : "Projekt");
+          } else if (rate > 0) {
+            postavkaText = `${currency.format(rate)}/h`;
+          }
 
           return `
             <article class="emp-sector-card" style="border-top: 4px solid ${color};">
@@ -1961,6 +2296,7 @@ function renderEmployeeDetail(employeeId) {
                   <div class="sector-title-wrap">
                     <span class="sector-color-dot" style="background-color: ${color};"></span>
                     <h3 style="margin: 0; font-size: 16px;">${sec.sectorName}</h3>
+                    ${payTypeBadgeHTML}
                   </div>
                   <p class="emp-sector-job-name">${sec.jobName || sec.sectorName}</p>
                 </div>
@@ -1974,7 +2310,7 @@ function renderEmployeeDetail(employeeId) {
                 </div>
                 <div class="emp-sector-stat">
                   <p>Postavka</p>
-                  <strong>${sec.isFixed ? "Polna zaposlitev" : (rate > 0 ? `${currency.format(rate)}/h` : "-")}</strong>
+                  <strong style="${sec.isFixed ? 'color: #1d4ed8; font-size: 13px;' : ''}">${postavkaText}</strong>
                 </div>
                 <div class="emp-sector-stat">
                   <p>Potni stroški</p>
@@ -1982,22 +2318,22 @@ function renderEmployeeDetail(employeeId) {
                 </div>
                 <div class="emp-sector-stat">
                   <p>Zaslužek</p>
-                  <strong style="color: var(--primary-dark);">${currency.format(secEarnings)}</strong>
+                  <strong style="color: var(--primary-dark);">${currency.format(effectiveSecEarnings)}</strong>
                 </div>
               </div>
 
-              <div class="progress" style="margin: 0; height: 6px; background: #e2e8f0;" title="${isZero ? 'Brez zabeleženih ur' : `${paidPct}% izplačano (${currency.format(secPaid)} od ${currency.format(secEarnings)})`}">
-                <span style="width: ${paidPct}%; background-color: ${isZero ? 'var(--line)' : (isFull ? '#10b981' : color)};"></span>
+              <div class="progress" style="margin: 0; height: 6px; background: #e2e8f0;" title="${isZero ? 'Brez zabeleženih ur in zaslužka' : `${paidPct}% izplačano (${currency.format(secPaid)} od ${currency.format(effectiveSecEarnings)})`}">
+                <span style="width: ${paidPct}%; background-color: ${isZero ? 'var(--line)' : (isFull ? '#10b981' : (isPaid ? color : 'var(--amber)'))};"></span>
               </div>
 
               <div class="emp-sector-footer">
                 ${
                   isZero
                     ? `<span style="color: var(--muted); font-weight: 600;">Ni zabeleženih ur</span>`
-                    : `<span style="color: ${isFull ? '#10b981' : 'var(--ink)'}; font-weight: 700;">${paidPct}% izplačano <span style="color: var(--muted); font-weight: 600; font-size: 11px;">(${currency.format(secPaid)} / ${currency.format(secEarnings)})</span></span>`
+                    : `<span style="color: ${isFull ? '#10b981' : 'var(--ink)'}; font-weight: 700;">${paidPct}% izplačano <span style="color: var(--muted); font-weight: 600; font-size: 11px;">(${currency.format(secPaid)} / ${currency.format(effectiveSecEarnings)})</span></span>`
                 }
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <span class="chip ${isPaid ? "" : "warning"}">${isPaid ? "Izplačano" : "Za izplačilo"}</span>
+                  <span class="chip ${isPaid ? "" : "warning"}" style="cursor: pointer;" onclick="toggleSectorPayout('${employee.id}', '${sec.sectorId}')" title="Kliknite za spremembo statusa izplačila">${isPaid ? "Izplačano" : "Za izplačilo"}</span>
                   <button type="button" onclick="handleDismissEmployee('${employee.id}', '${sec.sectorId}')" class="ghost-button" style="color: #ef4444; font-size: 11px; padding: 4px 8px; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer;" title="Prekini povezavo in odstrani zaposlenega iz tega sektorja">Odstrani iz sektorja</button>
                 </div>
               </div>
@@ -2042,7 +2378,7 @@ function renderEmployeeDetail(employeeId) {
             badges.push(`<span class="chip" style="background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Nedeljsko delo">Nedelja</span>`);
           }
           if (otHours > 0) {
-            badges.push(`<span class="chip" style="background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Tedenski presežek delovnih ur">+${number.format(otHours)} h nadure</span>`);
+            badges.push(`<span class="chip" style="background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Presežek mesečne delovne norme (${workNorm.requiredHours} h)">+${number.format(otHours)} h nadure</span>`);
           }
 
           const badgesHTML = badges.length > 0 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">${badges.join("")}</div>` : "";
@@ -2061,9 +2397,9 @@ function renderEmployeeDetail(employeeId) {
               </td>
               <td>${timeInterval}</td>
               <td><strong>${number.format(log.hours)} h</strong></td>
-              <td>${currency.format(log.rate)}/h</td>
+              <td>${log.isFixed ? `<span class="pay-type-badge pay-type-fixed" style="font-size: 10px; padding: 2px 6px;">Fiksno</span>` : `${currency.format(log.rate)}/h`}</td>
               <td>${travelDisplay}</td>
-              <td><strong style="color: var(--primary-dark);">${currency.format(log.earnings)}</strong></td>
+              <td><strong style="color: var(--primary-dark);">${log.isFixed ? (log.travelExpenses > 0 ? currency.format(log.travelExpenses) : `<span style="color: var(--muted); font-size: 11px;">(v fiksni plači)</span>`) : currency.format(log.earnings)}</strong></td>
               <td>${log.note ? `<em>${log.note}</em>` : `<span style="color: var(--muted);">-</span>`}</td>
               <td>${paidControl}</td>
             </tr>
@@ -2294,6 +2630,53 @@ window.handleEmployeeWorkTypeChange = function (employeeId, newType) {
   renderEmployeeDetail(employeeId);
 };
 
+// Preklopi status izplačila za posamezen sektor zaposlenega
+window.toggleSectorPayout = async function (employeeId, sectorId) {
+  const monthKey = activeMonth().key;
+  const emp = state.employees.find((e) => e.id === employeeId);
+  if (!emp || !emp.sectors || !emp.sectors[sectorId]) return;
+
+  const sec = emp.sectors[sectorId];
+  const currentPaid = sec.paid?.[monthKey] === true;
+  const newPaid = !currentPaid;
+
+  if (!sec.paid) sec.paid = {};
+  sec.paid[monthKey] = newPaid;
+
+  // Shrani v localStorage za trajno perzistenco
+  const savedPayouts = loadSectorPayoutStatus();
+  savedPayouts[getSectorPayoutKey(employeeId, sectorId, monthKey)] = newPaid;
+
+  // Posodobi morebitne zabeležene delovne dneve (rawLogs) v tem sektorju in mesecu
+  const secMonthLogs = state.rawLogs.filter(
+    (l) => l.userId === employeeId && l.sectorId === sectorId && l.date.startsWith(monthKey)
+  );
+  secMonthLogs.forEach((l) => {
+    l.isPaid = newPaid;
+  });
+
+  // Preveri skupni mesečni status zaposlenega
+  const allSectors = Object.values(emp.sectors);
+  const allSecsPaid = allSectors.every((s) => s.paid?.[monthKey] === true);
+  if (!emp.paid) emp.paid = {};
+  emp.paid[monthKey] = allSecsPaid;
+  savedPayouts[`emp_${employeeId}_${monthKey}`] = allSecsPaid;
+  saveSectorPayoutStatus(savedPayouts);
+
+  showToast(`Sektor "${sec.sectorName}": ${newPaid ? "označeno kot izplačano" : "označeno za izplačilo"}.`, "info");
+  renderAll();
+
+  // Če obstajajo vnosi v bazi Supabase, posodobi is_paid
+  if (supabaseClient && secMonthLogs.length > 0) {
+    try {
+      const logIds = secMonthLogs.map((l) => l.id);
+      await supabaseClient.from("work_logs").update({ is_paid: newPaid }).in("id", logIds);
+    } catch (err) {
+      console.error("Napaka pri posodobitvi statusa izplačila sektorja:", err);
+    }
+  }
+};
+
 // Odpusti zaposlenega (Prekini povezavo z enim sektorjem ali celotnim podjetjem)
 window.handleDismissEmployee = async function (employeeId, specificSectorId = null) {
   const emp = state.employees.find((e) => e.id === employeeId);
@@ -2506,6 +2889,10 @@ function renderSchedule() {
   // Render Sector Pills (Delovna mesta)
   renderScheduleSectorPills();
 
+  if (typeof updateCalendarSyncUI === "function") {
+    updateCalendarSyncUI();
+  }
+
   // Populate Employee Filter Dropdown
   const empSelect = $("#scheduleEmployeeFilter");
   if (empSelect) {
@@ -2689,10 +3076,16 @@ function renderScheduleMonthView(container, dateObj, shifts) {
   // Previous month trailing days
   for (let i = startDayIndex - 1; i >= 0; i--) {
     const dayNum = prevMonthDays - i;
+    const prevDate = new Date(year, month - 1, dayNum);
+    const prevDateStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    const prevHoliday = getSlovenianHolidayName(prevDateStr);
     html += `
-      <div class="schedule-month-cell outside-month">
+      <div class="schedule-month-cell outside-month ${prevHoliday ? "is-holiday" : ""}">
         <div class="schedule-cell-top">
-          <span class="cal-day-num outside-num">${dayNum}</span>
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden;">
+            <span class="cal-day-num outside-num">${dayNum}</span>
+            ${prevHoliday ? `<span class="cal-holiday-badge outside-holiday" title="${prevHoliday}">${prevHoliday}</span>` : ""}
+          </div>
         </div>
       </div>
     `;
@@ -2713,6 +3106,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const holidayName = getSlovenianHolidayName(dateStr);
     const dayShifts = shiftsByDate.get(dateStr) || [];
     const dayOpenShifts = openShiftsByDate.get(dateStr) || [];
     const regularDayShifts = dayShifts.filter((s) => !isShiftFromOpenShift(s, dayOpenShifts));
@@ -2728,9 +3122,9 @@ function renderScheduleMonthView(container, dateObj, shifts) {
       extEventsHtml = dayExtEvents
         .map(
           (ev) => `
-            <div class="cal-personal-event-chip" onclick="event.stopPropagation();" title="Osebni koledar: ${ev.title}${ev.startTime ? ` (${ev.startTime}–${ev.endTime})` : ''}">
-              <span style="font-size: 11px;">🔒</span>
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</span>
+            <div class="cal-personal-event-chip" onclick="event.stopPropagation();" title="Osebni dogodek: ${ev.title}${ev.startTime ? ` (${ev.startTime}–${ev.endTime})` : ''}">
+              <span style="font-size: 11px;">📅</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${ev.startTime ? `<strong style="font-weight: 700; margin-right: 2px;">${ev.startTime}</strong> ` : ''}${ev.title}</span>
             </div>
           `
         )
@@ -2813,13 +3207,14 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     }
 
     html += `
-      <div class="schedule-month-cell ${isToday ? "is-today" : ""}" onclick="openShiftModal(null, '${dateStr}')">
+      <div class="schedule-month-cell ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openShiftModal(null, '${dateStr}')">
         <div class="schedule-cell-top">
-          <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden;">
             <span class="cal-day-num ${isToday ? "is-today-badge" : ""}">${d}</span>
             ${isToday ? `<span class="today-indicator-pill">Danes</span>` : ""}
+            ${holidayName ? `<span class="cal-holiday-badge" title="${holidayName}">${holidayName}</span>` : ""}
           </div>
-          <div style="display: flex; align-items: center; gap: 5px;">
+          <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
             ${totalDayHours > 0 ? `<span class="cal-day-hours-badge" title="${number.format(totalDayHours)} načrtovanih ur">${number.format(totalDayHours)} h</span>` : ""}
             <button type="button" class="schedule-quick-add-btn" onclick="event.stopPropagation(); openShiftModal(null, '${dateStr}')" title="Dodaj izmeno za ta dan">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -2839,10 +3234,16 @@ function renderScheduleMonthView(container, dateObj, shifts) {
   const totalCells = startDayIndex + daysInMonth;
   const remainingCells = (7 - (totalCells % 7)) % 7;
   for (let n = 1; n <= remainingCells; n++) {
+    const nextDate = new Date(year, month + 1, n);
+    const nextDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
+    const nextHoliday = getSlovenianHolidayName(nextDateStr);
     html += `
-      <div class="schedule-month-cell outside-month">
+      <div class="schedule-month-cell outside-month ${nextHoliday ? "is-holiday" : ""}">
         <div class="schedule-cell-top">
-          <span class="cal-day-num outside-num">${n}</span>
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden;">
+            <span class="cal-day-num outside-num">${n}</span>
+            ${nextHoliday ? `<span class="cal-holiday-badge outside-holiday" title="${nextHoliday}">${nextHoliday}</span>` : ""}
+          </div>
         </div>
       </div>
     `;
@@ -2955,12 +3356,13 @@ function renderScheduleWeekView(container, days, shifts) {
       extEventsHtml = dayExtEvents
         .map(
           (ev) => `
-            <div class="cal-personal-event-chip" style="margin-bottom: 6px; padding: 6px 8px; border-left: 3px solid #94a3b8; background: #f8fafc;" title="Osebni koledar: ${ev.title}">
-              <span style="font-size: 12px;">🔒</span>
-              <div style="overflow: hidden;">
-                <div style="font-weight: 700; color: #475569; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</div>
-                <div style="font-size: 10px; color: #94a3b8;">${ev.startTime ? `${ev.startTime}${ev.endTime ? ' – ' + ev.endTime : ''}` : 'Celodnevno'} · Osebno</div>
+            <div class="cal-personal-event-chip" style="margin-bottom: 6px; padding: 6px 9px; border-left: 3.5px solid #8b5cf6; background: #f5f3ff; border: 1px solid #ddd6fe; border-left-width: 3.5px; border-radius: 7px;" title="Osebni dogodek: ${ev.title}">
+              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                <span style="font-size: 10px;">📅</span>
+                <span style="font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #7c3aed;">Osebni dogodek</span>
               </div>
+              <div style="font-weight: 700; color: #4c1d95; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</div>
+              <div style="font-size: 10px; color: #6d28d9; margin-top: 1px;">${ev.startTime ? `${ev.startTime}${ev.endTime ? ' – ' + ev.endTime : ''}` : 'Celodnevno'}</div>
             </div>
           `
         )
@@ -3001,16 +3403,20 @@ function renderScheduleWeekView(container, days, shifts) {
         .join("");
     }
 
+    const holidayName = getSlovenianHolidayName(dateStr);
     html += `
-      <div class="cal-week-col ${isToday ? "is-today" : ""}">
+      <div class="cal-week-col ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}">
         <div class="cal-week-header ${isToday ? "is-today-header" : ""}">
           <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>
             ${isToday ? `<span class="today-indicator-pill">Danes</span>` : ""}
           </div>
-          <div class="cal-week-date-row">
-            <span class="cal-week-date-num ${isToday ? "is-today-badge" : ""}">${dayDate.getDate()}. ${SLO_MONTH_NAMES[dayDate.getMonth()].slice(0, 3)}</span>
-            ${totalDayHours > 0 ? `<span class="cal-week-hours-badge">${number.format(totalDayHours)} h</span>` : ""}
+          <div class="cal-week-date-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden;">
+              <span class="cal-week-date-num ${isToday ? "is-today-badge" : ""}">${dayDate.getDate()}. ${SLO_MONTH_NAMES[dayDate.getMonth()].slice(0, 3)}</span>
+              ${holidayName ? `<span class="cal-holiday-badge" title="${holidayName}">${holidayName}</span>` : ""}
+            </div>
+            ${totalDayHours > 0 ? `<span class="cal-week-hours-badge" style="flex-shrink: 0;">${number.format(totalDayHours)} h</span>` : ""}
           </div>
         </div>
         <div class="cal-week-body" style="display: flex; flex-direction: column; gap: 8px;">
@@ -3078,6 +3484,195 @@ window.setShiftModalType = function (type) {
       titleEl.textContent = isEditing ? "Uredi izmeno na urniku" : "Dodaj zaposlenega na urnik";
     }
     if (saveBtn) saveBtn.textContent = "Shrani na urnik";
+  }
+
+  if (typeof window.updateShiftRecurrenceCalculation === "function") {
+    window.updateShiftRecurrenceCalculation();
+  }
+};
+
+// ===== URNIK: Ponavljajoče in večdnevne izmene (State & Helpers) =====
+window.shiftRecurrenceMode = "single";
+window.selectedShiftDays = new Set([1, 2, 3, 4, 5]); // Pon - Pet
+
+function computeFridayOfWeek(dateStr) {
+  if (!dateStr) return dateStr;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const day = dt.getDay(); // 0=Ned, 1=Pon...
+  let diff = 5 - day;
+  if (diff < 0) diff += 7;
+  const fri = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + diff);
+  const fy = fri.getFullYear();
+  const fm = String(fri.getMonth() + 1).padStart(2, "0");
+  const fd = String(fri.getDate()).padStart(2, "0");
+  return `${fy}-${fm}-${fd}`;
+}
+
+function getDatesInRange(startStr, endStr, selectedDays) {
+  if (!startStr || !endStr) return [];
+  const [sy, sm, sd] = startStr.split("-").map(Number);
+  const [ey, em, ed] = endStr.split("-").map(Number);
+  const start = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+  if (end < start) return [];
+
+  const dates = [];
+  const curr = new Date(start);
+  let safety = 0;
+  while (curr <= end && safety < 120) {
+    if (selectedDays.has(curr.getDay())) {
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, "0");
+      const d = String(curr.getDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${d}`);
+    }
+    curr.setDate(curr.getDate() + 1);
+    safety++;
+  }
+  return dates;
+}
+
+window.setShiftDateMode = function (mode) {
+  window.shiftRecurrenceMode = mode;
+  const btnSingle = $("#shiftModeSingle");
+  const btnRepeat = $("#shiftModeRepeat");
+  const singleSec = $("#shiftSingleDateSection");
+  const repeatSec = $("#shiftRepeatDateSection");
+  const singleDateInput = $("#modalShiftDate");
+  const startDateInput = $("#modalShiftStartDate");
+  const endDateInput = $("#modalShiftEndDate");
+
+  if (mode === "repeat") {
+    if (btnRepeat) btnRepeat.classList.add("active");
+    if (btnSingle) btnSingle.classList.remove("active");
+    if (singleSec) singleSec.style.display = "none";
+    if (repeatSec) repeatSec.style.display = "block";
+    if (singleDateInput) singleDateInput.removeAttribute("required");
+    if (startDateInput) startDateInput.setAttribute("required", "required");
+    if (endDateInput) endDateInput.setAttribute("required", "required");
+
+    if (startDateInput && !startDateInput.value) {
+      const base = singleDateInput?.value || new Date().toISOString().slice(0, 10);
+      startDateInput.value = base;
+      if (endDateInput) endDateInput.value = computeFridayOfWeek(base);
+    }
+  } else {
+    if (btnSingle) btnSingle.classList.add("active");
+    if (btnRepeat) btnRepeat.classList.remove("active");
+    if (singleSec) singleSec.style.display = "block";
+    if (repeatSec) repeatSec.style.display = "none";
+    if (singleDateInput) singleDateInput.setAttribute("required", "required");
+    if (startDateInput) startDateInput.removeAttribute("required");
+    if (endDateInput) endDateInput.removeAttribute("required");
+  }
+
+  updateShiftRecurrenceCalculation();
+};
+
+window.toggleShiftDayPill = function (dayNum) {
+  if (!window.selectedShiftDays) {
+    window.selectedShiftDays = new Set([1, 2, 3, 4, 5]);
+  }
+  const day = Number(dayNum);
+  if (window.selectedShiftDays.has(day)) {
+    if (window.selectedShiftDays.size > 1) {
+      window.selectedShiftDays.delete(day);
+    }
+  } else {
+    window.selectedShiftDays.add(day);
+  }
+
+  const pill = document.querySelector(`.shift-day-pill[data-day="${day}"]`);
+  if (pill) {
+    if (window.selectedShiftDays.has(day)) {
+      pill.classList.add("active");
+    } else {
+      pill.classList.remove("active");
+    }
+  }
+
+  updateShiftRecurrenceCalculation();
+};
+
+window.selectShiftDaysPreset = function (preset) {
+  if (preset === "workweek") {
+    window.selectedShiftDays = new Set([1, 2, 3, 4, 5]);
+  } else if (preset === "all") {
+    window.selectedShiftDays = new Set([1, 2, 3, 4, 5, 6, 0]);
+  } else if (preset === "weekend") {
+    window.selectedShiftDays = new Set([6, 0]);
+  }
+
+  document.querySelectorAll(".shift-day-pill").forEach((pill) => {
+    const d = Number(pill.getAttribute("data-day"));
+    if (window.selectedShiftDays.has(d)) {
+      pill.classList.add("active");
+    } else {
+      pill.classList.remove("active");
+    }
+  });
+
+  updateShiftRecurrenceCalculation();
+};
+
+window.updateShiftRecurrenceCalculation = function () {
+  updateShiftDurationDisplay();
+  const saveBtn = $("#saveShiftBtn");
+  const modalType = $("#modalShiftType")?.value || "assigned";
+  const isOpen = modalType === "open";
+  const isEditing = Boolean($("#modalShiftId")?.value);
+
+  if (window.shiftRecurrenceMode !== "repeat" || isEditing) {
+    if (saveBtn) {
+      if (isOpen) {
+        saveBtn.textContent = isEditing ? "Shrani spremembe" : "Objavi odprto izmeno";
+      } else {
+        saveBtn.textContent = isEditing ? "Shrani spremembe" : "Shrani na urnik";
+      }
+      saveBtn.disabled = false;
+    }
+    return;
+  }
+
+  const startStr = $("#modalShiftStartDate")?.value;
+  const endStr = $("#modalShiftEndDate")?.value;
+  const startTime = $("#modalShiftStartTime")?.value || "08:00";
+  const endTime = $("#modalShiftEndTime")?.value || "16:00";
+  const hours = calculateShiftDuration(startTime, endTime);
+  const selectedDays = window.selectedShiftDays || new Set([1, 2, 3, 4, 5]);
+
+  const dates = getDatesInRange(startStr, endStr, selectedDays);
+  const count = dates.length;
+  const totalHours = count * hours;
+
+  const empSelect = $("#modalShiftEmployee");
+  const empName = empSelect && empSelect.selectedIndex >= 0 && empSelect.value 
+    ? empSelect.options[empSelect.selectedIndex].text 
+    : "zaposlenega";
+
+  const summaryEl = $("#shiftRepeatSummaryText");
+  if (summaryEl) {
+    if (count === 0) {
+      summaryEl.innerHTML = `<span style="color: #ef4444; font-weight: 700;">Ni ujemajočih datumov. Preverite obseg datumov in izbrane dneve.</span>`;
+    } else {
+      const safeName = String(empName).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      if (isOpen) {
+        summaryEl.innerHTML = `Ustvarjenih bo <strong>${count} odprtih izmen</strong> (skupaj <strong>${number.format(totalHours)} ur</strong>, ${startTime} – ${endTime}).`;
+      } else {
+        summaryEl.innerHTML = `Ustvarjenih bo <strong>${count} izmen</strong> (skupaj <strong>${number.format(totalHours)} ur</strong>) za <strong>${safeName}</strong> (${startTime} – ${endTime}).`;
+      }
+    }
+  }
+
+  if (saveBtn) {
+    if (count === 0) {
+      saveBtn.textContent = "Ni izbranih datumov";
+      saveBtn.disabled = true;
+    } else {
+      saveBtn.textContent = isOpen ? `Objavi ${count} odprtih izmen` : `Shrani ${count} izmen na urnik`;
+      saveBtn.disabled = false;
+    }
   }
 };
 
@@ -3147,11 +3742,14 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
   const signupsList = $("#shiftSignupsList");
   const signupsCount = $("#shiftSignupsCount");
   const deleteBtn = $("#deleteShiftBtn");
+  const modeGroup = $("#shiftModeGroup");
 
-  // Populate Employee Select
+  // Populate Employee Select (Only currently active employees with approved requests)
+  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
+  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
   empSelect.innerHTML = `
     <option value="">Izberite zaposlenega...</option>
-    ${state.employees
+    ${activeEmployees
       .map((e) => `<option value="${e.id}">${e.name}</option>`)
       .join("")}
   `;
@@ -3171,6 +3769,8 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
 
     if (idInput) idInput.value = openShift.id;
     window.setShiftModalType("open");
+    if (modeGroup) modeGroup.style.display = "none";
+    window.setShiftDateMode("single");
     if (secSelect) secSelect.value = openShift.sectorId;
     if (dateInput) dateInput.value = openShift.date;
     if (startInput) startInput.value = openShift.startTime || "08:00";
@@ -3202,6 +3802,8 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
 
     if (idInput) idInput.value = shift.id;
     window.setShiftModalType("assigned");
+    if (modeGroup) modeGroup.style.display = "none";
+    window.setShiftDateMode("single");
     if (signupsGroup) signupsGroup.style.display = "none";
     if (empSelect) empSelect.value = shift.userId;
     if (secSelect) secSelect.value = shift.sectorId;
@@ -3234,17 +3836,32 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
         dateInput.value = defaultDate;
       } else {
         const d = state.scheduleDate || currentDate;
-        dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+        const now = new Date();
+        const isCurrentMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        const dayStr = isCurrentMonth ? String(now.getDate()).padStart(2, "0") : "01";
+        dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${dayStr}`;
       }
     }
     if (startInput) startInput.value = "08:00";
     if (endInput) endInput.value = "16:00";
     if (noteInput) noteInput.value = "";
     if (deleteBtn) deleteBtn.style.display = "none";
+
+    // Recurrence setup for Add Mode
+    if (modeGroup) modeGroup.style.display = "block";
+    window.setShiftDateMode("single");
+
+    const startDateInput = $("#modalShiftStartDate");
+    const endDateInput = $("#modalShiftEndDate");
+    const baseDate = defaultDate || (dateInput ? dateInput.value : "") || (new Date().toISOString().slice(0, 10));
+    if (startDateInput) startDateInput.value = baseDate;
+    if (endDateInput) endDateInput.value = computeFridayOfWeek(baseDate);
+    window.selectShiftDaysPreset("workweek");
   }
 
   renderShiftModalPresets();
   updateShiftDurationDisplay();
+  updateShiftRecurrenceCalculation();
 
   if (typeof modal.showModal === "function") {
     modal.showModal();
@@ -3289,6 +3906,9 @@ window.setShiftPreset = function (startTime, endTime) {
   if (startInput) startInput.value = startTime;
   if (endInput) endInput.value = endTime;
   updateShiftDurationDisplay();
+  if (typeof window.updateShiftRecurrenceCalculation === "function") {
+    window.updateShiftRecurrenceCalculation();
+  }
 };
 
 function renderShiftModalPresets() {
@@ -3573,50 +4193,219 @@ function parseICSContent(icsText) {
   return events;
 }
 
-function updateExternalCalStatusUI(corsWarning = false) {
-  const statusEl = $("#externalCalStatus");
-  const clearBtn = $("#clearExternalCalBtn");
-  const eventsCount = (state.externalEvents || []).length;
-  const savedUrl = localStorage.getItem(getUserStorageKey("external_cal_url")) || "";
+let selectedCalendarProvider = "google";
 
-  if (clearBtn) {
-    clearBtn.style.display = eventsCount > 0 || savedUrl ? "inline-flex" : "none";
+window.selectCalendarProvider = function (provider) {
+  selectedCalendarProvider = provider;
+  const appleCard = $("#calCardApple");
+  const googleCard = $("#calCardGoogle");
+  const googleSection = $("#calGoogleSection");
+  const appleSection = $("#calAppleSection");
+
+  if (appleCard) appleCard.classList.toggle("selected", provider === "apple");
+  if (googleCard) googleCard.classList.toggle("selected", provider === "google");
+
+  if (googleSection) googleSection.style.display = provider === "google" ? "flex" : "none";
+  if (appleSection) appleSection.style.display = provider === "apple" ? "flex" : "none";
+};
+
+window.connectGoogleCalendarOAuth = async function () {
+  if (!supabaseClient) {
+    showToast("Povezava s strežnikom ni na voljo.", "error");
+    return;
   }
 
-  if (!statusEl) return;
-  if (eventsCount > 0) {
-    statusEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ Naloženih ${eventsCount} osebnih dogodkov.</span> Prikažejo se na urniku kot zasedeni termini.`;
-  } else if (savedUrl && corsWarning) {
-    statusEl.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⚠ URL je shranjen.</span> Ker brskalniki zaradi varnosti (CORS) blokirajo neposredno branje zunanjih koledarjev, kliknite <em>Naloži .ics datoteko</em> za takojšen prikaz dogodkov.`;
-  } else if (savedUrl) {
-    statusEl.innerHTML = `<span style="color: #10b981; font-weight: 700;">✓ URL shranjen.</span>`;
-  } else {
-    statusEl.innerHTML = `Ni naloženih osebnih koledarjev.`;
+  showToast("Preusmerjam na Google za dovoljenje za dostop do koledarja...", "info");
+  try {
+    sessionStorage.setItem("4p_sync_google_cal_on_load", "true");
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectTo,
+        scopes: "https://www.googleapis.com/auth/calendar.events.readonly",
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+
+    if (error) {
+      showToast(`Napaka pri Google povezavi: ${error.message}`, "error");
+    }
+  } catch (err) {
+    showToast("Prišlo je do napake pri odpiranju Googla.", "error");
+  }
+};
+
+async function fetchAndSyncGoogleCalendarEvents(accessToken) {
+  const token = accessToken || localStorage.getItem(getUserStorageKey("google_cal_access_token"));
+  if (!token) return;
+
+  try {
+    const timeMin = new Date();
+    timeMin.setMonth(timeMin.getMonth() - 2);
+    const timeMax = new Date();
+    timeMax.setMonth(timeMax.getMonth() + 4);
+
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&maxResults=250`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem(getUserStorageKey("google_cal_access_token"));
+      }
+      return;
+    }
+
+    const data = await res.json();
+    const items = data.items || [];
+    const events = items
+      .filter((item) => item.status !== "cancelled" && (item.start?.dateTime || item.start?.date))
+      .map((item) => {
+        const start = item.start.dateTime || item.start.date;
+        const end = item.end.dateTime || item.end.date;
+        const dateStr = start.slice(0, 10);
+        const startTime = start.includes("T") ? start.slice(11, 16) : "";
+        const endTime = end.includes("T") ? end.slice(11, 16) : "";
+        return {
+          id: "gcal_" + item.id,
+          title: item.summary || "Zasedeno (Google Koledar)",
+          date: dateStr,
+          startTime,
+          endTime,
+          isExternal: true,
+          source: "google",
+        };
+      });
+
+    state.externalEvents = events;
+    localStorage.setItem(getUserStorageKey("external_cal_events"), JSON.stringify(events));
+    localStorage.setItem(getUserStorageKey("connected_calendar_type"), "google");
+    updateExternalCalStatusUI();
+    renderSchedule();
+    showToast(`Uspešno uvoženih ${events.length} dogodkov iz Google Koledarja!`, "success");
+  } catch (err) {
+    console.warn("Google koledar napaka:", err);
   }
 }
+
+function updateExternalCalStatusUI(corsWarning = false) {
+  const statusEl = $("#externalCalStatus");
+  const connectedBox = $("#calConnectedStateBox");
+  const connectedTitle = $("#calConnectedTitle");
+  const connectedSubtitle = $("#calConnectedSubtitle");
+  const mainBtn = $("#openCalendarSyncBtn");
+  const toggleCheckbox = $("#toggleShowExternalEvents");
+  const previewEl = $("#calEventsPreview");
+
+  const eventsCount = (state.externalEvents || []).length;
+  const calType = localStorage.getItem(getUserStorageKey("connected_calendar_type")) || "google";
+
+  if (toggleCheckbox) {
+    toggleCheckbox.checked = state.showExternalEvents !== false;
+  }
+
+  if (connectedBox) {
+    if (eventsCount > 0) {
+      connectedBox.style.display = "block";
+      if (connectedTitle) {
+        connectedTitle.textContent = `Prikazanih ${eventsCount} osebnih dogodkov na urniku`;
+      }
+      if (connectedSubtitle) {
+        connectedSubtitle.textContent = calType === "apple"
+          ? "Uvoženo iz Apple Koledarja · Zasedeni termini so vidni na urniku"
+          : "Uvoženo iz Google Koledarja · Zasedeni termini so vidni na urniku";
+      }
+      if (previewEl) {
+        const sorted = [...state.externalEvents].sort((a, b) =>
+          (a.date + (a.startTime || "")).localeCompare(b.date + (b.startTime || ""))
+        );
+        const slice = sorted.slice(0, 5);
+        previewEl.style.display = "block";
+        previewEl.innerHTML = `
+          <div style="font-size: 11.5px; font-weight: 700; color: #5b21b6; margin-bottom: 6px;">
+            Predogled vaših dogodkov (${eventsCount}):
+          </div>
+          <div style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+            ${slice
+              .map((ev) => {
+                const dayNum = ev.date ? ev.date.slice(8, 10) : "";
+                const mIdx = ev.date ? parseInt(ev.date.slice(5, 7), 10) - 1 : 0;
+                const mName = SLO_MONTH_NAMES[mIdx] ? SLO_MONTH_NAMES[mIdx].slice(0, 3) : "";
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #ffffff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 4px 8px; font-size: 11px;">
+                    <div style="display: flex; align-items: center; gap: 5px; min-width: 0;">
+                      <span style="color: #8b5cf6;">📅</span>
+                      <span style="font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ev.title}</span>
+                    </div>
+                    <div style="font-size: 10px; color: #6d28d9; white-space: nowrap; flex-shrink: 0; font-weight: 600;">
+                      ${dayNum}. ${mName}.${ev.startTime ? ` ob ${ev.startTime}` : ""}
+                    </div>
+                  </div>
+                `;
+              })
+              .join("")}
+            ${sorted.length > 5 ? `<div style="font-size: 10.5px; color: #7c3aed; text-align: center; padding-top: 2px;">+ še ${sorted.length - 5} dogodkov na urniku</div>` : ""}
+          </div>
+        `;
+      }
+    } else {
+      connectedBox.style.display = "none";
+      if (previewEl) {
+        previewEl.innerHTML = "";
+        previewEl.style.display = "none";
+      }
+    }
+  }
+
+  if (statusEl) {
+    if (eventsCount > 0) {
+      statusEl.innerHTML = `<span style="color: #059669; font-weight: 700;">✓ Naloženih ${eventsCount} dogodkov.</span> Na urniku so prikazani kot vaši osebni termini.`;
+    } else if (corsWarning) {
+      statusEl.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⚠ URL je shranjen.</span> Ker brskalnik blokira neposredno branje (CORS), uporabite gumb <em>Naloži .ics datoteko</em>.`;
+    } else {
+      statusEl.innerHTML = `Ni naloženih osebnih dogodkov.`;
+    }
+  }
+
+  if (mainBtn) {
+    if (eventsCount > 0) {
+      mainBtn.innerHTML = `
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6; margin-right: 2px;"></span>
+        <span>Moji dogodki (${eventsCount})</span>
+      `;
+      mainBtn.style.borderColor = "#ddd6fe";
+      mainBtn.style.background = "#f5f3ff";
+      mainBtn.style.color = "#5b21b6";
+    } else {
+      mainBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>Moji dogodki na urniku</span>
+      `;
+      mainBtn.style.borderColor = "";
+      mainBtn.style.background = "";
+      mainBtn.style.color = "";
+    }
+  }
+}
+
+
+
+window.updateCalendarSyncUI = updateExternalCalStatusUI;
 
 window.openCalendarSyncModal = function () {
   const modal = $("#calendarSyncModal");
   if (!modal) return;
 
-  const { httpUrl, webcalUrl } = getCalendarFeedUrls();
-  const urlInput = $("#calSyncFeedUrl");
-  if (urlInput) urlInput.value = httpUrl;
-
-  const extUrlInput = $("#employerExternalCalUrl");
-  if (extUrlInput) {
-    extUrlInput.value = localStorage.getItem(getUserStorageKey("external_cal_url")) || "";
-  }
-
-  const toggleCheckbox = $("#toggleShowExternalEvents");
-  if (toggleCheckbox) {
-    toggleCheckbox.checked = state.showExternalEvents !== false;
-  }
-
+  const savedType = localStorage.getItem(getUserStorageKey("connected_calendar_type")) || "google";
+  selectCalendarProvider(savedType);
   updateExternalCalStatusUI();
-
-  // Takoj sinhroniziraj najnovejše stanje v Supabase
-  syncCalendarFeedToSupabase();
 
   if (typeof modal.showModal === "function") {
     modal.showModal();
@@ -3780,17 +4569,35 @@ function renderAll() {
   renderSchedule();
   renderSettings();
   renderPendingRequestsNotification();
+  updateExternalCalStatusUI();
 }
 
-function switchView(view) {
+function switchView(view, updateHash = true) {
+  const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
+  if (!validViews.includes(view)) view = "overview";
+
   state.activeView = view;
+  try {
+    sessionStorage.setItem("4p_active_view", view);
+    localStorage.setItem("4p_active_view", view);
+    if (updateHash && window.location.hash !== `#${view}`) {
+      history.replaceState(null, "", `#${view}`);
+    }
+  } catch (e) {}
+
   document.querySelectorAll(".view").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
   $(`#${view}View`)?.classList.add("active");
   $(`[data-view="${view}"]`)?.classList.add("active");
   
-  const viewTitle = $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard";
-  $("#pageTitle").textContent = viewTitle;
+  const viewTitles = {
+    overview: "Overview",
+    sectors: "Sektorji",
+    employees: "Zaposleni",
+    schedule: "Urnik BETA",
+    settings: "Nastavitve",
+  };
+  $("#pageTitle").textContent = viewTitles[view] || $(`[data-view="${view}"] span:last-child`)?.textContent || "Dashboard";
 
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
@@ -3928,7 +4735,12 @@ $("#sectorModalForm")?.addEventListener("submit", async (event) => {
 
 document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]");
-  if (nav) switchView(nav.dataset.view);
+  if (nav) {
+    if (nav.dataset.view === "employees" && state.selectedEmployeeId) {
+      window.closeEmployeeDetail();
+    }
+    switchView(nav.dataset.view);
+  }
 
   const sectorButton = event.target.closest("[data-sector-id]");
   if (sectorButton) renderSectorDetail(sectorButton.dataset.sectorId);
@@ -3999,10 +4811,14 @@ document.addEventListener("change", async (event) => {
       l.isPaid = isPaid;
     });
 
+    const savedPayouts = loadSectorPayoutStatus();
+    savedPayouts[`emp_${empId}_${monthKey}`] = isPaid;
     Object.values(employee.sectors || {}).forEach((sec) => {
       if (!sec.paid) sec.paid = {};
       sec.paid[monthKey] = isPaid;
+      savedPayouts[getSectorPayoutKey(empId, sec.sectorId, monthKey)] = isPaid;
     });
+    saveSectorPayoutStatus(savedPayouts);
 
     renderAll();
 
@@ -4147,6 +4963,10 @@ $("#passwordForm")?.addEventListener("submit", async (event) => {
 $$("[data-schedule-mode]").forEach((btn) => {
   btn.addEventListener("click", () => {
     state.scheduleMode = btn.dataset.scheduleMode;
+    try {
+      localStorage.setItem("4p_schedule_mode", state.scheduleMode);
+      sessionStorage.setItem("4p_schedule_mode", state.scheduleMode);
+    } catch (e) {}
     renderSchedule();
   });
 });
@@ -4183,8 +5003,26 @@ $("#scheduleTodayBtn")?.addEventListener("click", () => {
   renderSchedule();
 });
 
-$("#modalShiftStartTime")?.addEventListener("input", updateShiftDurationDisplay);
-$("#modalShiftEndTime")?.addEventListener("input", updateShiftDurationDisplay);
+$("#modalShiftStartTime")?.addEventListener("input", () => {
+  updateShiftDurationDisplay();
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
+$("#modalShiftEndTime")?.addEventListener("input", () => {
+  updateShiftDurationDisplay();
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
+$("#modalShiftStartDate")?.addEventListener("input", () => {
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
+$("#modalShiftEndDate")?.addEventListener("input", () => {
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
+$("#modalShiftEmployee")?.addEventListener("change", () => {
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
+$("#modalShiftSector")?.addEventListener("change", () => {
+  if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
+});
 
 $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -4196,17 +5034,11 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   const endInput = $("#modalShiftEndTime");
   const noteInput = $("#modalShiftNote");
 
-  const userId = empSelect.value;
-  const sectorId = secSelect.value;
-  const date = dateInput.value;
-  const startTime = startInput.value;
-  const endTime = endInput.value;
-  const note = noteInput.value.trim();
-
-  if (!userId || !sectorId || !date || !startTime || !endTime) {
-    alert("Prosimo, izpolnite vsa obvezna polja.");
-    return;
-  }
+  const userId = empSelect?.value;
+  const sectorId = secSelect?.value;
+  const startTime = startInput?.value;
+  const endTime = endInput?.value;
+  const note = (noteInput?.value || "").trim();
 
   const typeInput = $("#modalShiftType");
   const isTypeOpen = typeInput?.value === "open";
@@ -4214,7 +5046,145 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   const sectorName = sec ? sec.name : "Sektor";
   const color = sec ? sec.color || "#56829d" : "#56829d";
   const hours = calculateShiftDuration(startTime, endTime);
-  const existingId = idInput.value;
+  const existingId = idInput?.value;
+
+  const isRepeat = window.shiftRecurrenceMode === "repeat" && !existingId;
+
+  if (isRepeat) {
+    // Multi-day / Recurrence saving
+    const startStr = $("#modalShiftStartDate")?.value;
+    const endStr = $("#modalShiftEndDate")?.value;
+    const selectedDays = window.selectedShiftDays || new Set([1, 2, 3, 4, 5]);
+    const dates = getDatesInRange(startStr, endStr, selectedDays);
+
+    if (dates.length === 0) {
+      alert("Prosimo, izberite veljavno časovno obdobje in vsaj en ujemajoč dan v tednu.");
+      return;
+    }
+
+    if (!sectorId || !startTime || !endTime) {
+      alert("Prosimo, izpolnite vsa obvezna polja (sektor, ura začetka in zaključka).");
+      return;
+    }
+
+    if (isTypeOpen) {
+      const spotsInput = $("#modalShiftRequiredSpots");
+      const requiredSpots = parseInt(spotsInput?.value, 10) || 1;
+      if (!state.openShifts) state.openShifts = [];
+
+      const newOpenShifts = [];
+      for (const d of dates) {
+        const openShiftId = typeof crypto !== "undefined" && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : "os_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+        const rec = {
+          id: openShiftId,
+          isOpenShift: true,
+          workplaceId: sectorId,
+          sectorId: sectorId,
+          sectorName: sectorName,
+          color: color,
+          date: d,
+          startTime: startTime,
+          endTime: endTime,
+          hours: hours,
+          requiredSpots: requiredSpots,
+          note: note,
+          signups: []
+        };
+        state.openShifts.push(rec);
+        newOpenShifts.push({
+          id: openShiftId,
+          employer_id: state.currentUser?.id,
+          workplace_id: sectorId,
+          date: d,
+          start_time: startTime,
+          end_time: endTime,
+          hours: hours,
+          required_spots: requiredSpots,
+          note: note
+        });
+      }
+
+      localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+      closeShiftModal();
+      renderSchedule();
+
+      if (supabaseClient && state.currentUser && newOpenShifts.length > 0) {
+        try {
+          await supabaseClient.from("open_shifts").upsert(newOpenShifts);
+          await fetchOpenShifts();
+          renderSchedule();
+        } catch (err) {
+          console.warn("Supabase multi open_shifts upsert error:", err);
+        }
+      }
+      syncCalendarFeedToSupabase();
+      return;
+    } else {
+      // Assigned recurring shift
+      if (!userId) {
+        alert("Prosimo, izberite zaposlenega.");
+        return;
+      }
+
+      const emp = state.employees.find((item) => item.id === userId);
+      const userName = emp ? emp.name : "Zaposleni";
+      if (!state.scheduleShifts) state.scheduleShifts = [];
+
+      const newScheduleShifts = [];
+      for (const d of dates) {
+        const shiftId = typeof crypto !== "undefined" && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : "shift_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+        const rec = {
+          id: shiftId,
+          userId,
+          userName,
+          sectorId,
+          sectorName,
+          color,
+          date: d,
+          startTime,
+          endTime,
+          hours,
+          note,
+        };
+        state.scheduleShifts.push(rec);
+        newScheduleShifts.push({
+          id: shiftId,
+          employer_id: state.currentUser?.id,
+          workplace_id: sectorId,
+          user_id: userId,
+          date: d,
+          start_time: startTime,
+          end_time: endTime,
+          hours: hours,
+          note: note || "",
+          is_self_planned: false,
+        });
+      }
+
+      localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
+      closeShiftModal();
+      renderSchedule();
+
+      if (supabaseClient && state.currentUser && newScheduleShifts.length > 0) {
+        try {
+          await supabaseClient.from("schedule_shifts").upsert(newScheduleShifts);
+          await fetchScheduleShifts();
+          renderSchedule();
+        } catch (err) {
+          console.warn("Supabase multi schedule_shifts upsert error:", err);
+        }
+      }
+      syncCalendarFeedToSupabase();
+      return;
+    }
+  }
+
+  // --- Enkratna izmena (Single Shift Mode or Editing) ---
+  const date = dateInput?.value;
 
   if (isTypeOpen) {
     const spotsInput = $("#modalShiftRequiredSpots");
@@ -4277,7 +5247,7 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Assigned shift
+  // Assigned single shift
   if (!userId || !sectorId || !date || !startTime || !endTime) {
     alert("Prosimo, izpolnite vsa obvezna polja.");
     return;
@@ -4330,6 +5300,7 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
         end_time: endTime,
         hours: hours,
         note: note || "",
+        is_self_planned: false,
       });
     } catch (err) {
       console.warn("Supabase schedule_shifts upsert error:", err);
@@ -4353,3 +5324,12 @@ $("#dismissEmployeeBtn")?.addEventListener("click", () => {
 // Bootstrapping
 initSupabase();
 renderAll();
+switchView(state.activeView, true);
+
+window.addEventListener("hashchange", () => {
+  const hash = (window.location.hash || "").replace(/^#/, "").trim();
+  const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
+  if (validViews.includes(hash) && state.activeView !== hash) {
+    switchView(hash, false);
+  }
+});

@@ -35,15 +35,28 @@ CREATE POLICY "Public can read feed with valid token"
   TO anon, authenticated
   USING (token IS NOT NULL AND length(token) >= 16);
 
--- 3. Varnostna RPC funkcija za branje koledarja po žetonu
+-- 3. Ustvari domeno "text/calendar", da PostgREST vrne čist koledarski format brez JSON narekovajev
+DO $$ 
+BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'text/calendar') THEN 
+    CREATE DOMAIN "text/calendar" AS text; 
+  END IF; 
+END $$;
+
+-- 4. Varnostna RPC funkcija za branje koledarja po žetonu (v obliki čistega .ics formata)
+DROP FUNCTION IF EXISTS public.get_calendar_feed(TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_calendar_feed(feed_token TEXT)
-RETURNS TEXT
+RETURNS "text/calendar"
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
   v_data TEXT;
 BEGIN
+  -- Nastavi glavo odgovora na text/calendar, da Google in Apple koledar takoj prepoznata vir
+  PERFORM set_config('response.headers', '[{"Content-Type": "text/calendar; charset=utf-8"}, {"Cache-Control": "no-cache, no-store, must-revalidate"}]', true);
+
   SELECT calendar_data INTO v_data
   FROM public.calendar_feeds
   WHERE token = feed_token;
