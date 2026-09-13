@@ -16,11 +16,11 @@ function getUserStorageKey(key) {
 }
 
 const DEFAULT_SHIFT_PRESETS = [
-  { id: "def-1", startTime: "06:00", endTime: "14:00", label: "" },
-  { id: "def-2", startTime: "08:00", endTime: "16:00", label: "" },
-  { id: "def-3", startTime: "14:00", endTime: "22:00", label: "" },
-  { id: "def-4", startTime: "16:00", endTime: "00:00", label: "" },
-  { id: "def-5", startTime: "09:00", endTime: "17:00", label: "" },
+  { id: "def-1", startTime: "06:00", endTime: "14:00", label: "Jutranja", days: null },
+  { id: "def-2", startTime: "08:00", endTime: "16:00", label: "Dopoldanska", days: null },
+  { id: "def-3", startTime: "14:00", endTime: "22:00", label: "Popoldanska", days: null },
+  { id: "def-4", startTime: "08:00", endTime: "16:00", label: "Delovni teden", days: [1, 2, 3, 4, 5] },
+  { id: "def-5", startTime: "08:00", endTime: "16:00", label: "Cel teden", days: [1, 2, 3, 4, 5, 6, 0] },
 ];
 
 function getInitialView() {
@@ -728,12 +728,29 @@ async function fetchShiftPresets() {
 
     if (!error && Array.isArray(data)) {
       if (data.length > 0) {
-        state.shiftPresets = data.map((d) => ({
-          id: d.id,
-          startTime: d.start_time,
-          endTime: d.end_time,
-          label: d.label || "",
-        }));
+        state.shiftPresets = data.map((d) => {
+          let days = null;
+          if (d.days_of_week) {
+            try {
+              days = typeof d.days_of_week === "string" ? JSON.parse(d.days_of_week) : d.days_of_week;
+            } catch (e) {
+              days = null;
+            }
+          } else if (d.label && d.label.includes("[") && d.label.includes("]")) {
+            const m = d.label.match(/\[([0-9,]+)\]/);
+            if (m && m[1]) {
+              days = m[1].split(",").map(Number).filter((n) => !isNaN(n));
+            }
+          }
+          const cleanLabel = (d.label || "").replace(/\s*\[[0-9,]+\]\s*/, "").trim();
+          return {
+            id: d.id,
+            startTime: d.start_time,
+            endTime: d.end_time,
+            label: cleanLabel,
+            days: Array.isArray(days) && days.length > 0 ? days : null,
+          };
+        });
       } else {
         const cached = localStorage.getItem(getUserStorageKey("shift_presets"));
         if (cached) {
@@ -742,7 +759,7 @@ async function fetchShiftPresets() {
           // Initialize default presets in state and database for new employer
           state.shiftPresets = DEFAULT_SHIFT_PRESETS.map((p) => ({
             ...p,
-            id: crypto.randomUUID(),
+            id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "pre_" + Date.now() + "_" + Math.random(),
           }));
           try {
             await supabaseClient.from("shift_presets").insert(
@@ -752,6 +769,7 @@ async function fetchShiftPresets() {
                 start_time: p.startTime,
                 end_time: p.endTime,
                 label: p.label || null,
+                days_of_week: p.days ? JSON.stringify(p.days) : null,
               }))
             );
           } catch (seedingErr) {
@@ -2934,6 +2952,72 @@ window.handleDeleteCustomStatus = function (statusName) {
   }
 };
 
+window.currentPresetScopeMode = "single";
+window.currentPresetSelectedDays = new Set([1, 2, 3, 4, 5]);
+
+window.setPresetScopeMode = function (mode) {
+  window.currentPresetScopeMode = mode;
+  document.querySelectorAll(".preset-scope-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-scope") === mode);
+  });
+
+  const daysRow = $("#newPresetDaysRow");
+  if (mode === "single") {
+    if (daysRow) daysRow.style.display = "none";
+  } else if (mode === "workweek") {
+    window.currentPresetSelectedDays = new Set([1, 2, 3, 4, 5]);
+    if (daysRow) daysRow.style.display = "block";
+  } else if (mode === "fullweek") {
+    window.currentPresetSelectedDays = new Set([1, 2, 3, 4, 5, 6, 0]);
+    if (daysRow) daysRow.style.display = "block";
+  } else if (mode === "custom") {
+    if (daysRow) daysRow.style.display = "block";
+  }
+
+  updatePresetDaysPillsUI();
+  updatePresetDaysSummary();
+};
+
+window.togglePresetDayPill = function (dayNum) {
+  const day = Number(dayNum);
+  if (!window.currentPresetSelectedDays) {
+    window.currentPresetSelectedDays = new Set([1, 2, 3, 4, 5]);
+  }
+  if (window.currentPresetSelectedDays.has(day)) {
+    if (window.currentPresetSelectedDays.size > 1) {
+      window.currentPresetSelectedDays.delete(day);
+    }
+  } else {
+    window.currentPresetSelectedDays.add(day);
+  }
+
+  window.currentPresetScopeMode = "custom";
+  document.querySelectorAll(".preset-scope-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-scope") === "custom");
+  });
+
+  updatePresetDaysPillsUI();
+  updatePresetDaysSummary();
+};
+
+function updatePresetDaysPillsUI() {
+  document.querySelectorAll(".preset-day-pill").forEach((pill) => {
+    const d = Number(pill.getAttribute("data-day"));
+    pill.classList.toggle("active", window.currentPresetSelectedDays ? window.currentPresetSelectedDays.has(d) : false);
+  });
+}
+
+function updatePresetDaysSummary() {
+  const summaryEl = $("#newPresetDaysSummary");
+  if (!summaryEl) return;
+  const start = $("#newPresetStartTime")?.value || "08:00";
+  const end = $("#newPresetEndTime")?.value || "16:00";
+  const hoursPerShift = calculateShiftDuration(start, end);
+  const count = window.currentPresetSelectedDays ? window.currentPresetSelectedDays.size : 1;
+  const total = hoursPerShift * count;
+  summaryEl.textContent = `${count} dni (${number.format(total)} ur/teden)`;
+}
+
 function renderShiftPresetsSettings() {
   const container = $("#shiftPresetsManageList");
   if (!container) return;
@@ -2947,12 +3031,34 @@ function renderShiftPresetsSettings() {
   container.innerHTML = presets
     .map((p) => {
       const dur = calculateShiftDuration(p.startTime, p.endTime);
+      const isWeekly = Array.isArray(p.days) && p.days.length > 0;
+      const daysCount = isWeekly ? p.days.length : 1;
+      const totalHours = dur * daysCount;
+
+      let daysBadge = "";
+      if (isWeekly) {
+        if (p.days.length === 5 && p.days.every((d) => [1, 2, 3, 4, 5].includes(d))) {
+          daysBadge = `<span class="chip" style="background: rgba(86, 130, 157, 0.14); color: var(--primary-dark); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">📅 Pon – Pet (5 dni)</span>`;
+        } else if (p.days.length === 7) {
+          daysBadge = `<span class="chip" style="background: rgba(16, 185, 129, 0.14); color: #047857; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">🗓️ Cel teden (7 dni)</span>`;
+        } else {
+          const dayNames = [1, 2, 3, 4, 5, 6, 0].filter((d) => p.days.includes(d)).map((d) => {
+            const idx = (d + 6) % 7;
+            return SLO_DAY_HEADERS[idx];
+          }).join(", ");
+          daysBadge = `<span class="chip" style="background: rgba(86, 130, 157, 0.14); color: var(--primary-dark); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">📅 ${dayNames} (${p.days.length} dni)</span>`;
+        }
+      } else {
+        daysBadge = `<span class="chip" style="background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px;">1 dan</span>`;
+      }
+
       return `
         <article class="shift-preset-manage-item">
-          <div class="shift-preset-item-info">
+          <div class="shift-preset-item-info" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="shift-preset-badge">${p.startTime} – ${p.endTime}</span>
-            ${p.label ? `<span class="shift-preset-label">${p.label}</span>` : ""}
-            <span class="shift-preset-duration">(${number.format(dur)} ur)</span>
+            ${daysBadge}
+            ${p.label ? `<span class="shift-preset-label" style="font-weight: 700;">${p.label}</span>` : ""}
+            <span class="shift-preset-duration" style="color: var(--muted); font-size: 11.5px;">(${number.format(totalHours)} ur${isWeekly ? "/teden" : ""})</span>
           </div>
           <button type="button" class="delete-preset-btn" onclick="handleDeleteShiftPreset('${p.id}')" title="Izbriši to hitro izbiro">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2969,13 +3075,14 @@ function renderShiftPresetsSettings() {
     .join("");
 }
 
-window.handleAddShiftPreset = async function (startTime, endTime, label) {
+window.handleAddShiftPreset = async function (startTime, endTime, label, days = null) {
   if (!startTime || !endTime) return;
   const newPreset = {
-    id: crypto.randomUUID(),
+    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "pre_" + Date.now(),
     startTime,
     endTime,
     label: (label || "").trim(),
+    days: Array.isArray(days) && days.length > 0 ? days : null,
   };
 
   if (!state.shiftPresets) {
@@ -2988,15 +3095,28 @@ window.handleAddShiftPreset = async function (startTime, endTime, label) {
 
   if (supabaseClient && state.currentUser) {
     try {
-      await supabaseClient.from("shift_presets").insert([
+      const { error } = await supabaseClient.from("shift_presets").insert([
         {
           id: newPreset.id,
           employer_id: state.currentUser.id,
           start_time: newPreset.startTime,
           end_time: newPreset.endTime,
           label: newPreset.label || null,
+          days_of_week: newPreset.days ? JSON.stringify(newPreset.days) : null,
         },
       ]);
+      if (error && error.message && error.message.includes("days_of_week")) {
+        // Fallback če stolpec še ni bil dodan v Supabase
+        await supabaseClient.from("shift_presets").insert([
+          {
+            id: newPreset.id,
+            employer_id: state.currentUser.id,
+            start_time: newPreset.startTime,
+            end_time: newPreset.endTime,
+            label: newPreset.days ? `${newPreset.label || ''} [${newPreset.days.join(',')}]`.trim() : (newPreset.label || null),
+          },
+        ]);
+      }
     } catch (e) {
       console.warn("Supabase insert shift_preset error:", e);
     }
@@ -4547,6 +4667,80 @@ function calculateShiftDuration(startStr, endStr) {
   return Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
 }
 
+window.applyShiftPreset = function (presetId) {
+  const preset = (state.shiftPresets || DEFAULT_SHIFT_PRESETS).find((p) => p.id === presetId);
+  if (!preset) return;
+
+  const startInput = $("#modalShiftStartTime");
+  const endInput = $("#modalShiftEndTime");
+  if (startInput) startInput.value = preset.startTime;
+  if (endInput) endInput.value = preset.endTime;
+
+  if (preset.days && preset.days.length > 0) {
+    // Preklopi način na "Več dni / Cel teden"
+    if (typeof window.setShiftDateMode === "function") {
+      window.setShiftDateMode("repeat");
+    }
+
+    // Določi ustrezen ponedeljek in nedeljo/petek za ta teden
+    const singleDateVal = $("#modalShiftDate")?.value;
+    const refDate = singleDateVal ? new Date(singleDateVal) : (state.scheduleDate || new Date());
+    const dayOfWeek = (refDate.getDay() + 6) % 7; // Pon = 0, Ned = 6
+    const monday = new Date(refDate);
+    monday.setDate(refDate.getDate() - dayOfWeek);
+
+    const sortedDays = [...preset.days].sort((a, b) => {
+      const aVal = a === 0 ? 7 : a;
+      const bVal = b === 0 ? 7 : b;
+      return aVal - bVal;
+    });
+    const minDayIdx = sortedDays[0] === 0 ? 7 : sortedDays[0];
+    const maxDayIdx = sortedDays[sortedDays.length - 1] === 0 ? 7 : sortedDays[sortedDays.length - 1];
+
+    const startDay = new Date(monday);
+    startDay.setDate(monday.getDate() + (minDayIdx - 1));
+
+    const endDay = new Date(monday);
+    endDay.setDate(monday.getDate() + (maxDayIdx - 1));
+
+    const yStart = startDay.getFullYear();
+    const mStart = String(startDay.getMonth() + 1).padStart(2, "0");
+    const dStart = String(startDay.getDate()).padStart(2, "0");
+
+    const yEnd = endDay.getFullYear();
+    const mEnd = String(endDay.getMonth() + 1).padStart(2, "0");
+    const dEnd = String(endDay.getDate()).padStart(2, "0");
+
+    const startDateInput = $("#modalShiftStartDate");
+    const endDateInput = $("#modalShiftEndDate");
+    if (startDateInput) startDateInput.value = `${yStart}-${mStart}-${dStart}`;
+    if (endDateInput) endDateInput.value = `${yEnd}-${mEnd}-${dEnd}`;
+
+    // Aktiviraj ustrezne dneve v tednu
+    window.selectedShiftDays = new Set(preset.days);
+    document.querySelectorAll(".shift-day-pill").forEach((pill) => {
+      const d = Number(pill.getAttribute("data-day"));
+      if (window.selectedShiftDays.has(d)) {
+        pill.classList.add("active");
+      } else {
+        pill.classList.remove("active");
+      }
+    });
+
+    if (preset.label && $("#modalShiftNote") && !$("#modalShiftNote").value) {
+      $("#modalShiftNote").value = preset.label;
+    }
+  } else {
+    // Posamezen dan: ohrani trenutni datum ali ga pusti v single načinu
+    updateShiftDurationDisplay();
+  }
+
+  updateShiftDurationDisplay();
+  if (typeof window.updateShiftRecurrenceCalculation === "function") {
+    window.updateShiftRecurrenceCalculation();
+  }
+};
+
 window.setShiftPreset = function (startTime, endTime) {
   const startInput = $("#modalShiftStartTime");
   const endInput = $("#modalShiftEndTime");
@@ -4574,10 +4768,28 @@ function renderShiftModalPresets() {
   container.innerHTML = presets
     .map((p) => {
       const dur = calculateShiftDuration(p.startTime, p.endTime);
+      const isWeekly = Array.isArray(p.days) && p.days.length > 0;
+      const daysCount = isWeekly ? p.days.length : 1;
+      const totalHours = dur * daysCount;
+
+      let scopeLabel = "";
+      if (isWeekly) {
+        if (p.days.length === 5 && p.days.every((d) => [1, 2, 3, 4, 5].includes(d))) {
+          scopeLabel = "Pon–Pet";
+        } else if (p.days.length === 7) {
+          scopeLabel = "Cel teden";
+        } else {
+          scopeLabel = `${p.days.length} dni`;
+        }
+      }
+
       const labelPart = p.label ? `<span style="font-weight: 700; color: var(--primary-dark); margin-right: 4px;">${p.label}:</span>` : "";
+      const scopeIcon = isWeekly ? "📅 " : "";
+      const scopeBadge = isWeekly ? `<span style="font-size: 10px; background: rgba(86, 130, 157, 0.16); color: var(--primary-dark); padding: 1px 5px; border-radius: 4px; margin-right: 4px; font-weight: 700;">${scopeLabel}</span>` : "";
+
       return `
-        <button type="button" class="shift-preset-btn" onclick="setShiftPreset('${p.startTime}', '${p.endTime}')">
-          ${labelPart}${p.startTime} – ${p.endTime} (${number.format(dur)}h)
+        <button type="button" class="shift-preset-btn ${isWeekly ? 'is-weekly-preset' : ''}" onclick="applyShiftPreset('${p.id}')" title="${isWeekly ? `Hitri vnos za ${scopeLabel} (${p.startTime} – ${p.endTime})` : `Hitri vnos (${p.startTime} – ${p.endTime})`}">
+          ${scopeIcon}${scopeBadge}${labelPart}${p.startTime} – ${p.endTime} (${number.format(totalHours)}h)
         </button>
       `;
     })
@@ -5562,10 +5774,31 @@ $("#addShiftPresetForm")?.addEventListener("submit", (event) => {
   const start = startInput ? startInput.value : "";
   const end = endInput ? endInput.value : "";
   const label = labelInput ? labelInput.value : "";
-  if (start && end) {
-    handleAddShiftPreset(start, end, label);
-    if (labelInput) labelInput.value = "";
+
+  let days = null;
+  if (window.currentPresetScopeMode !== "single") {
+    days = window.currentPresetSelectedDays ? Array.from(window.currentPresetSelectedDays) : [1, 2, 3, 4, 5];
+    if (days.length === 0) {
+      alert("Prosimo, izberite vsaj en dan za tedensko hitro izbiro.");
+      return;
+    }
   }
+
+  if (start && end) {
+    handleAddShiftPreset(start, end, label, days);
+    if (labelInput) labelInput.value = "";
+    // Reset nazaj na privzeti način
+    if (typeof setPresetScopeMode === "function") {
+      setPresetScopeMode("single");
+    }
+  }
+});
+
+$("#newPresetStartTime")?.addEventListener("input", () => {
+  if (typeof updatePresetDaysSummary === "function") updatePresetDaysSummary();
+});
+$("#newPresetEndTime")?.addEventListener("input", () => {
+  if (typeof updatePresetDaysSummary === "function") updatePresetDaysSummary();
 });
 
 // Update Password Form

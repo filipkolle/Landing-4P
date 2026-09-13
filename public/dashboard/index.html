@@ -550,7 +550,7 @@
                 </div>
 
                 <!-- Obrazec za dodajanje nove hitre izbire -->
-                <form id="addShiftPresetForm" class="settings-form" style="background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+                <form id="addShiftPresetForm" class="settings-form" style="background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <label style="font-size: 12px; font-weight: 600;">
                       Začetek (Od)
@@ -561,10 +561,41 @@
                       <input type="time" id="newPresetEndTime" value="16:00" required style="padding: 6px 10px; font-size: 13px;" />
                     </label>
                   </div>
-                  <div style="display: flex; gap: 8px; align-items: flex-end; margin-top: -4px;">
+
+                  <!-- Obseg veljavnosti: Posamezen dan ali Celoten teden -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                      <span style="font-size: 12px; font-weight: 600;">Veljavnost / Dnevi izmene:</span>
+                      <div class="preset-scope-toggle" style="display: inline-flex; gap: 3px; background: var(--surface); padding: 2px; border-radius: 8px; border: 1px solid var(--line);">
+                        <button type="button" class="preset-scope-btn active" data-scope="single" onclick="setPresetScopeMode('single')">1 dan</button>
+                        <button type="button" class="preset-scope-btn" data-scope="workweek" onclick="setPresetScopeMode('workweek')">Pon – Pet</button>
+                        <button type="button" class="preset-scope-btn" data-scope="fullweek" onclick="setPresetScopeMode('fullweek')">Cel teden (Pon–Ned)</button>
+                        <button type="button" class="preset-scope-btn" data-scope="custom" onclick="setPresetScopeMode('custom')">Po meri</button>
+                      </div>
+                    </div>
+
+                    <!-- Vrstica za izbiro dni v tednu -->
+                    <div id="newPresetDaysRow" style="display: none; margin-top: 6px; background: var(--surface); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Izbrani dnevi za to tedensko izbiro:</span>
+                        <span id="newPresetDaysSummary" style="font-size: 11px; font-weight: 700; color: var(--primary-dark);">5 dni (40 ur/teden)</span>
+                      </div>
+                      <div class="shift-days-pills-row" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                        <button type="button" class="preset-day-pill active" data-day="1" onclick="togglePresetDayPill(1)">Pon</button>
+                        <button type="button" class="preset-day-pill active" data-day="2" onclick="togglePresetDayPill(2)">Tor</button>
+                        <button type="button" class="preset-day-pill active" data-day="3" onclick="togglePresetDayPill(3)">Sre</button>
+                        <button type="button" class="preset-day-pill active" data-day="4" onclick="togglePresetDayPill(4)">Čet</button>
+                        <button type="button" class="preset-day-pill active" data-day="5" onclick="togglePresetDayPill(5)">Pet</button>
+                        <button type="button" class="preset-day-pill" data-day="6" onclick="togglePresetDayPill(6)">Sob</button>
+                        <button type="button" class="preset-day-pill" data-day="0" onclick="togglePresetDayPill(0)">Ned</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: 8px; align-items: flex-end;">
                     <label style="flex: 1; font-size: 12px; font-weight: 600; margin-bottom: 0;">
                       Poimenovanje / Oznaka (neobvezno)
-                      <input type="text" id="newPresetLabel" placeholder="npr. Jutranja, Dopoldan, Nočna..." style="padding: 6px 10px; font-size: 13px;" />
+                      <input type="text" id="newPresetLabel" placeholder="npr. Jutranja, Delovni teden, Vikend..." style="padding: 6px 10px; font-size: 13px;" />
                     </label>
                     <button type="submit" class="primary-button" style="white-space: nowrap; font-size: 13px; padding: 7px 14px; height: 38px;">+ Dodaj izbiro</button>
                   </div>
