@@ -2370,6 +2370,9 @@ function renderSectors() {
       })
       .join("");
   }
+  if (state.selectedSectorId && !$("#sectorDetail")?.hidden) {
+    renderSectorDetail(state.selectedSectorId);
+  }
 }
 
 function renderEmployees() {
@@ -3338,6 +3341,7 @@ function renderFilters() {
 }
 
 function renderSectorDetail(sectorId) {
+  state.selectedSectorId = sectorId;
   const sector = state.sectors.find((item) => item.id === sectorId);
   if (!sector) return;
 
@@ -5470,18 +5474,18 @@ function switchView(view, updateHash = true) {
   const addSectorBtn = $("#openSectorModal");
   const pageDesc = $("#pageDescription");
 
-  // Switch between Year switcher (Overview, Sectors, Settings) and Month switcher (Employees)
+  // Switch between Year switcher (Overview, Settings) and Month switcher (Employees, Sectors)
   const yearSwitcher = $("#topbarYearSwitcher");
   const monthSwitcher = $("#topbarMonthSwitcher");
 
-  if (view === "employees") {
+  if (view === "employees" || view === "sectors") {
     if (yearSwitcher) yearSwitcher.style.display = "none";
     if (monthSwitcher) monthSwitcher.style.display = "inline-flex";
   } else if (view === "schedule") {
     if (yearSwitcher) yearSwitcher.style.display = "none";
     if (monthSwitcher) monthSwitcher.style.display = "none";
   } else {
-    // overview, sectors, settings
+    // overview, settings
     if (yearSwitcher) yearSwitcher.style.display = "inline-flex";
     if (monthSwitcher) monthSwitcher.style.display = "none";
   }
@@ -5749,6 +5753,7 @@ $("#topbarNextMonth")?.addEventListener("click", () => {
 
 $("#closeSectorDetail")?.addEventListener("click", () => {
   $("#sectorDetail").hidden = true;
+  state.selectedSectorId = null;
 });
 
 $("#employeeSearch")?.addEventListener("input", renderEmployees);
