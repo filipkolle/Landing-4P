@@ -1100,12 +1100,16 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
     const userStatus = !hasActiveConnection ? "Prekinjena povezava" : (state.employeeCustomStatuses?.[userId] || "Zaposlen");
 
+    const reqDateStr = req.created_at || req.joined_at || req.updated_at || "";
+    const reqMonthKey = reqDateStr ? reqDateStr.slice(0, 7) : null;
+
     if (!empMap.has(userId)) {
       empMap.set(userId, {
         id: userId,
         name: userName,
         status: userStatus,
         isDisconnected: !hasActiveConnection,
+        joinedMonth: reqMonthKey,
         sectors: {},
         hours: {},
         travelExpenses: {},
@@ -1121,6 +1125,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       } else if (req.user_name && emp.name === "Zaposleni") {
         emp.name = req.user_name;
       }
+      if (reqMonthKey && (!emp.joinedMonth || reqMonthKey < emp.joinedMonth)) {
+        emp.joinedMonth = reqMonthKey;
+      }
       if (!emp.sectors[matchedSector.id]) {
         emp.sectors[matchedSector.id] = {
           sectorId: matchedSector.id,
@@ -1134,11 +1141,16 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
           netSalary: 0,
           jobName: wp.name || matchedSector.name,
           isDisconnected: !hasActiveConnection,
+          joinedMonth: reqMonthKey,
           hours: {},
           travelExpenses: {},
           earnings: {},
           paid: {},
         };
+      } else if (reqMonthKey) {
+        if (!emp.sectors[matchedSector.id].joinedMonth || reqMonthKey < emp.sectors[matchedSector.id].joinedMonth) {
+          emp.sectors[matchedSector.id].joinedMonth = reqMonthKey;
+        }
       }
     }
   });
@@ -1160,6 +1172,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       const isProject = payType === "project";
       const netSalary = Number(src.net_salary) || 0;
       const srcRate = isFixed ? 0 : (Number(src.hourly_rate) || 0);
+      const srcDateStr = src.created_at || src.updated_at || "";
+      const srcMonthKey = srcDateStr ? srcDateStr.slice(0, 7) : null;
 
       if (emp && emp.sectors[matchedSector.id]) {
         emp.sectors[matchedSector.id].type = payType;
@@ -1169,6 +1183,14 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         emp.sectors[matchedSector.id].netSalary = netSalary;
         if (src.name) {
           emp.sectors[matchedSector.id].jobName = src.name;
+        }
+        if (srcMonthKey) {
+          if (!emp.sectors[matchedSector.id].joinedMonth || srcMonthKey < emp.sectors[matchedSector.id].joinedMonth) {
+            emp.sectors[matchedSector.id].joinedMonth = srcMonthKey;
+          }
+          if (!emp.joinedMonth || srcMonthKey < emp.joinedMonth) {
+            emp.joinedMonth = srcMonthKey;
+          }
         }
       }
 
@@ -1184,6 +1206,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         netSalary: netSalary,
         jobName: src.name || matchedSector.name,
         workplaceId: src.workplace_id || matchedSector.id,
+        joinedMonth: srcMonthKey,
       });
     }
   });
@@ -1210,6 +1233,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         netSalary: sourceInfo?.netSalary || 0,
         jobName: sourceInfo?.jobName || sec.name,
         workplaceId: sec.id,
+        joinedMonth: sourceInfo?.joinedMonth || null,
       };
     } else if (log.source_id && sourceToSectorMap.has(log.source_id)) {
       matchedSectorInfo = sourceToSectorMap.get(log.source_id);
@@ -1227,6 +1251,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         name: fallbackName,
         status: "Prekinjena povezava",
         isDisconnected: true,
+        joinedMonth: null,
         sectors: {},
         hours: {},
         travelExpenses: {},
@@ -1252,6 +1277,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         netSalary: matchedSectorInfo.netSalary || 0,
         jobName: matchedSectorInfo.jobName || matchedSectorInfo.sectorName,
         isDisconnected: emp.isDisconnected || false,
+        joinedMonth: matchedSectorInfo.joinedMonth || null,
         hours: {},
         travelExpenses: {},
         earnings: {},
@@ -1264,6 +1290,15 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     if (!dateStr) return;
     const cleanDate = dateStr.slice(0, 10);
     const monthKey = cleanDate.slice(0, 7); // "YYYY-MM"
+
+    if (monthKey) {
+      if (!secEntry.joinedMonth || monthKey < secEntry.joinedMonth) {
+        secEntry.joinedMonth = monthKey;
+      }
+      if (!emp.joinedMonth || monthKey < emp.joinedMonth) {
+        emp.joinedMonth = monthKey;
+      }
+    }
 
     const h = Number(log.hours || 0);
     const travel = Number(log.travel_expenses || 0);
@@ -1330,21 +1365,42 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   const savedPayouts = loadSectorPayoutStatus();
 
   empMap.forEach((emp) => {
+    const secJoinedList = Object.values(emp.sectors).map((s) => s.joinedMonth).filter(Boolean);
+    emp.joinedMonth = secJoinedList.length > 0 ? secJoinedList.sort()[0] : activeMKey;
+
     Object.values(emp.sectors).forEach((sec) => {
+      if (!sec.joinedMonth) sec.joinedMonth = emp.joinedMonth;
+      const secJoined = sec.joinedMonth || activeMKey;
+
       const allMonths = new Set([...Object.keys(sec.hours), ...Object.keys(sec.travelExpenses), activeMKey]);
       allMonths.forEach((mKey) => {
         const sTravel = sec.travelExpenses[mKey] || 0;
+        const sHours = sec.hours[mKey] || 0;
+        const isJoined = mKey >= secJoined;
+
         if (sec.isFixed) {
-          sec.earnings[mKey] = (Number(sec.netSalary) || 0) + sTravel;
-        } else if (sec.isProject && Number(sec.netSalary) > 0 && (sec.hours[mKey] || 0) === 0) {
-          sec.earnings[mKey] = Number(sec.netSalary) + sTravel;
+          if (isJoined) {
+            sec.earnings[mKey] = (Number(sec.netSalary) || 0) + sTravel;
+          } else {
+            sec.earnings[mKey] = sHours > 0 ? (sHours * (sec.rate || 0) + sTravel) : sTravel;
+          }
+        } else if (sec.isProject && Number(sec.netSalary) > 0 && sHours === 0) {
+          if (isJoined) {
+            sec.earnings[mKey] = Number(sec.netSalary) + sTravel;
+          } else {
+            sec.earnings[mKey] = sTravel;
+          }
         }
 
         const payoutKey = getSectorPayoutKey(emp.id, sec.sectorId, mKey);
         if (savedPayouts[payoutKey] !== undefined) {
           sec.paid[mKey] = savedPayouts[payoutKey];
-        } else if (sec.isFixed && (sec.earnings[mKey] || 0) > 0 && sec.paid[mKey] === undefined) {
-          sec.paid[mKey] = false;
+        } else if (sec.isFixed) {
+          if (!isJoined && (sec.earnings[mKey] || 0) === 0) {
+            sec.paid[mKey] = true;
+          } else if ((sec.earnings[mKey] || 0) > 0 && sec.paid[mKey] === undefined) {
+            sec.paid[mKey] = false;
+          }
         }
       });
     });
@@ -1364,8 +1420,13 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         let mAllPaid = true;
         sList.forEach((sec) => {
           const sEarnings = sec.earnings[mKey] || 0;
+          const sHours = sec.hours[mKey] || 0;
+          const sTravel = sec.travelExpenses[mKey] || 0;
+          const secJoined = sec.joinedMonth || emp.joinedMonth || activeMKey;
+          const isJoined = mKey >= secJoined;
+
           mEarnings += sEarnings;
-          const sPaid = sec.paid[mKey] ?? (((sec.hours[mKey] || 0) === 0 && (sec.travelExpenses[mKey] || 0) === 0 && !sec.isFixed) ? true : false);
+          const sPaid = sec.paid[mKey] ?? (((sHours === 0 && sTravel === 0 && (!sec.isFixed || !isJoined)) ? true : false));
           if (!sPaid && sEarnings > 0) {
             mAllPaid = false;
           }
@@ -1670,15 +1731,17 @@ function employeeMonth(employee, specificSectorId = null, specificMonthKey = nul
   const monthKey = specificMonthKey || activeMonth().key;
   if (specificSectorId && employee.sectors?.[specificSectorId]) {
     const sec = employee.sectors[specificSectorId];
+    const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+    const isJoined = monthKey >= secJoined;
     const hours = sec.hours?.[monthKey] ?? 0;
     const travelExpenses = sec.travelExpenses?.[monthKey] ?? 0;
     const baseEarnings = sec.isFixed
-      ? ((Number(sec.netSalary) || 0) + travelExpenses)
+      ? (isJoined ? ((Number(sec.netSalary) || 0) + travelExpenses) : (hours > 0 ? (hours * (sec.rate || 0) + travelExpenses) : travelExpenses))
       : (sec.isProject && Number(sec.netSalary) > 0 && !sec.hours?.[monthKey]
-          ? (Number(sec.netSalary) + travelExpenses)
+          ? (isJoined ? (Number(sec.netSalary) + travelExpenses) : travelExpenses)
           : (hours * (sec.rate || 0) + travelExpenses));
     const earnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
-    const paid = sec.paid?.[monthKey] ?? ((hours === 0 && travelExpenses === 0 && !sec.isFixed) ? true : false);
+    const paid = sec.paid?.[monthKey] ?? ((hours === 0 && travelExpenses === 0 && (!sec.isFixed || !isJoined)) ? true : false);
     return {
       hours,
       travelExpenses,
@@ -1700,8 +1763,17 @@ function employeeMonth(employee, specificSectorId = null, specificMonthKey = nul
   let allPaid = true;
   if (sectorList.length > 0) {
     earnings = sectorList.reduce((sum, sec) => {
-      const sEarnings = sec.earnings?.[monthKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + (sec.travelExpenses?.[monthKey] || 0)) : ((sec.hours?.[monthKey] || 0) * (sec.rate || 0) + (sec.travelExpenses?.[monthKey] || 0)));
-      const sPaid = sec.paid?.[monthKey] ?? (((sec.hours?.[monthKey] || 0) === 0 && (sec.travelExpenses?.[monthKey] || 0) === 0 && !sec.isFixed) ? true : false);
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+      const isJoined = monthKey >= secJoined;
+      const sHours = sec.hours?.[monthKey] || 0;
+      const sTravel = sec.travelExpenses?.[monthKey] || 0;
+      const baseSecEarnings = sec.isFixed
+        ? (isJoined ? ((Number(sec.netSalary) || 0) + sTravel) : (sHours > 0 ? (sHours * (sec.rate || 0) + sTravel) : sTravel))
+        : (sec.isProject && Number(sec.netSalary) > 0 && sHours === 0
+            ? (isJoined ? (Number(sec.netSalary) + sTravel) : sTravel)
+            : (sHours * (sec.rate || 0) + sTravel));
+      const sEarnings = sec.earnings?.[monthKey] ?? baseSecEarnings;
+      const sPaid = sec.paid?.[monthKey] ?? (((sHours === 0 && sTravel === 0 && (!sec.isFixed || !isJoined)) ? true : false));
       if (!sPaid && sEarnings > 0) allPaid = false;
       return sum + sEarnings;
     }, 0);
@@ -2053,9 +2125,16 @@ function sectorStats(sectorId) {
 
   sectorEmployees.forEach((employee) => {
     const sec = employee.sectors[sectorId];
+    const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+    const isJoined = monthKey >= secJoined;
     const hours = sec.hours?.[monthKey] ?? 0;
     const travel = sec.travelExpenses?.[monthKey] ?? 0;
-    const earnings = sec.earnings?.[monthKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + travel) : (hours * (sec.rate || 0) + travel));
+    const baseEarnings = sec.isFixed
+      ? (isJoined ? ((Number(sec.netSalary) || 0) + travel) : (hours > 0 ? (hours * (sec.rate || 0) + travel) : travel))
+      : (sec.isProject && Number(sec.netSalary) > 0 && hours === 0
+          ? (isJoined ? (Number(sec.netSalary) + travel) : travel)
+          : (hours * (sec.rate || 0) + travel));
+    const earnings = sec.earnings?.[monthKey] ?? baseEarnings;
 
     // Calculate whether this employee's work in this sector is paid
     const secLogs = state.rawLogs.filter(
@@ -2073,7 +2152,7 @@ function sectorStats(sectorId) {
       empSectorUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
       isPaid = empSectorUnpaid === 0;
     } else {
-      isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+      isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && (!sec.isFixed || !isJoined)) ? true : false);
       empSectorUnpaid = isPaid ? 0 : earnings;
     }
 
@@ -2135,9 +2214,16 @@ function annualSectorStats(sectorId, year) {
     let empSecUnpaid = 0;
 
     yearMonths.forEach((mKey) => {
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+      const isJoined = mKey >= secJoined;
       const hours = sec.hours?.[mKey] ?? 0;
       const travel = sec.travelExpenses?.[mKey] ?? 0;
-      const earnings = sec.earnings?.[mKey] ?? (sec.isFixed ? ((Number(sec.netSalary) || 0) + travel) : (hours * (sec.rate || 0) + travel));
+      const baseEarnings = sec.isFixed
+        ? (isJoined ? ((Number(sec.netSalary) || 0) + travel) : (hours > 0 ? (hours * (sec.rate || 0) + travel) : travel))
+        : (sec.isProject && Number(sec.netSalary) > 0 && hours === 0
+            ? (isJoined ? (Number(sec.netSalary) + travel) : travel)
+            : (hours * (sec.rate || 0) + travel));
+      const earnings = sec.earnings?.[mKey] ?? baseEarnings;
 
       const secLogs = state.rawLogs.filter(
         (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(mKey)
@@ -2149,7 +2235,7 @@ function annualSectorStats(sectorId, year) {
         const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
         isPaid = secUnpaid === 0;
       } else {
-        isPaid = sec.paid?.[mKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+        isPaid = sec.paid?.[mKey] ?? ((hours === 0 && travel === 0 && (!sec.isFixed || !isJoined)) ? true : false);
       }
 
       totalHours += hours;
@@ -2424,10 +2510,17 @@ function renderEmployees() {
 
         // Calculate payment progress for this employee in active month
         const empMonthLogs = state.rawLogs.filter((l) => l.userId === employee.id && l.date.startsWith(monthKey));
-        const totalHours = empMonthLogs.reduce((sum, l) => sum + l.hours, 0);
         const monthInfo = employeeMonth(employee);
-        const totalEarnings = empMonthLogs.length > 0 ? empMonthLogs.reduce((sum, l) => sum + l.earnings, 0) : monthInfo.earnings;
-        const paidEarnings = empMonthLogs.length > 0 ? empMonthLogs.filter((l) => l.isPaid).reduce((sum, l) => sum + l.earnings, 0) : (monthInfo.paid ? totalEarnings : 0);
+        const isAnyFixed = employeeSectors.some((s) => s.isFixed);
+        const totalEarnings = monthInfo.earnings;
+        let paidEarnings = 0;
+        if (isAnyFixed) {
+          paidEarnings = monthInfo.paid ? totalEarnings : 0;
+        } else if (empMonthLogs.length > 0) {
+          paidEarnings = empMonthLogs.filter((l) => l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
+        } else {
+          paidEarnings = monthInfo.paid ? totalEarnings : 0;
+        }
         
         let paidPercent = 100;
         if (totalEarnings > 0) {
@@ -2604,14 +2697,16 @@ function renderEmployeeDetail(employeeId) {
 
   if (employeeSectors.length > 0) {
     employeeSectors.forEach((sec) => {
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+      const isJoined = monthKey >= secJoined;
       const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
       const secTravel = secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
       const secLogEarnings = secLogs.reduce((sum, l) => sum + l.earnings, 0);
 
       const effectiveSecEarnings = sec.isFixed
-        ? ((Number(sec.netSalary) || 0) + secTravel)
+        ? (isJoined ? ((Number(sec.netSalary) || 0) + secTravel) : (secLogs.length > 0 ? (secLogEarnings + secTravel) : secTravel))
         : (sec.isProject && Number(sec.netSalary) > 0 && secLogs.length === 0
-            ? (Number(sec.netSalary) + secTravel)
+            ? (isJoined ? (Number(sec.netSalary) + secTravel) : secTravel)
             : secLogEarnings);
 
       let isSecPaid = false;
@@ -2621,7 +2716,7 @@ function renderEmployeeDetail(employeeId) {
         const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
         isSecPaid = secUnpaid === 0;
       } else {
-        isSecPaid = sec.paid?.[monthKey] ?? ((secLogs.length === 0 && !sec.isFixed) ? true : false);
+        isSecPaid = sec.paid?.[monthKey] ?? ((secLogs.length === 0 && (!sec.isFixed || !isJoined)) ? true : false);
       }
 
       totalEarnings += effectiveSecEarnings;
@@ -2710,6 +2805,8 @@ function renderEmployeeDetail(employeeId) {
       sectorCardsContainer.innerHTML = employeeSectors
         .map((sec) => {
           const color = sec.color || "#56829d";
+          const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+          const isJoined = monthKey >= secJoined;
           const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
           const secHours = secLogs.reduce((sum, l) => sum + l.hours, 0);
           const secTravel = secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
@@ -2717,9 +2814,9 @@ function renderEmployeeDetail(employeeId) {
           const rate = sec.rate || 0;
 
           const effectiveSecEarnings = sec.isFixed
-            ? ((Number(sec.netSalary) || 0) + secTravel)
+            ? (isJoined ? ((Number(sec.netSalary) || 0) + secTravel) : (secLogs.length > 0 ? (secLogEarnings + secTravel) : secTravel))
             : (sec.isProject && Number(sec.netSalary) > 0 && secLogs.length === 0
-                ? (Number(sec.netSalary) + secTravel)
+                ? (isJoined ? (Number(sec.netSalary) + secTravel) : secTravel)
                 : secLogEarnings);
 
           let isPaid = false;
@@ -2729,7 +2826,7 @@ function renderEmployeeDetail(employeeId) {
             const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
             isPaid = secUnpaid === 0;
           } else {
-            isPaid = sec.paid?.[monthKey] ?? ((secHours === 0 && secTravel === 0 && !sec.isFixed) ? true : false);
+            isPaid = sec.paid?.[monthKey] ?? ((secHours === 0 && secTravel === 0 && (!sec.isFixed || !isJoined)) ? true : false);
           }
 
           const secPaid = isPaid ? effectiveSecEarnings : 0;
@@ -3413,6 +3510,9 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   const sec = employee.sectors?.[sectorId];
   if (!sec) return "";
 
+  const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+  const isJoined = monthKey >= secJoined;
+
   const secLogs = state.rawLogs.filter(
     (l) => l.userId === employee.id && l.sectorId === sectorId && l.date.startsWith(monthKey)
   );
@@ -3421,9 +3521,9 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   const travel = sec.travelExpenses?.[monthKey] ?? secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
 
   const baseEarnings = sec.isFixed
-    ? ((Number(sec.netSalary) || 0) + travel)
+    ? (isJoined ? ((Number(sec.netSalary) || 0) + travel) : (hours > 0 ? (hours * (sec.rate || 0) + travel) : travel))
     : (sec.isProject && Number(sec.netSalary) > 0 && hours === 0
-        ? (Number(sec.netSalary) + travel)
+        ? (isJoined ? (Number(sec.netSalary) + travel) : travel)
         : (hours * (sec.rate || 0) + travel));
   const earnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
 
@@ -3434,7 +3534,7 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
     const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
     isPaid = secUnpaid === 0;
   } else {
-    isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && !sec.isFixed) ? true : false);
+    isPaid = sec.paid?.[monthKey] ?? ((hours === 0 && travel === 0 && (!sec.isFixed || !isJoined)) ? true : false);
   }
 
   const effectiveRate = sec.rate || secLogs.find((l) => l.rate > 0)?.rate || (hours > 0 ? Math.round(((earnings - travel) / hours) * 100) / 100 : 0);
@@ -3606,15 +3706,17 @@ function renderSectorDetail(sectorId) {
     if (singleEmp) {
       displayedEmployees = [singleEmp];
       const sec = singleEmp.sectors?.[sector.id];
+      const secJoined = sec.joinedMonth || singleEmp.joinedMonth || "9999-99";
+      const isJoined = monthKey >= secJoined;
       const secLogs = state.rawLogs.filter(
         (l) => l.userId === singleEmp.id && l.sectorId === sector.id && l.date.startsWith(monthKey)
       );
       dispHours = sec.hours?.[monthKey] ?? secLogs.reduce((sum, l) => sum + l.hours, 0);
       dispTravel = sec.travelExpenses?.[monthKey] ?? secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
       const baseEarnings = sec.isFixed
-        ? ((Number(sec.netSalary) || 0) + dispTravel)
+        ? (isJoined ? ((Number(sec.netSalary) || 0) + dispTravel) : (dispHours > 0 ? (dispHours * (sec.rate || 0) + dispTravel) : dispTravel))
         : (sec.isProject && Number(sec.netSalary) > 0 && dispHours === 0
-            ? (Number(sec.netSalary) + dispTravel)
+            ? (isJoined ? (Number(sec.netSalary) + dispTravel) : dispTravel)
             : (dispHours * (sec.rate || 0) + dispTravel));
       dispEarnings = sec.earnings?.[monthKey] !== undefined ? sec.earnings[monthKey] : baseEarnings;
 
@@ -3625,7 +3727,7 @@ function renderSectorDetail(sectorId) {
         const secUnpaid = secLogs.filter((l) => !l.isPaid).reduce((sum, l) => sum + l.earnings, 0);
         isPaid = secUnpaid === 0;
       } else {
-        isPaid = sec.paid?.[monthKey] ?? ((dispHours === 0 && dispTravel === 0 && !sec.isFixed) ? true : false);
+        isPaid = sec.paid?.[monthKey] ?? ((dispHours === 0 && dispTravel === 0 && (!sec.isFixed || !isJoined)) ? true : false);
       }
       dispUnpaid = isPaid ? 0 : dispEarnings;
       dispEmpCount = 1;
