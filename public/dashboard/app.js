@@ -2473,6 +2473,7 @@ function renderEmployees() {
 // ==========================================================================
 window.openEmployeeDetail = function (employeeId) {
   state.selectedEmployeeId = employeeId;
+  state.empDailyLogsSectorFilter = "all";
   try {
     sessionStorage.setItem("4p_selected_employee_id", employeeId);
   } catch (e) {}
@@ -2783,11 +2784,40 @@ function renderEmployeeDetail(employeeId) {
 
   // Daily Work Logs Table
   const dailyLogsTable = $("#empDailyLogsTable");
+  const filterSelect = $("#empLogsSectorFilter");
+  const selectedSector = state.empDailyLogsSectorFilter || "all";
+
+  if (filterSelect) {
+    const empSectors = Object.values(employee.sectors || {});
+    const sectorIds = new Set();
+    empSectors.forEach((s) => sectorIds.add(s.sectorId));
+    empMonthLogs.forEach((l) => {
+      if (l.sectorId) sectorIds.add(l.sectorId);
+    });
+
+    let optionsHtml = `<option value="all" ${selectedSector === "all" ? "selected" : ""}>Vsi sektorji (${empMonthLogs.length})</option>`;
+    sectorIds.forEach((secId) => {
+      const secObj = state.sectors.find((s) => s.id === secId) || empSectors.find((s) => s.sectorId === secId);
+      const secName = secObj?.name || secObj?.sectorName || "Sektor";
+      const secLogsCount = empMonthLogs.filter((l) => l.sectorId === secId).length;
+      optionsHtml += `<option value="${secId}" ${selectedSector === secId ? "selected" : ""}>${secName} (${secLogsCount})</option>`;
+    });
+    filterSelect.innerHTML = optionsHtml;
+  }
+
+  const displayLogs = selectedSector === "all"
+    ? empMonthLogs
+    : empMonthLogs.filter((l) => l.sectorId === selectedSector);
+
   if (dailyLogsTable) {
     if (empMonthLogs.length === 0) {
       dailyLogsTable.innerHTML = `<tr><td colspan="9" class="empty-cell">V tem mesecu (${monthLabel}) še ni zabeleženih delovnih ur za tega zaposlenega</td></tr>`;
+    } else if (displayLogs.length === 0) {
+      const selectedSecObj = state.sectors.find((s) => s.id === selectedSector) || Object.values(employee.sectors || {}).find((s) => s.sectorId === selectedSector);
+      const selectedSecName = selectedSecObj?.name || selectedSecObj?.sectorName || "izbrani sektor";
+      dailyLogsTable.innerHTML = `<tr><td colspan="9" class="empty-cell">Za sektor »${selectedSecName}« v mesecu ${monthLabel} ni zabeleženih delovnih ur</td></tr>`;
     } else {
-      const sortedLogs = [...empMonthLogs].sort((a, b) => b.date.localeCompare(a.date));
+      const sortedLogs = [...displayLogs].sort((a, b) => b.date.localeCompare(a.date));
       dailyLogsTable.innerHTML = sortedLogs
         .map((log) => {
           const color = log.color || "#56829d";
@@ -6371,6 +6401,13 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
 // Back button from Employee Detail
 $("#backToEmployeesList")?.addEventListener("click", () => {
   window.closeEmployeeDetail();
+});
+
+$("#empLogsSectorFilter")?.addEventListener("change", (e) => {
+  state.empDailyLogsSectorFilter = e.target.value;
+  if (state.selectedEmployeeId) {
+    renderEmployeeDetail(state.selectedEmployeeId);
+  }
 });
 
 // Dismiss button from Employee Detail
