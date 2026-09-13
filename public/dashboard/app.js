@@ -572,7 +572,6 @@ async function fetchApprovedRequests() {
     const { data, error } = await supabaseClient
       .from("workplace_requests")
       .select("*, workplaces(*)")
-      .eq("status", "approved")
       .order("created_at", { ascending: false });
 
     if (!error && Array.isArray(data)) {
@@ -580,6 +579,8 @@ async function fetchApprovedRequests() {
       const myJoinCodes = new Set(state.sectors.map((s) => s.code));
 
       const filtered = data.filter((req) => {
+        // Include both actively approved and historically connected/disconnected requests
+        if (req.status !== "approved" && req.status !== "disconnected") return false;
         return (
           myWorkplaceIds.has(req.workplace_id) ||
           myJoinCodes.has(req.workplaces?.join_code)
@@ -1027,7 +1028,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     sectorByIdMap.set(sec.id, sec);
   });
 
-  // 1. Process approved requests as the SOLE source of truth for active employment
+  // 1. Process approved and historical requests
   approvedReqs.forEach((req) => {
     const userId = req.user_id;
     if (!userId) return;
@@ -1044,30 +1045,28 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     if (!matchedSector) return;
 
-    // Check if the user has actively disconnected this workplace in their income sources:
-    // If the user has income sources, but none of them are linked to this sector (e.g. user removed the code in app),
-    // they are no longer connected!
+    // Check connection status: active or disconnected
+    const isReqDisconnected = req.status === "disconnected" || Boolean(req.disconnected_at);
     const userSources = sources.filter((s) => s.user_id === userId);
-    if (userSources.length > 0) {
-      const hasActiveConnection = userSources.some(
+    let hasActiveConnection = !isReqDisconnected;
+    if (hasActiveConnection && userSources.length > 0) {
+      hasActiveConnection = userSources.some(
         (s) =>
           (s.workplace_id && (s.workplace_id === matchedSector.id || s.workplace_id === req.workplace_id)) ||
           (s.join_code && (s.join_code === matchedSector.code || s.join_code === wp.join_code))
       );
-      if (!hasActiveConnection) {
-        return; // User disconnected from this sector in the app
-      }
     }
 
-    const userStatus = state.employeeCustomStatuses?.[userId] || "Zaposlen";
     const liveName = state.userProfiles.get(userId);
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
+    const userStatus = !hasActiveConnection ? "Prekinjena povezava" : (state.employeeCustomStatuses?.[userId] || "Zaposlen");
 
     if (!empMap.has(userId)) {
       empMap.set(userId, {
         id: userId,
         name: userName,
         status: userStatus,
+        isDisconnected: !hasActiveConnection,
         sectors: {},
         hours: {},
         travelExpenses: {},
@@ -1078,13 +1077,12 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     const emp = empMap.get(userId);
     if (emp) {
-      emp.status = userStatus;
       if (liveName && liveName !== "Neznan uporabnik") {
         emp.name = liveName;
       } else if (req.user_name && emp.name === "Zaposleni") {
         emp.name = req.user_name;
       }
-        if (!emp.sectors[matchedSector.id]) {
+      if (!emp.sectors[matchedSector.id]) {
         emp.sectors[matchedSector.id] = {
           sectorId: matchedSector.id,
           sectorName: matchedSector.name,
@@ -1096,6 +1094,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
           isProject: false,
           netSalary: 0,
           jobName: wp.name || matchedSector.name,
+          isDisconnected: !hasActiveConnection,
           hours: {},
           travelExpenses: {},
           earnings: {},
@@ -1150,47 +1149,75 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     }
   });
 
-  // Process work_logs: STRICTLY assign logs to the matching sector ONLY
+  // 3. Process work_logs: Strictly preserve all work logs belonging to this company's sectors
   state.rawLogs = [];
   logs.forEach((log) => {
     const userId = log.user_id;
-    if (!empMap.has(userId)) return;
-
-    // Check if the log belongs to a disconnected source
-    const sourceObj = sources.find((s) => s.id === log.source_id);
-    if (sourceObj && !sourceObj.workplace_id && !sourceObj.join_code) {
-      // Disconnected source: user deleted employer code in app, do not show under employer dashboard
-      return;
-    }
 
     // Find the exact sector for this work log
     let matchedSectorInfo = null;
-    if (log.source_id && sourceToSectorMap.has(log.source_id)) {
-      matchedSectorInfo = sourceToSectorMap.get(log.source_id);
-    } else if (log.workplace_id && sectorByIdMap.has(log.workplace_id)) {
+    if (log.workplace_id && sectorByIdMap.has(log.workplace_id)) {
       const sec = sectorByIdMap.get(log.workplace_id);
+      const sourceInfo = log.source_id && sourceToSectorMap.has(log.source_id) ? sourceToSectorMap.get(log.source_id) : null;
       matchedSectorInfo = {
         sectorId: sec.id,
         sectorName: sec.name,
         sectorCode: sec.code,
         color: sec.color || "#56829d",
-        type: "hourly",
-        hourlyRate: 0,
-        isFixed: false,
-        isProject: false,
-        netSalary: 0,
+        type: sourceInfo?.type || "hourly",
+        hourlyRate: sourceInfo?.hourlyRate || 0,
+        isFixed: sourceInfo?.isFixed || false,
+        isProject: sourceInfo?.isProject || false,
+        netSalary: sourceInfo?.netSalary || 0,
+        jobName: sourceInfo?.jobName || sec.name,
+        workplaceId: sec.id,
       };
+    } else if (log.source_id && sourceToSectorMap.has(log.source_id)) {
+      matchedSectorInfo = sourceToSectorMap.get(log.source_id);
     }
 
-    // STRICT ISOLATION: if this work log does not belong to any of this company's sectors, ignore it completely
+    // STRICT ISOLATION: If this work log does not belong to any of this company's sectors, ignore it completely!
+    // This ensures any new log entered by the employee after removing the employer code is NEVER accessible to the employer!
     if (!matchedSectorInfo) return;
+
+    // Ensure employee exists in empMap even if disconnected or deleted
+    if (!empMap.has(userId)) {
+      const fallbackName = log.employee_name || state.userProfiles.get(userId) || "Nekdanji zaposleni";
+      empMap.set(userId, {
+        id: userId,
+        name: fallbackName,
+        status: "Prekinjena povezava",
+        isDisconnected: true,
+        sectors: {},
+        hours: {},
+        travelExpenses: {},
+        earnings: {},
+        paid: {},
+      });
+    }
 
     const targetSectorId = matchedSectorInfo.sectorId;
     const emp = empMap.get(userId);
 
-    // If the employee is NOT actively connected to this sector, do NOT add it!
+    // Ensure sector exists on employee
     if (!emp.sectors[targetSectorId]) {
-      return;
+      emp.sectors[targetSectorId] = {
+        sectorId: targetSectorId,
+        sectorName: matchedSectorInfo.sectorName,
+        sectorCode: matchedSectorInfo.sectorCode,
+        color: matchedSectorInfo.color || "#56829d",
+        type: matchedSectorInfo.type || "hourly",
+        rate: matchedSectorInfo.hourlyRate || 0,
+        isFixed: matchedSectorInfo.isFixed || false,
+        isProject: matchedSectorInfo.isProject || false,
+        netSalary: matchedSectorInfo.netSalary || 0,
+        jobName: matchedSectorInfo.jobName || matchedSectorInfo.sectorName,
+        isDisconnected: emp.isDisconnected || false,
+        hours: {},
+        travelExpenses: {},
+        earnings: {},
+        paid: {},
+      };
     }
 
     const secEntry = emp.sectors[targetSectorId];
@@ -2372,7 +2399,7 @@ function renderEmployees() {
               <div class="person">
                 <span class="avatar">${initials(employee.name)}</span>
                 <strong>${employee.name}</strong>
-                <span class="chip" style="background: var(--primary-light); color: var(--primary-dark); font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${status}</span>
+                <span class="chip" style="background: ${employee.isDisconnected ? '#fef2f2' : 'var(--primary-light)'}; color: ${employee.isDisconnected ? '#dc2626' : 'var(--primary-dark)'}; border: 1px solid ${employee.isDisconnected ? '#fecaca' : 'transparent'}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${status}</span>
               </div>
             </td>
             <td style="min-width: 220px; vertical-align: middle;">
@@ -2489,12 +2516,21 @@ function renderEmployeeDetail(employeeId) {
     </div>
   `;
 
+  const statusBadgeHTML = employee.isDisconnected
+    ? `<span class="chip" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
+    : statusDropdownHTML;
+
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
-      ${statusDropdownHTML}
+      ${statusBadgeHTML}
       ${workTypeDropdownHTML}
       ${sectorBadgesHTML}
     `;
+  }
+
+  const dismissBtn = $("#dismissEmployeeBtn");
+  if (dismissBtn) {
+    dismissBtn.style.display = employee.isDisconnected ? "none" : "inline-flex";
   }
 
   // Find all work logs for this employee in this active month
@@ -3073,8 +3109,8 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
   }
 
   const confirmMsg = specificSectorId
-    ? `Ali ste prepričani, da želite zaposlenega "${empName}" odstraniti iz tega sektorja? Prekinil se bo pretok informacij in izbrisane bodo njegove dodeljene izmene v tem sektorju.`
-    : `Ali ste prepričani, da želite odpustiti zaposlenega "${empName}"? S tem boste prekinili povezavo z vašim podjetjem (vsemi sektorji) in izbrisali njegove prihodnje dodeljene izmene.`;
+    ? `Ali ste prepričani, da želite zaposlenega "${empName}" odstraniti iz tega sektorja? Povezava bo prekinjena, vsi pretekli podatki in ure pa bodo trajno ohranjeni v vaši evidenci.`
+    : `Ali ste prepričani, da želite odpustiti zaposlenega "${empName}"? Povezava bo prekinjena, vsi pretekli podatki, evidence in ure pa ostanejo trajno shranjeni v vašem 4P dashboardu.`;
 
   if (!confirm(confirmMsg)) return;
 
@@ -3084,15 +3120,20 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
   }
 
   try {
-    // 1. Izbriši iz workplace_requests
+    // 1. Posodobi v workplace_requests kot 'disconnected' (NE brišemo, da se trajno ohranijo pretekli podatki za delodajalca)
     const { error: reqErr } = await supabaseClient
       .from("workplace_requests")
-      .delete()
+      .update({
+        status: "disconnected",
+        is_active: false,
+        disconnected_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .eq("user_id", employeeId)
       .in("workplace_id", targetSectorIds);
 
     if (reqErr) {
-      console.warn("Brisanje zahteve ni uspelo, posodabljam status v 'denied':", reqErr);
+      console.warn("Posodobitev zahteve v 'disconnected' ni uspela, posodabljam status v 'denied':", reqErr);
       await supabaseClient
         .from("workplace_requests")
         .update({ status: "denied", updated_at: new Date().toISOString() })
@@ -3100,25 +3141,27 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
         .in("workplace_id", targetSectorIds);
     }
 
-    // 2. Izbriši dodeljene izmene v urniku tega sektorja / delodajalca
+    // 2. Izbriši le PRIHODNJE dodeljene izmene v urniku tega sektorja / delodajalca (pretekle ostanejo za evidenco)
+    const todayIso = new Date().toISOString().slice(0, 10);
     const { error: shiftErr } = await supabaseClient
       .from("schedule_shifts")
       .delete()
       .eq("user_id", employeeId)
-      .in("workplace_id", targetSectorIds);
+      .in("workplace_id", targetSectorIds)
+      .gte("date", todayIso);
 
     if (shiftErr) {
-      console.warn("Napaka pri brisanju dodeljenih izmen:", shiftErr);
+      console.warn("Napaka pri brisanju dodeljenih bodočih izmen:", shiftErr);
     }
 
-    alert(`Zaposleni "${empName}" je bil uspešno odpuščen in povezava prekinjena.`);
+    alert(`Zaposleni "${empName}" je bil uspešno odpuščen in povezava prekinjena. Vsi pretekli podatki in delovne ure so trajno shranjeni.`);
 
     // 3. Ponovno naloži podatke
     await loadAllData();
 
-    // 4. Če zaposleni nima več nobenega sektorja v tem podjetju, zapri profil
+    // 4. Posodobi pogled profila ali ostani v njem
     const updatedEmp = state.employees.find((e) => e.id === employeeId);
-    if (!updatedEmp || Object.keys(updatedEmp.sectors || {}).length === 0) {
+    if (!updatedEmp) {
       window.closeEmployeeDetail();
     } else {
       renderEmployeeDetail(employeeId);
