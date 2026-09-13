@@ -2212,16 +2212,24 @@ dialog.modal::backdrop {
 }
 
 .cal-select {
-  min-height: 38px;
-  padding: 6px 12px;
+  min-height: 40px;
+  padding: 0 14px;
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: var(--surface-soft);
+  background: var(--surface);
   color: var(--ink);
   outline: none;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 140ms ease;
+  font-family: inherit;
+}
+
+.cal-select:hover {
+  border-color: #cbd5e1;
+  background: var(--surface-soft);
 }
 
 .cal-select:focus {

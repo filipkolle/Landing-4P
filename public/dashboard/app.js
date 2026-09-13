@@ -3962,8 +3962,8 @@ function renderSchedule() {
     btn.classList.toggle("active", btn.dataset.scheduleMode === activeMode);
   });
 
-  // Render Sector Pills (Delovna mesta)
-  renderScheduleSectorPills();
+  // Populate Sector Filter Dropdown
+  renderScheduleSectorDropdown();
 
   if (typeof updateCalendarSyncUI === "function") {
     updateCalendarSyncUI();
@@ -4023,50 +4023,23 @@ function renderSchedule() {
   if ($("#scheduleActiveEmployees")) $("#scheduleActiveEmployees").textContent = uniqueEmps;
 }
 
-function renderScheduleSectorPills() {
-  const container = $("#scheduleSectorPills");
-  if (!container) return;
+function renderScheduleSectorDropdown() {
+  const secSelect = $("#scheduleSectorFilter");
+  if (!secSelect) return;
 
-  if (state.sectors.length === 0) {
-    container.innerHTML = `<span style="font-size: 12px; color: var(--muted);">Ni delovnih mest</span>`;
-    return;
-  }
-
-  if (state.sectors.length === 1) {
-    const sec = state.sectors[0];
-    const color = sec.color || "#56829d";
-    container.innerHTML = `
-      <div class="schedule-sector-pill active">
-        <span class="schedule-sector-pill-dot" style="background-color: ${color};"></span>
-        <span>${sec.name}</span>
-      </div>
-    `;
-    return;
-  }
-
-  const activeSector = state.scheduleSectorFilter || "all";
-  let html = `
-    <button type="button" class="schedule-sector-pill ${activeSector === "all" ? "active" : ""}" onclick="setScheduleSectorFilter('all')">
-      <span>Vsa delovna mesta</span>
-    </button>
+  const currentVal = state.scheduleSectorFilter || "all";
+  secSelect.innerHTML = `
+    <option value="all" ${currentVal === "all" ? "selected" : ""}>Vsa delovna mesta</option>
+    ${state.sectors
+      .map((s) => `<option value="${s.id}" ${currentVal === s.id ? "selected" : ""}>${s.name}</option>`)
+      .join("")}
   `;
-
-  state.sectors.forEach((sec) => {
-    const color = sec.color || "#56829d";
-    const isActive = activeSector === sec.id;
-    html += `
-      <button type="button" class="schedule-sector-pill ${isActive ? "active" : ""}" onclick="setScheduleSectorFilter('${sec.id}')">
-        <span class="schedule-sector-pill-dot" style="background-color: ${color};"></span>
-        <span>${sec.name}</span>
-      </button>
-    `;
-  });
-
-  container.innerHTML = html;
 }
 
 window.setScheduleSectorFilter = function (sectorId) {
   state.scheduleSectorFilter = sectorId;
+  const secSelect = $("#scheduleSectorFilter");
+  if (secSelect) secSelect.value = sectorId;
   renderSchedule();
 };
 
@@ -6513,6 +6486,11 @@ $$("[data-schedule-mode]").forEach((btn) => {
     } catch (e) {}
     renderSchedule();
   });
+});
+
+$("#scheduleSectorFilter")?.addEventListener("change", (e) => {
+  state.scheduleSectorFilter = e.target.value;
+  renderSchedule();
 });
 
 $("#scheduleEmployeeFilter")?.addEventListener("change", (e) => {

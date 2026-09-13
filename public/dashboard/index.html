@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=60" />
+    <link rel="stylesheet" href="styles.css?v=61" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -553,14 +553,12 @@
               </button>
             </div>
 
-            <!-- Izbira delovnih mest / sektorjev (Skupen ali posamezen sektor) -->
-            <div class="schedule-sector-selector-wrap" id="scheduleSectorSelectorWrap">
-              <div class="schedule-sector-pills" id="scheduleSectorPills"></div>
-            </div>
-
-            <!-- Filter po zaposlenih -->
+            <!-- Filtri (Sektorji & Zaposleni) -->
             <div class="cal-filters-group">
-              <select id="scheduleEmployeeFilter" class="cal-select">
+              <select id="scheduleSectorFilter" class="cal-select" aria-label="Izbira sektorja">
+                <option value="all">Vsa delovna mesta</option>
+              </select>
+              <select id="scheduleEmployeeFilter" class="cal-select" aria-label="Izbira zaposlenega">
                 <option value="all">Vsi zaposleni</option>
               </select>
             </div>
@@ -1241,6 +1239,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=72"></script>
+    <script src="app.js?v=73"></script>
   </body>
 </html>
