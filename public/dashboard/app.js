@@ -1812,6 +1812,7 @@ function getAnnualTotals(year) {
     monthsCount: yearMonths.size,
     employeesCount: state.employees.length,
     activeEmployeesCount: activeEmployeeIds.size,
+    activeMonths: Array.from(yearMonths),
   };
 }
 
@@ -2303,14 +2304,13 @@ function renderOverview() {
   state.employees.forEach((employee) => {
     let empUnpaid = 0;
     let empHours = 0;
-    for (let m = 1; m <= 12; m++) {
-      const mKey = `${annualTotals.year}-${String(m).padStart(2, "0")}`;
+    (annualTotals.activeMonths || []).forEach((mKey) => {
       const mData = employeeMonth(employee, null, mKey);
       empHours += mData.hours;
       if (!mData.paid && mData.earnings > 0) {
         empUnpaid += mData.earnings;
       }
-    }
+    });
     if (empUnpaid > 0) {
       unpaidEmployeesAnnual.push({ employee, unpaid: empUnpaid, hours: empHours });
     }
