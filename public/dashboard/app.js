@@ -3055,12 +3055,18 @@ window.closeSettingsCategory = function () {
 };
 
 function renderSettings() {
-  if ($("#companyName")) $("#companyName").value = state.companyName;
-  if ($("#accountEmail")) $("#accountEmail").value = state.currentUser?.email || "";
+  const compNameInput = $("#companyName");
+  if (compNameInput && document.activeElement !== compNameInput) {
+    compNameInput.value = state.companyName || "";
+  }
+  const emailInput = $("#accountEmail");
+  if (emailInput && document.activeElement !== emailInput) {
+    emailInput.value = state.currentUser?.email || "";
+  }
   if ($("#sidebarCompany")) $("#sidebarCompany").textContent = state.companyName || "Moje podjetje";
 
   const schedModeSelect = $("#settingOverviewScheduleMode");
-  if (schedModeSelect) {
+  if (schedModeSelect && document.activeElement !== schedModeSelect) {
     schedModeSelect.value = getOverviewScheduleViewMode();
     schedModeSelect.onchange = function () {
       saveOverviewScheduleSetting(this.value);
@@ -6441,9 +6447,21 @@ $("#companyForm")?.addEventListener("submit", async (event) => {
 
   state.companyName = newCompanyName;
   localStorage.setItem(getUserStorageKey("company_name"), newCompanyName);
+  localStorage.setItem("4p_company_name", newCompanyName);
+
+  if ($("#sidebarCompany")) $("#sidebarCompany").textContent = newCompanyName;
 
   if (state.currentUser) {
     await syncEmployerProfile(state.currentUser, newCompanyName);
+    if (supabaseClient) {
+      try {
+        await supabaseClient.auth.updateUser({
+          data: { company_name: newCompanyName }
+        });
+      } catch (e) {
+        console.log("updateUser metadata note:", e);
+      }
+    }
   }
 
   if (alertEl) {
