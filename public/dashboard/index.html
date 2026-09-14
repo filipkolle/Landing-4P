@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=63" />
+    <link rel="stylesheet" href="styles.css?v=64" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -1073,6 +1073,38 @@
       </div>
     </dialog>
 
+    <!-- Modal za podroben pregled odprte izmene -->
+    <dialog id="openShiftDetailsModal" class="modal" style="max-width: 500px; width: 100%;">
+      <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
+        <div class="modal-header" style="margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line);">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);">🔓 Odprta izmena</h2>
+              <span id="openShiftModalSpotsBadge" style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 100px;"></span>
+            </div>
+            <p id="openShiftModalDateSubtitle" style="margin: 0; font-size: 13px; color: var(--muted);"></p>
+          </div>
+          <button type="button" class="icon-button modal-close" onclick="closeOpenShiftDetailsModal()" aria-label="Zapri">✕</button>
+        </div>
+
+        <div id="openShiftModalBody" style="display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow-y: auto; padding-right: 2px;">
+          <!-- Dinamična vsebina -->
+        </div>
+
+        <div class="modal-actions" style="margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+          <button type="button" class="ghost-button" onclick="closeOpenShiftDetailsModal()" style="padding: 8px 16px; font-size: 13px; font-weight: 700;">Zapri</button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="delete-sector-btn" id="openShiftModalDeleteBtn" style="padding: 8px 14px; font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+              <span>🗑️</span> Izbriši
+            </button>
+            <button type="button" class="primary-button" id="openShiftModalEditBtn" style="padding: 8px 18px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <span>✏️</span> Uredi izmeno
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
     <!-- Modal za pregled podrobnosti dneva (prazniki, osebni dogodki, izmene) -->
     <dialog id="dayDetailsModal" class="modal" style="max-width: 540px; width: 100%;">
       <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
@@ -1237,6 +1269,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=73"></script>
+    <script src="app.js?v=74"></script>
   </body>
 </html>

@@ -2059,13 +2059,13 @@ function renderOverviewSchedule() {
         const color = s.color || "#56829d";
         return `
           <div class="overview-sched-shift-chip" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="${s.userName || 'Zaposleni'} · ${s.sectorName || ''} (${s.startTime} - ${s.endTime})">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-              <strong style="font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.userName || 'Izmena'}</strong>
-              <span style="font-size: 10px; font-weight: 700; color: ${color};">${number.format(s.hours)}h</span>
+            <div>
+              <strong style="font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${s.userName || 'Izmena'}</strong>
+              <div style="font-size: 9.5px; color: var(--muted); font-weight: 600; margin-top: 1px;">🕒 ${s.startTime}–${s.endTime}</div>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px; font-size: 10px; color: var(--muted);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 3px; font-size: 10px; color: var(--muted);">
               <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.sectorName || ''}</span>
-              <span style="white-space: nowrap; font-size: 9.5px;">${s.startTime || ''}</span>
+              <span style="font-size: 9.5px; font-weight: 700; color: ${color};">${number.format(s.hours)}h</span>
             </div>
           </div>
         `;
@@ -2077,12 +2077,13 @@ function renderOverviewSchedule() {
         const signupsCount = os.signups ? os.signups.length : 0;
         const isFull = signupsCount >= os.requiredSpots;
         return `
-          <div class="overview-sched-shift-chip" style="border-left-color: ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.07)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openShiftModal('${os.id}', null, null, true)" title="Odprta izmena: ${os.sectorName || ''} (${signupsCount}/${os.requiredSpots})">
+          <div class="overview-sched-shift-chip" style="border-left-color: ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.07)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${os.id}')" title="Odprta izmena: ${os.sectorName || ''} (${signupsCount}/${os.requiredSpots})">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
               <span style="font-size: 10px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta</span>
               <span style="font-size: 9.5px; font-weight: 700; padding: 1px 4px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${os.requiredSpots}</span>
             </div>
-            <div style="font-size: 10px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${os.sectorName || ''}</div>
+            <div style="font-size: 10.5px; font-weight: 700; color: var(--ink); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${os.sectorName || ''}</div>
+            <div style="font-size: 9.5px; color: var(--muted); margin-top: 1px; font-weight: 600;">🕒 ${os.startTime}–${os.endTime} (${number.format(os.hours)}h)</div>
           </div>
         `;
       }).join("");
@@ -4188,45 +4189,15 @@ function renderScheduleMonthView(container, dateObj, shifts) {
           const signupsCount = s.signups ? s.signups.length : 0;
           const isFull = signupsCount >= s.requiredSpots;
           return `
-            <div class="schedule-shift-chip is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 3.5px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.09)'};" onclick="event.stopPropagation(); openShiftModal('${s.id}', null, null, true)" title="Odprta izmena: ${signupsCount}/${s.requiredSpots} prijavljenih. Kliknite za podrobnosti.">
+            <div class="schedule-shift-chip is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 3.5px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.09)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')" title="Odprta izmena: ${signupsCount}/${s.requiredSpots} prijavljenih. Kliknite za podrobnosti.">
               <div class="schedule-shift-chip-top">
-                <span class="schedule-shift-chip-emp" style="color: ${color}; font-weight: 800; font-size: 11px;">🔓 ${s.sectorName}</span>
-                <span style="font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${s.requiredSpots}</span>
+                <span class="schedule-shift-chip-emp" style="color: ${color}; font-weight: 800; font-size: 10.5px;">🔓 Odprta izmena</span>
+                <span style="font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${s.requiredSpots}</span>
               </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-                <span class="schedule-shift-chip-time">${s.startTime}–${s.endTime}</span>
-                <span style="font-size: 10px; font-weight: 700; color: var(--ink);">${number.format(s.hours)}h</span>
+              <div style="margin-top: 2px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">● ${s.sectorName}</div>
+                <div style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 1px;">🕒 ${s.startTime}–${s.endTime} (${number.format(s.hours)}h)</div>
               </div>
-              ${s.note && s.note !== "Odprta izmena" ? `<span style="font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.note}</span>` : ""}
-
-              ${signupsCount > 0 ? `
-                <div class="open-shift-signups-container" style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed ${color}50; display: flex; flex-direction: column; gap: 2.5px;">
-                  ${s.signups.map((su) => `
-                    <div class="open-shift-user-badge" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; background: #ffffff; padding: 2px 5px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.07); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                      <div style="display: flex; align-items: center; gap: 4px; min-width: 0;">
-                        <span class="avatar" style="width: 16px; height: 16px; font-size: 8px; font-weight: 700; background: ${color}20; color: ${color}; flex-shrink: 0;">${initials(su.userName)}</span>
-                        <span style="font-weight: 700; font-size: 10.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${su.userName}</span>
-                      </div>
-                      <span style="font-size: 8.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 0.5px 4px; border-radius: 3px; flex-shrink: 0;">Prijavljen</span>
-                    </div>
-                  `).join('')}
-                  ${!isFull ? `
-                    <div style="font-size: 9.5px; color: #b45309; font-weight: 600; padding: 1px 2px; display: flex; align-items: center; gap: 3px;">
-                      <span style="font-size: 9px;">➕</span>
-                      <span>Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}</span>
-                    </div>
-                  ` : `
-                    <div style="font-size: 9px; color: #15803d; font-weight: 700; padding: 1px 2px; display: flex; align-items: center; gap: 3px;">
-                      <span style="font-size: 9px;">✓</span>
-                      <span>Zasedeno</span>
-                    </div>
-                  `}
-                </div>
-              ` : `
-                <div style="font-size: 9.5px; color: #b45309; font-style: italic; margin-top: 3px; display: flex; align-items: center; gap: 3px;">
-                  <span>⏳</span><span>Čaka na prijave (${s.requiredSpots} ${getSpotsLabel(s.requiredSpots)})</span>
-                </div>
-              `}
             </div>
           `;
         })
@@ -4240,15 +4211,15 @@ function renderScheduleMonthView(container, dateObj, shifts) {
           const color = s.color || "#56829d";
           return `
             <div class="schedule-shift-chip" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="Kliknite za urejanje izmene">
-              <div class="schedule-shift-chip-top">
-                <span class="schedule-shift-chip-emp">${s.userName}</span>
-                <span class="schedule-shift-chip-time">${s.startTime}–${s.endTime}</span>
+              <div style="display: flex; flex-direction: column; gap: 1px;">
+                <strong class="schedule-shift-chip-emp" style="font-size: 11.5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.userName}</strong>
+                <span class="schedule-shift-chip-time" style="font-size: 10px; color: var(--muted); font-weight: 600;">🕒 ${s.startTime}–${s.endTime}</span>
               </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-                <span class="schedule-shift-chip-sector" style="color: ${color};">● ${s.sectorName}</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px;">
+                <span class="schedule-shift-chip-sector" style="color: ${color}; font-size: 10px;">● ${s.sectorName}</span>
                 <span style="font-size: 10px; font-weight: 700; color: var(--ink);">${number.format(s.hours)}h</span>
               </div>
-              ${s.note ? `<span style="font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.note}</span>` : ""}
+              ${s.note ? `<span style="font-size: 9.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;">${s.note}</span>` : ""}
             </div>
           `;
         })
@@ -4344,53 +4315,29 @@ function renderScheduleWeekView(container, days, shifts) {
           const signupsCount = s.signups ? s.signups.length : 0;
           const isFull = signupsCount >= s.requiredSpots;
           return `
-            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openShiftModal('${s.id}', null, null, true)">
-              <div class="schedule-week-shift-emp-row">
+            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')">
+              <div class="schedule-week-shift-emp-row" style="margin-bottom: 2px;">
                 <span style="font-size: 11px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta izmena</span>
-                <span style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 100px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">
+                <span style="font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 100px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">
                   ${signupsCount}/${s.requiredSpots} mest
                 </span>
               </div>
 
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-                <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
-                  <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
-                  ${s.sectorName}
-                </span>
-                <span class="schedule-week-shift-time-badge">${s.startTime} – ${s.endTime} (${number.format(s.hours)}h)</span>
+              <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 4px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <span class="sector-color-dot" style="background-color: ${color}; width: 7px; height: 7px;"></span>
+                  <strong style="font-size: 12px; color: var(--ink);">${s.sectorName}</strong>
+                </div>
+                <div style="font-size: 11px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 4px;">
+                  <span>🕒</span>
+                  <span>${s.startTime} – ${s.endTime} (${number.format(s.hours)} ur)</span>
+                </div>
               </div>
 
-              ${s.note && s.note !== "Odprta izmena" ? `<div class="cal-shift-note-box" style="margin-top: 4px; font-size: 11px;">${s.note}</div>` : ""}
-
-              ${signupsCount > 0 ? `
-                <div class="open-shift-signups-container" style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed ${color}50; display: flex; flex-direction: column; gap: 4px;">
-                  <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;">Prijavljeni zaposleni:</div>
-                  ${s.signups.map((su) => `
-                    <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                      <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                        <span class="avatar" style="width: 20px; height: 20px; font-size: 9px; font-weight: 700; background: ${color}20; color: ${color}; flex-shrink: 0;">${initials(su.userName)}</span>
-                        <span style="font-weight: 700; font-size: 11.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${su.userName}</span>
-                      </div>
-                      <span style="font-size: 9.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">Prijavljen</span>
-                    </div>
-                  `).join('')}
-                  ${!isFull ? `
-                    <div style="font-size: 10px; color: #b45309; font-weight: 600; padding: 2px 4px; display: flex; align-items: center; gap: 4px;">
-                      <span style="font-size: 10px;">➕</span>
-                      <span>Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}</span>
-                    </div>
-                  ` : `
-                    <div style="font-size: 10px; color: #15803d; font-weight: 700; padding: 2px 4px; display: flex; align-items: center; gap: 4px;">
-                      <span style="font-size: 10px;">✓</span>
-                      <span>Vsa mesta zasedena</span>
-                    </div>
-                  `}
-                </div>
-              ` : `
-                <div style="font-size: 10.5px; color: #b45309; font-style: italic; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
-                  <span>⏳</span><span>Čaka na prijave zaposlenih (${s.requiredSpots} ${getSpotsLabel(s.requiredSpots)})</span>
-                </div>
-              `}
+              <div style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed ${color}40; display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; color: ${isFull ? '#15803d' : '#b45309'}; font-weight: 700;">
+                <span>${isFull ? '✓ Zasedeno' : `➕ Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}`}</span>
+                <span style="font-size: 10px; color: var(--muted); font-weight: 500;">Podrobnosti ›</span>
+              </div>
             </article>
           `;
         })
@@ -4427,17 +4374,18 @@ function renderScheduleWeekView(container, days, shifts) {
           const color = s.color || "#56829d";
           return `
             <article class="schedule-week-shift-card" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')">
-              <div class="schedule-week-shift-emp-row">
+              <div class="schedule-week-shift-emp-stacked">
                 <div class="schedule-week-shift-emp">
-                  <span class="avatar" style="width: 26px; height: 26px; font-size: 10px;">${initials(s.userName)}</span>
-                  <span>${s.userName}</span>
+                  <span class="avatar" style="width: 24px; height: 24px; font-size: 9.5px; flex-shrink: 0;">${initials(s.userName)}</span>
+                  <strong style="font-size: 13px; color: var(--ink); line-height: 1.2;">${s.userName}</strong>
                 </div>
-                <span class="schedule-week-shift-time-badge">
-                  ${s.startTime} – ${s.endTime}
-                </span>
+                <div class="schedule-week-shift-time-stacked" style="margin-top: 3px; font-size: 11.5px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 4px;">
+                  <span>🕒</span>
+                  <span>${s.startTime} – ${s.endTime}</span>
+                </div>
               </div>
 
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--line);">
                 <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
                   <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
                   ${s.sectorName}
@@ -4926,6 +4874,175 @@ window.closeShiftModal = function () {
   }
 };
 
+window.openOpenShiftDetailsModal = function (openShiftId) {
+  const modal = $("#openShiftDetailsModal");
+  if (!modal) {
+    window.openShiftModal(openShiftId, null, null, true);
+    return;
+  }
+
+  const openShift = (typeof getEnrichedOpenShifts === "function" ? getEnrichedOpenShifts() : []).find((s) => s.id === openShiftId) || (state.openShifts || []).find((s) => s.id === openShiftId);
+  if (!openShift) return;
+
+  const color = openShift.color || "#f59e0b";
+  const signups = openShift.signups || [];
+  const signupsCount = signups.length;
+  const isFull = signupsCount >= openShift.requiredSpots;
+  const freeSpots = Math.max(0, openShift.requiredSpots - signupsCount);
+
+  // Set header info
+  const dateTitleEl = $("#openShiftModalDateSubtitle");
+  if (dateTitleEl) {
+    dateTitleEl.textContent = formatSloDateString(openShift.date);
+  }
+
+  const spotsBadgeEl = $("#openShiftModalSpotsBadge");
+  if (spotsBadgeEl) {
+    spotsBadgeEl.textContent = `${signupsCount}/${openShift.requiredSpots} mest`;
+    spotsBadgeEl.style.background = isFull ? "#dcfce7" : "#fef3c7";
+    spotsBadgeEl.style.color = isFull ? "#15803d" : "#b45309";
+  }
+
+  const bodyEl = $("#openShiftModalBody");
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      <!-- Sektor in Ura -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--surface-soft); padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Sektor / Delovno mesto</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span class="sector-color-dot" style="background-color: ${color}; width: 8px; height: 8px;"></span>
+            <strong style="font-size: 14px; color: var(--ink);">${openShift.sectorName || 'Sektor'}</strong>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Delovni čas</div>
+          <div style="font-size: 14px; font-weight: 800; color: var(--ink); margin-top: 4px;">
+            ${openShift.startTime} – ${openShift.endTime}
+            <span style="font-size: 12px; font-weight: 600; color: var(--muted);">(${number.format(openShift.hours)} h)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zasedenost mest -->
+      <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--ink);">Stanje zasedenosti mest:</span>
+          <span style="font-size: 12px; font-weight: 800; color: ${isFull ? '#15803d' : '#b45309'};">
+            ${isFull ? '✓ Vsa mesta zasedena' : `Še ${freeSpots} ${getSpotsLabel(freeSpots)}`}
+          </span>
+        </div>
+        <div class="progress" style="height: 7px; margin-top: 4px;">
+          <span style="width: ${Math.min(100, Math.round((signupsCount / openShift.requiredSpots) * 100))}%; background-color: ${isFull ? '#10b981' : color};"></span>
+        </div>
+      </div>
+
+      <!-- Seznam prijavljenih zaposlenih -->
+      <div>
+        <div style="font-size: 12px; font-weight: 800; color: var(--ink); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+          <span>Prijavljeni zaposleni (${signupsCount}):</span>
+        </div>
+        ${signups.length === 0 ? `
+          <div style="padding: 16px; text-align: center; background: var(--surface-soft); border-radius: 8px; border: 1px dashed var(--line); font-size: 12.5px; color: var(--muted);">
+            ⏳ Zaenkrat še ni prijavljenih zaposlenih.<br/>
+            <span style="font-size: 11.5px;">Zaposleni se lahko prijavijo prek mobilne aplikacije.</span>
+          </div>
+        ` : `
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${signups.map((su) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="avatar" style="width: 26px; height: 26px; font-size: 10px; font-weight: 700; background: ${color}20; color: ${color};">${initials(su.userName)}</span>
+                  <div>
+                    <strong style="font-size: 13px; color: var(--ink); display: block;">${su.userName}</strong>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 10.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px;">Prijavljen</span>
+                  <button type="button" onclick="handleRemoveOpenShiftSignup('${openShift.id}', '${su.id || ''}', '${su.userId}'); openOpenShiftDetailsModal('${openShift.id}');" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: 700; padding: 4px;" title="Odstrani prijavo">✕</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+
+      <!-- Opomba / Navodila -->
+      ${openShift.note && openShift.note !== "Odprta izmena" ? `
+        <div style="background: var(--surface-soft); padding: 10px 12px; border-radius: 8px; border-left: 3px solid ${color}; font-size: 12px; color: var(--muted);">
+          <strong style="color: var(--ink); display: block; margin-bottom: 2px;">Opomba za zaposlene:</strong>
+          ${openShift.note}
+        </div>
+      ` : ""}
+    `;
+  }
+
+  // Edit button action
+  const editBtn = $("#openShiftModalEditBtn");
+  if (editBtn) {
+    editBtn.onclick = function () {
+      closeOpenShiftDetailsModal();
+      window.openShiftModal(openShift.id, null, null, true);
+    };
+  }
+
+  // Delete button action
+  const deleteBtn = $("#openShiftModalDeleteBtn");
+  if (deleteBtn) {
+    deleteBtn.onclick = async function () {
+      if (confirm("Ali ste prepričani, da želite izbrisati to odprto izmeno? S tem se bodo izbrisale tudi vse morebitne prijave zaposlenih.")) {
+        closeOpenShiftDetailsModal();
+        state.openShifts = (state.openShifts || []).filter((s) => s.id !== openShift.id);
+        localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
+        renderSchedule();
+
+        if (supabaseClient && state.currentUser) {
+          try {
+            await supabaseClient.from("open_shifts").delete().eq("id", openShift.id);
+            await fetchOpenShifts();
+            renderSchedule();
+          } catch (e) {
+            console.warn("Supabase open_shift delete error:", e);
+          }
+        }
+        syncCalendarFeedToSupabase();
+      }
+    };
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.setAttribute("open", "");
+  }
+};
+
+window.closeOpenShiftDetailsModal = function () {
+  const modal = $("#openShiftDetailsModal");
+  if (!modal) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.removeAttribute("open");
+  }
+};
+
+const openShiftDetailsModalEl = $("#openShiftDetailsModal");
+openShiftDetailsModalEl?.addEventListener("click", (e) => {
+  if (e.target === openShiftDetailsModalEl) closeOpenShiftDetailsModal();
+});
+
+const dayDetailsModalEl = $("#dayDetailsModal");
+dayDetailsModalEl?.addEventListener("click", (e) => {
+  if (e.target === dayDetailsModalEl) closeDayDetailsModal();
+});
+
+const shiftModalEl = $("#shiftModal");
+shiftModalEl?.addEventListener("click", (e) => {
+  if (e.target === shiftModalEl) closeShiftModal();
+});
+
+
 window.openDayDetailsModal = function (dateStr) {
   if (!dateStr) return;
   state.selectedDayModalDate = dateStr;
@@ -5042,7 +5159,7 @@ window.openDayDetailsModal = function (dateStr) {
             const signupsCount = os.signups ? os.signups.length : 0;
             const isFull = signupsCount >= os.requiredSpots;
             return `
-              <div style="background: #ffffff; border: 1px solid ${color}40; border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${os.id}', null, null, true);" title="Kliknite za urejanje odprte izmene">
+              <div style="background: #ffffff; border: 1px solid ${color}40; border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openOpenShiftDetailsModal('${os.id}');" title="Kliknite za podrobnosti odprte izmene">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-weight: 800; font-size: 13px; color: ${color};">🔓 ${os.sectorName}</span>
