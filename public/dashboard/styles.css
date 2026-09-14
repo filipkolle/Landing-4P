@@ -165,6 +165,15 @@ button {
   height: 24px;
   place-items: center;
   color: #9cbccc;
+  transition: color 160ms ease;
+}
+
+.nav-item:hover .icon {
+  color: #ffffff;
+}
+
+.nav-item.active .icon {
+  color: #ffffff;
 }
 
 .company-card {
