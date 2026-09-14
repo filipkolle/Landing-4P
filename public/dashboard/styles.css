@@ -2215,6 +2215,43 @@ dialog.modal::backdrop {
   box-shadow: 0 2px 8px rgba(86, 130, 157, 0.35);
 }
 
+/* Overview Schedule View Mode Toggle (Pon-Ned vs 7 dni) */
+.overview-sched-mode-toggle {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  gap: 3px;
+}
+
+.overview-sched-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 140ms ease;
+  font-family: inherit;
+}
+
+.overview-sched-toggle-btn:hover {
+  color: var(--ink);
+  background: rgba(86, 130, 157, 0.08);
+}
+
+.overview-sched-toggle-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(86, 130, 157, 0.35);
+}
+
 .cal-filters-group {
   display: flex;
   align-items: center;

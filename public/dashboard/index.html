@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=65" />
+    <link rel="stylesheet" href="styles.css?v=66" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -237,11 +237,11 @@
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <!-- Hitri preklopnik med pogledoma -->
-                <div class="shift-type-selector" style="display: flex; gap: 3px; background: var(--surface-soft); padding: 3px; border-radius: 8px; border: 1px solid var(--line);">
-                  <button type="button" class="shift-type-btn active" id="overviewSchedBtnWorkweek" onclick="setOverviewScheduleViewMode('workweek')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Ponedeljek – Nedelja">
+                <div class="overview-sched-mode-toggle" id="overviewSchedModeToggle">
+                  <button type="button" class="overview-sched-toggle-btn active" id="overviewSchedBtnWorkweek" onclick="setOverviewScheduleViewMode('workweek')" title="Ponedeljek – Nedelja">
                     Pon – Ned
                   </button>
-                  <button type="button" class="shift-type-btn" id="overviewSchedBtnRolling7" onclick="setOverviewScheduleViewMode('rolling_7')" style="padding: 4px 9px; font-size: 11.5px; border-radius: 6px;" title="Naslednjih 7 dni od danes">
+                  <button type="button" class="overview-sched-toggle-btn" id="overviewSchedBtnRolling7" onclick="setOverviewScheduleViewMode('rolling_7')" title="Naslednjih 7 dni od danes">
                     7 dni
                   </button>
                 </div>
@@ -1269,6 +1269,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=76"></script>
+    <script src="app.js?v=77"></script>
   </body>
 </html>
