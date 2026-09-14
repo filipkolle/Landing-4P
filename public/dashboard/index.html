@@ -448,10 +448,16 @@
               <button type="button" class="ghost-button" id="backToEmployeesList" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
                 <span>←</span> Nazaj na seznam zaposlenih
               </button>
-              <button type="button" id="dismissEmployeeBtn" class="btn-danger-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; color: #ef4444; border: 1px solid #fca5a5; background: #fef2f2; cursor: pointer; transition: all 0.2s;" title="Prekini povezavo in odstrani zaposlenega iz vseh vaših sektorjev">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
-                Odpusti zaposlenega
-              </button>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="dismissEmployeeBtn" class="btn-danger-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; color: #ef4444; border: 1px solid #fca5a5; background: #fef2f2; cursor: pointer; transition: all 0.2s;" title="Prekini povezavo in odstrani zaposlenega iz vseh vaših sektorjev">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+                  <span>Odpusti zaposlenega</span>
+                </button>
+                <button type="button" id="purgeEmployeeHistoryBtn" class="btn-danger-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; color: #b91c1c; border: 1px solid #f87171; background: #fef2f2; cursor: pointer; transition: all 0.2s;" title="Dokončno in nepovratno izbriši vse zgodovinske podatke, delovne ure in evidence tega zaposlenega">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  <span>Izbriši zgodovino zaposlenega</span>
+                </button>
+              </div>
             </div>
 
             <!-- Glavna kartica zaposlenega z metriko -->
@@ -1324,6 +1330,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=83"></script>
+    <script src="app.js?v=84"></script>
   </body>
 </html>

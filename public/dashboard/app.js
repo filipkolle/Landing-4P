@@ -2601,34 +2601,42 @@ function renderEmployees() {
         const isFull = paidPercent === 100 && totalEarnings > 0;
         const isZeroEarnings = totalEarnings === 0 && totalHours === 0;
 
+        const isDisconnected = Boolean(employee.isDisconnected);
+        const redColor = "#dc2626";
+        const redBg = "#fef2f2";
+        const redBorder = "#fca5a5";
+
         return `
-          <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}')">
+          <tr class="clickable-employee-row ${isDisconnected ? 'is-disconnected-row' : ''}" onclick="openEmployeeDetail('${employee.id}')" style="${isDisconnected ? 'background: #fff8f8; border-left: 4px solid #ef4444;' : ''}">
             <td>
               <div class="person">
-                <span class="avatar">${initials(employee.name)}</span>
-                <strong>${employee.name}</strong>
-                <span class="chip" style="background: ${employee.isDisconnected ? '#fef2f2' : 'var(--primary-light)'}; color: ${employee.isDisconnected ? '#dc2626' : 'var(--primary-dark)'}; border: 1px solid ${employee.isDisconnected ? '#fecaca' : 'transparent'}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${status}</span>
+                <span class="avatar" style="${isDisconnected ? 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;' : ''}">${initials(employee.name)}</span>
+                <div>
+                  <strong style="${isDisconnected ? 'color: #dc2626;' : ''}">${employee.name}</strong>
+                  ${isDisconnected ? `<span style="display: block; font-size: 11px; color: #ef4444; font-weight: 600;">Prekinjena povezava</span>` : ''}
+                </div>
+                <span class="chip" style="background: ${isDisconnected ? redBg : 'var(--primary-light)'}; color: ${isDisconnected ? redColor : 'var(--primary-dark)'}; border: 1px solid ${isDisconnected ? redBorder : 'transparent'}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${isDisconnected ? 'Prekinjena povezava' : status}</span>
               </div>
             </td>
             <td style="min-width: 220px; vertical-align: middle;">
               <div class="emp-progress-cell" style="display: flex; flex-direction: column; gap: 4px; max-width: 220px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
-                  <span style="font-weight: 700; color: ${isZeroEarnings ? 'var(--muted)' : (isFull ? '#10b981' : (paidPercent > 0 ? 'var(--primary-dark)' : 'var(--muted)'))};">
-                    ${isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`}
+                  <span style="font-weight: 700; color: ${isDisconnected ? redColor : (isZeroEarnings ? 'var(--muted)' : (isFull ? '#10b981' : (paidPercent > 0 ? 'var(--primary-dark)' : 'var(--muted)')))};">
+                    ${isDisconnected ? 'Prekinjena povezava' : (isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`)}
                   </span>
-                  <span style="font-size: 11px; color: var(--muted); font-weight: 600;">
+                  <span style="font-size: 11px; color: ${isDisconnected ? redColor : 'var(--muted)'}; font-weight: 600;">
                     ${currency.format(paidEarnings)} / ${currency.format(totalEarnings)}
                   </span>
                 </div>
-                <div class="progress" style="margin-top: 0; height: 6px; background: #e2e8f0;" title="${isZeroEarnings ? 'Brez zabeleženih ur v tem mesecu' : `${paidPercent}% izplačano (${currency.format(paidEarnings)} od ${currency.format(totalEarnings)})`}">
-                  <span style="width: ${paidPercent}%; background-color: ${isZeroEarnings ? 'var(--line)' : (isFull ? '#10b981' : 'var(--primary)')};"></span>
+                <div class="progress" style="margin-top: 0; height: 6px; background: ${isDisconnected ? '#fee2e2' : '#e2e8f0'};" title="${isZeroEarnings ? 'Brez zabeleženih ur v tem mesecu' : `${paidPercent}% izplačano (${currency.format(paidEarnings)} od ${currency.format(totalEarnings)})`}">
+                  <span style="width: ${paidPercent}%; background-color: ${isDisconnected ? '#ef4444' : (isZeroEarnings ? 'var(--line)' : (isFull ? '#10b981' : 'var(--primary)'))};"></span>
                 </div>
               </div>
             </td>
             <td style="text-align: right; padding-right: 24px; vertical-align: middle;">
               <div style="display: inline-flex; align-items: center; gap: 10px;">
                 ${sectorBadgesHTML}
-                <span style="color: var(--muted); font-size: 18px; line-height: 1; margin-left: 4px;">›</span>
+                <span style="color: ${isDisconnected ? redColor : 'var(--muted)'}; font-size: 18px; line-height: 1; margin-left: 4px;">›</span>
               </div>
             </td>
           </tr>
@@ -2695,13 +2703,32 @@ function renderEmployeeDetail(employeeId) {
   const employee = state.employees.find((e) => e.id === employeeId);
   if (!employee) return;
 
+  const isDisconnected = Boolean(employee.isDisconnected);
+  const redColor = "#dc2626";
+
   const monthObj = activeMonth();
   const monthKey = monthObj.key;
   const monthLabel = monthObj.label;
 
   // Header info
-  if ($("#empDetailAvatar")) $("#empDetailAvatar").textContent = initials(employee.name);
-  if ($("#empDetailName")) $("#empDetailName").textContent = employee.name;
+  const avatarEl = $("#empDetailAvatar");
+  const nameEl = $("#empDetailName");
+  if (avatarEl) {
+    avatarEl.textContent = initials(employee.name);
+    if (isDisconnected) {
+      avatarEl.style.background = "#fee2e2";
+      avatarEl.style.color = redColor;
+      avatarEl.style.border = "2px solid #fca5a5";
+    } else {
+      avatarEl.style.background = "";
+      avatarEl.style.color = "";
+      avatarEl.style.border = "";
+    }
+  }
+  if (nameEl) {
+    nameEl.textContent = employee.name;
+    nameEl.style.color = isDisconnected ? redColor : "var(--ink)";
+  }
   if ($("#empDetailMonthPill")) $("#empDetailMonthPill").textContent = monthLabel;
 
   const employeeSectors = Object.values(employee.sectors || {});
@@ -2737,21 +2764,33 @@ function renderEmployeeDetail(employeeId) {
     </div>
   `;
 
-  const statusBadgeHTML = employee.isDisconnected
-    ? `<span class="chip" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
+  const statusBadgeHTML = isDisconnected
+    ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
     : statusDropdownHTML;
+
+  const disconnectedBannerHTML = isDisconnected
+    ? `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Povezava s tem zaposlenim je prekinjena. Vsi podatki spodaj so arhivirani zgodovinski zapisi.</span>
+       </div>`
+    : "";
 
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusBadgeHTML}
-      ${workTypeDropdownHTML}
+      ${isDisconnected ? "" : workTypeDropdownHTML}
       ${sectorBadgesHTML}
+      ${disconnectedBannerHTML}
     `;
   }
 
   const dismissBtn = $("#dismissEmployeeBtn");
   if (dismissBtn) {
-    dismissBtn.style.display = employee.isDisconnected ? "none" : "inline-flex";
+    dismissBtn.style.display = isDisconnected ? "none" : "inline-flex";
+  }
+  const purgeBtn = $("#purgeEmployeeHistoryBtn");
+  if (purgeBtn) {
+    purgeBtn.style.display = "inline-flex";
   }
 
   // Find all work logs for this employee in this active month
@@ -2813,7 +2852,10 @@ function renderEmployeeDetail(employeeId) {
   const logOvertimeMap = calculateEmployeeMonthlyOvertime(empMonthLogs, workNorm.requiredHours);
   const totalMonthOvertime = Math.max(0, Math.round((totalHours - workNorm.requiredHours) * 100) / 100);
 
-  if ($("#empDetailTotalHours")) $("#empDetailTotalHours").textContent = `${number.format(totalHours)} h`;
+  if ($("#empDetailTotalHours")) {
+    $("#empDetailTotalHours").textContent = `${number.format(totalHours)} h`;
+    $("#empDetailTotalHours").style.color = isDisconnected ? redColor : "var(--ink)";
+  }
   if ($("#empDetailHourlyRate")) {
     const isAnyFixed = employeeSectors.some((s) => s.isFixed);
     if (isAnyFixed && employeeSectors.every((s) => s.isFixed)) {
@@ -2828,12 +2870,19 @@ function renderEmployeeDetail(employeeId) {
       });
       $("#empDetailHourlyRate").textContent = descriptions.join(" · ") || "-";
     }
+    $("#empDetailHourlyRate").style.color = isDisconnected ? redColor : "var(--ink)";
   }
-  if ($("#empDetailTravel")) $("#empDetailTravel").textContent = currency.format(totalTravel);
-  if ($("#empDetailTotalEarnings")) $("#empDetailTotalEarnings").textContent = currency.format(totalEarnings);
+  if ($("#empDetailTravel")) {
+    $("#empDetailTravel").textContent = currency.format(totalTravel);
+    $("#empDetailTravel").style.color = isDisconnected ? redColor : "var(--ink)";
+  }
+  if ($("#empDetailTotalEarnings")) {
+    $("#empDetailTotalEarnings").textContent = currency.format(totalEarnings);
+    $("#empDetailTotalEarnings").style.color = isDisconnected ? redColor : "var(--ink)";
+  }
   if ($("#empDetailUnpaid")) {
     $("#empDetailUnpaid").textContent = currency.format(unpaidAmount);
-    $("#empDetailUnpaid").style.color = unpaidAmount > 0 ? "var(--amber)" : "var(--primary-dark)";
+    $("#empDetailUnpaid").style.color = isDisconnected ? redColor : (unpaidAmount > 0 ? "var(--amber)" : "var(--primary-dark)");
   }
 
   // Posodobitev kartic za Nedelje, Praznike in Nadure
@@ -3648,6 +3697,78 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
   } catch (err) {
     console.error("Napaka pri odpuščanju zaposlenega:", err);
     alert("Prišlo je do napake: " + (err.message || err));
+  }
+};
+
+// Dokončno izbriši vse zgodovinske podatke zaposlenega
+window.handlePurgeEmployeeHistory = async function (employeeId) {
+  const emp = state.employees.find((e) => e.id === employeeId);
+  const empName = emp ? emp.name : "tega zaposlenega";
+  const targetSectorIds = state.sectors.map((s) => s.id);
+
+  const confirmed = await showConfirmDialog({
+    title: "Trajni izbris podatkov zaposlenega",
+    message: `Ali ste prepričani, da želite dokončno in nepovratno izbrisati vse pretekle podatke, delovne ure, izmene ter evidenco za zaposlenega "${empName}"? Tega dejanja ni mogoče razveljaviti.`,
+    confirmText: "Dokončno izbriši",
+    cancelText: "Prekliči",
+    isDanger: true,
+  });
+
+  if (!confirmed) return;
+
+  try {
+    if (supabaseClient) {
+      // 1. Izbriši vse delovne ure tega zaposlenega v sektorjih tega delodajalca
+      if (targetSectorIds.length > 0) {
+        await supabaseClient
+          .from("work_logs")
+          .delete()
+          .eq("user_id", employeeId)
+          .in("workplace_id", targetSectorIds);
+
+        // 2. Izbriši vse izmene v urniku
+        await supabaseClient
+          .from("schedule_shifts")
+          .delete()
+          .eq("user_id", employeeId)
+          .in("workplace_id", targetSectorIds);
+
+        // 3. Izbriši povezave / zahteve
+        await supabaseClient
+          .from("workplace_requests")
+          .delete()
+          .eq("user_id", employeeId)
+          .in("workplace_id", targetSectorIds);
+      } else {
+        await supabaseClient
+          .from("workplace_requests")
+          .delete()
+          .eq("user_id", employeeId);
+      }
+    }
+
+    // 4. Lokalno čiščenje
+    state.rawLogs = state.rawLogs.filter(
+      (l) => !(l.userId === employeeId && targetSectorIds.includes(l.sectorId))
+    );
+    state.scheduleShifts = (state.scheduleShifts || []).filter(
+      (s) => !(s.userId === employeeId && targetSectorIds.includes(s.workplaceId || s.workplace_id))
+    );
+    state.employees = state.employees.filter((e) => e.id !== employeeId);
+
+    if (state.employeeWorkTypes) delete state.employeeWorkTypes[employeeId];
+    if (state.employeeCustomStatuses) delete state.employeeCustomStatuses[employeeId];
+
+    localStorage.setItem(getUserStorageKey("employee_work_types"), JSON.stringify(state.employeeWorkTypes || {}));
+    localStorage.setItem(getUserStorageKey("employee_statuses"), JSON.stringify(state.employeeCustomStatuses || {}));
+    localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts || []));
+
+    window.closeEmployeeDetail();
+    await loadAllData();
+    renderAll();
+  } catch (err) {
+    console.error("Napaka pri trajnem izbrisu podatkov zaposlenega:", err);
+    alert("Prišlo je do napake pri izbrisu: " + (err.message || err));
   }
 };
 
@@ -7076,6 +7197,13 @@ $("#empLogsSectorFilter")?.addEventListener("change", (e) => {
 $("#dismissEmployeeBtn")?.addEventListener("click", () => {
   if (state.selectedEmployeeId) {
     handleDismissEmployee(state.selectedEmployeeId);
+  }
+});
+
+// Purge employee history button from Employee Detail
+$("#purgeEmployeeHistoryBtn")?.addEventListener("click", () => {
+  if (state.selectedEmployeeId) {
+    handlePurgeEmployeeHistory(state.selectedEmployeeId);
   }
 });
 
