@@ -1300,6 +1300,30 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=81"></script>
+    <!-- 6. Splošno potrditveno okno (Custom Confirm Modal) -->
+    <dialog id="customConfirmModal" class="modal" style="max-width: 460px; width: 92vw;">
+      <div class="modal-box" style="padding: 24px 28px; gap: 16px;">
+        <div style="display: flex; gap: 14px; align-items: flex-start;">
+          <div id="confirmModalIconWrap" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fef2f2; color: #ef4444;">
+            <svg id="confirmModalDangerIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div style="flex: 1;">
+            <h3 id="confirmModalTitle" style="margin: 0 0 6px; font-size: 17px; font-weight: 700; color: var(--ink);">Potrditev dejanja</h3>
+            <p id="confirmModalMessage" style="margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5;"></p>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+          <button type="button" id="confirmModalCancelBtn" class="ghost-button" style="padding: 9px 18px; font-size: 13px; font-weight: 600;">Prekliči</button>
+          <button type="button" id="confirmModalAcceptBtn" class="primary-button" style="padding: 9px 20px; font-size: 13px; font-weight: 700; background: #ef4444; border-color: #ef4444; color: #ffffff;">Potrdi</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="app.js?v=82"></script>
   </body>
 </html>

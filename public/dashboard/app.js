@@ -129,6 +129,103 @@ function hideLoadingScreen() {
   }, 450);
 }
 
+// Global Promise-based Confirm Modal
+window.showConfirmDialog = function ({
+  title = "Potrditev dejanja",
+  message = "Ali ste prepričani, da želite nadaljevati?",
+  confirmText = "Potrdi",
+  cancelText = "Prekliči",
+  isDanger = true,
+} = {}) {
+  return new Promise((resolve) => {
+    const modal = $("#customConfirmModal");
+    if (!modal) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    const titleEl = $("#confirmModalTitle");
+    const msgEl = $("#confirmModalMessage");
+    const cancelBtn = $("#confirmModalCancelBtn");
+    const acceptBtn = $("#confirmModalAcceptBtn");
+    const iconWrap = $("#confirmModalIconWrap");
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+    if (cancelBtn) cancelBtn.textContent = cancelText;
+    if (acceptBtn) {
+      acceptBtn.textContent = confirmText;
+      if (isDanger) {
+        acceptBtn.style.background = "#ef4444";
+        acceptBtn.style.borderColor = "#ef4444";
+        acceptBtn.style.color = "#ffffff";
+      } else {
+        acceptBtn.style.background = "var(--primary)";
+        acceptBtn.style.borderColor = "var(--primary)";
+        acceptBtn.style.color = "#ffffff";
+      }
+    }
+    if (iconWrap) {
+      if (isDanger) {
+        iconWrap.style.background = "#fef2f2";
+        iconWrap.style.color = "#ef4444";
+      } else {
+        iconWrap.style.background = "var(--primary-light)";
+        iconWrap.style.color = "var(--primary-dark)";
+      }
+    }
+
+    let settled = false;
+
+    const cleanup = () => {
+      cancelBtn?.removeEventListener("click", onCancel);
+      acceptBtn?.removeEventListener("click", onAccept);
+      modal.removeEventListener("cancel", onCancel);
+      modal.removeEventListener("click", onBackdropClick);
+    };
+
+    const onCancel = (e) => {
+      if (e) e.preventDefault?.();
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try { modal.close(); } catch (err) {}
+      resolve(false);
+    };
+
+    const onAccept = (e) => {
+      if (e) e.preventDefault?.();
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try { modal.close(); } catch (err) {}
+      resolve(true);
+    };
+
+    const onBackdropClick = (e) => {
+      if (e.target === modal) {
+        onCancel(e);
+      }
+    };
+
+    cancelBtn?.addEventListener("click", onCancel);
+    acceptBtn?.addEventListener("click", onAccept);
+    modal.addEventListener("cancel", onCancel);
+    modal.addEventListener("click", onBackdropClick);
+
+    try {
+      if (typeof modal.showModal === "function") {
+        modal.showModal();
+      } else {
+        modal.setAttribute("open", "");
+      }
+    } catch (e) {
+      console.warn("showModal error, fallback to confirm:", e);
+      resolve(window.confirm(message));
+    }
+  });
+};
+
 // Initialize Supabase Client & Auth
 async function initSupabase() {
   if (window.supabase && state.supabaseUrl && state.supabaseKey) {
@@ -3486,7 +3583,15 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
     ? `Ali ste prepričani, da želite zaposlenega "${empName}" odstraniti iz tega sektorja? Povezava bo prekinjena, vsi pretekli podatki in ure pa bodo trajno ohranjeni v vaši evidenci.`
     : `Ali ste prepričani, da želite odpustiti zaposlenega "${empName}"? Povezava bo prekinjena, vsi pretekli podatki, evidence in ure pa ostanejo trajno shranjeni v vašem 4P dashboardu.`;
 
-  if (!confirm(confirmMsg)) return;
+  const confirmed = await showConfirmDialog({
+    title: specificSectorId ? "Odstranitev iz sektorja" : "Odpust zaposlenega",
+    message: confirmMsg,
+    confirmText: specificSectorId ? "Odstrani" : "Odpusti",
+    cancelText: "Prekliči",
+    isDanger: true,
+  });
+
+  if (!confirmed) return;
 
   if (!supabaseClient) {
     alert("Ni povezave s podatkovno bazo.");
@@ -3548,7 +3653,13 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
 
 // Delete Sector Permanently from Database
 window.handleDeleteSector = async function (sectorId, sectorName, sectorCode) {
-  const confirmed = confirm(`Ali ste prepričani, da želite dokončno izbrisati sektor "${sectorName}" (${sectorCode}) iz baze podatkov?`);
+  const confirmed = await showConfirmDialog({
+    title: "Izbris sektorja",
+    message: `Ali ste prepričani, da želite dokončno izbrisati sektor "${sectorName}" (${sectorCode}) iz baze podatkov?`,
+    confirmText: "Izbriši sektor",
+    cancelText: "Prekliči",
+    isDanger: true,
+  });
   if (!confirmed) return;
 
   // 1. Optimistic removal from state
@@ -4646,7 +4757,14 @@ window.adjustShiftSpots = function (delta) {
 };
 
 window.handleRemoveOpenShiftSignup = async function (openShiftId, signupId, employeeUserId) {
-  if (!confirm("Ali res želite odstraniti tega zaposlenega iz odprte izmene?")) return;
+  const confirmed = await showConfirmDialog({
+    title: "Odstranitev zaposlenega",
+    message: "Ali res želite odstraniti tega zaposlenega iz odprte izmene?",
+    confirmText: "Odstrani",
+    cancelText: "Prekliči",
+    isDanger: true,
+  });
+  if (!confirmed) return;
   
   // Optimistic local state update
   state.openShifts = (state.openShifts || []).map((os) => {
@@ -4957,7 +5075,14 @@ window.openOpenShiftDetailsModal = function (openShiftId) {
   const deleteBtn = $("#openShiftModalDeleteBtn");
   if (deleteBtn) {
     deleteBtn.onclick = async function () {
-      if (confirm("Ali ste prepričani, da želite izbrisati to odprto izmeno? S tem se bodo izbrisale tudi vse morebitne prijave zaposlenih.")) {
+      const confirmed = await showConfirmDialog({
+        title: "Izbris odprte izmene",
+        message: "Ali ste prepričani, da želite izbrisati to odprto izmeno? S tem se bodo izbrisale tudi vse morebitne prijave zaposlenih.",
+        confirmText: "Izbriši izmeno",
+        cancelText: "Prekliči",
+        isDanger: true,
+      });
+      if (confirmed) {
         closeOpenShiftDetailsModal();
         state.openShifts = (state.openShifts || []).filter((s) => s.id !== openShift.id);
         localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
@@ -5390,7 +5515,15 @@ window.handleDeleteShiftModal = async function () {
     ? "Ali ste prepričani, da želite izbrisati to odprto izmeno? S tem se bodo izbrisale tudi vse morebitne prijave zaposlenih."
     : "Ali ste prepričani, da želite izbrisati to izmeno z urnika?";
 
-  if (confirm(confirmText)) {
+  const confirmed = await showConfirmDialog({
+    title: isTypeOpen ? "Izbris odprte izmene" : "Izbris izmene",
+    message: confirmText,
+    confirmText: "Izbriši",
+    cancelText: "Prekliči",
+    isDanger: true,
+  });
+
+  if (confirmed) {
     if (isTypeOpen) {
       state.openShifts = (state.openShifts || []).filter((s) => s.id !== id);
       localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
