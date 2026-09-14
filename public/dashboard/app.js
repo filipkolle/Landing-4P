@@ -1884,10 +1884,6 @@ function getAnnualTotals(year) {
     });
   });
 
-  if (activeMonth().key.startsWith(targetYear + "-")) {
-    yearMonths.add(activeMonth().key);
-  }
-
   // Sum across all active months for all employees in targetYear
   yearMonths.forEach((mKey) => {
     state.employees.forEach((emp) => {
@@ -2214,9 +2210,6 @@ function annualSectorStats(sectorId, year) {
       if (k.startsWith(targetYear + "-") && (sec.earnings[k] || 0) > 0) yearMonths.add(k);
     });
   });
-  if (activeMonth().key.startsWith(targetYear + "-")) {
-    yearMonths.add(activeMonth().key);
-  }
 
   sectorEmployees.forEach((employee) => {
     const sec = employee.sectors[sectorId];
