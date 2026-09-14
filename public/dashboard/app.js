@@ -1373,14 +1373,16 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   const savedPayouts = loadSectorPayoutStatus();
 
   empMap.forEach((emp) => {
+    const curYear = currentDate.getFullYear();
+    const curYearMonths = Array.from({ length: 12 }, (_, i) => `${curYear}-${String(i + 1).padStart(2, "0")}`);
     const secJoinedList = Object.values(emp.sectors).map((s) => s.joinedMonth).filter(Boolean);
-    emp.joinedMonth = secJoinedList.length > 0 ? secJoinedList.sort()[0] : activeMKey;
+    emp.joinedMonth = secJoinedList.length > 0 ? secJoinedList.sort()[0] : "2000-01";
 
     Object.values(emp.sectors).forEach((sec) => {
       if (!sec.joinedMonth) sec.joinedMonth = emp.joinedMonth;
-      const secJoined = sec.joinedMonth || activeMKey;
+      const secJoined = sec.joinedMonth || "2000-01";
 
-      const allMonths = new Set([...Object.keys(sec.hours), ...Object.keys(sec.travelExpenses), activeMKey]);
+      const allMonths = new Set([...Object.keys(sec.hours), ...Object.keys(sec.travelExpenses), ...curYearMonths, activeMKey]);
       allMonths.forEach((mKey) => {
         const sTravel = sec.travelExpenses[mKey] || 0;
         const sHours = sec.hours[mKey] || 0;
@@ -1418,6 +1420,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       ...Object.keys(emp.hours),
       ...Object.keys(emp.travelExpenses),
       ...Object.keys(emp.earnings),
+      ...curYearMonths,
       activeMKey,
     ]);
 
@@ -1430,7 +1433,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
           const sEarnings = sec.earnings[mKey] || 0;
           const sHours = sec.hours[mKey] || 0;
           const sTravel = sec.travelExpenses[mKey] || 0;
-          const secJoined = sec.joinedMonth || emp.joinedMonth || activeMKey;
+          const secJoined = sec.joinedMonth || emp.joinedMonth || "2000-01";
           const isJoined = mKey >= secJoined;
 
           mEarnings += sEarnings;
@@ -1739,7 +1742,7 @@ function employeeMonth(employee, specificSectorId = null, specificMonthKey = nul
   const monthKey = specificMonthKey || activeMonth().key;
   if (specificSectorId && employee.sectors?.[specificSectorId]) {
     const sec = employee.sectors[specificSectorId];
-    const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+    const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
     const isJoined = monthKey >= secJoined;
     const hours = sec.hours?.[monthKey] ?? 0;
     const travelExpenses = sec.travelExpenses?.[monthKey] ?? 0;
@@ -1771,7 +1774,7 @@ function employeeMonth(employee, specificSectorId = null, specificMonthKey = nul
   let allPaid = true;
   if (sectorList.length > 0) {
     earnings = sectorList.reduce((sum, sec) => {
-      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
       const isJoined = monthKey >= secJoined;
       const sHours = sec.hours?.[monthKey] || 0;
       const sTravel = sec.travelExpenses?.[monthKey] || 0;
@@ -1841,16 +1844,16 @@ function currentTotals() {
     (totals, employee) => {
       const month = employeeMonth(employee);
       totals.hours += month.hours;
-      totals.travelExpenses = (totals.travelExpenses || 0) + (month.travelExpenses || 0);
+      totals.travelExpenses += month.travelExpenses;
       totals.earnings += month.earnings;
-      totals.unpaid += month.paid ? 0 : month.earnings;
+      if (!month.paid) totals.unpaid += month.earnings;
       return totals;
     },
     { hours: 0, travelExpenses: 0, earnings: 0, unpaid: 0 }
   );
 }
 
-// Annual totals calculation (letna raven za izbrano leto)
+// Annual totals calculation (letna raven za izbrano leto - vseh 12 mesecev)
 function getAnnualTotals(year) {
   const targetYear = String(year || activeMonth().year);
   let totalHours = 0;
@@ -1859,33 +1862,11 @@ function getAnnualTotals(year) {
   let totalTravel = 0;
   const activeEmployeeIds = new Set();
 
-  // Find all distinct months in targetYear that have recorded activity
-  const yearMonths = new Set();
-  state.rawLogs.forEach((l) => {
-    if (l.date && l.date.startsWith(targetYear + "-")) {
-      yearMonths.add(l.date.slice(0, 7));
-    }
-  });
+  // All 12 months in targetYear (januar - december)
+  const all12Months = Array.from({ length: 12 }, (_, i) => `${targetYear}-${String(i + 1).padStart(2, "0")}`);
+  const activeMonthsWithData = new Set();
 
-  state.employees.forEach((emp) => {
-    Object.keys(emp.hours || {}).forEach((k) => {
-      if (k.startsWith(targetYear + "-") && (emp.hours[k] || 0) > 0) yearMonths.add(k);
-    });
-    Object.keys(emp.earnings || {}).forEach((k) => {
-      if (k.startsWith(targetYear + "-") && (emp.earnings[k] || 0) > 0) yearMonths.add(k);
-    });
-    Object.values(emp.sectors || {}).forEach((sec) => {
-      Object.keys(sec.hours || {}).forEach((k) => {
-        if (k.startsWith(targetYear + "-") && (sec.hours[k] || 0) > 0) yearMonths.add(k);
-      });
-      Object.keys(sec.earnings || {}).forEach((k) => {
-        if (k.startsWith(targetYear + "-") && (sec.earnings[k] || 0) > 0) yearMonths.add(k);
-      });
-    });
-  });
-
-  // Sum across all active months for all employees in targetYear
-  yearMonths.forEach((mKey) => {
+  all12Months.forEach((mKey) => {
     state.employees.forEach((emp) => {
       const m = employeeMonth(emp, null, mKey);
       totalHours += m.hours;
@@ -1896,6 +1877,7 @@ function getAnnualTotals(year) {
       }
       if (m.hours > 0 || m.earnings > 0) {
         activeEmployeeIds.add(emp.id);
+        activeMonthsWithData.add(mKey);
       }
     });
   });
@@ -1906,10 +1888,10 @@ function getAnnualTotals(year) {
     travelExpenses: totalTravel,
     earnings: totalEarnings,
     unpaid: totalUnpaid,
-    monthsCount: yearMonths.size,
+    monthsCount: activeMonthsWithData.size || 12,
     employeesCount: state.employees.length,
     activeEmployeesCount: activeEmployeeIds.size,
-    activeMonths: Array.from(yearMonths),
+    activeMonths: all12Months,
   };
 }
 
@@ -2130,7 +2112,7 @@ function sectorStats(sectorId) {
 
   sectorEmployees.forEach((employee) => {
     const sec = employee.sectors[sectorId];
-    const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+    const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
     const isJoined = monthKey >= secJoined;
     const hours = sec.hours?.[monthKey] ?? 0;
     const travel = sec.travelExpenses?.[monthKey] ?? 0;
@@ -2195,28 +2177,14 @@ function annualSectorStats(sectorId, year) {
   const sectorEmployees = state.employees.filter((employee) => Boolean(employee.sectors?.[sectorId]));
   const count = sectorEmployees.length;
 
-  const yearMonths = new Set();
-  state.rawLogs.forEach((l) => {
-    if (l.sectorId === sectorId && l.date && l.date.startsWith(targetYear + "-")) {
-      yearMonths.add(l.date.slice(0, 7));
-    }
-  });
-  sectorEmployees.forEach((emp) => {
-    const sec = emp.sectors[sectorId];
-    Object.keys(sec.hours || {}).forEach((k) => {
-      if (k.startsWith(targetYear + "-") && (sec.hours[k] || 0) > 0) yearMonths.add(k);
-    });
-    Object.keys(sec.earnings || {}).forEach((k) => {
-      if (k.startsWith(targetYear + "-") && (sec.earnings[k] || 0) > 0) yearMonths.add(k);
-    });
-  });
+  const all12Months = Array.from({ length: 12 }, (_, i) => `${targetYear}-${String(i + 1).padStart(2, "0")}`);
 
   sectorEmployees.forEach((employee) => {
     const sec = employee.sectors[sectorId];
     let empSecUnpaid = 0;
 
-    yearMonths.forEach((mKey) => {
-      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+    all12Months.forEach((mKey) => {
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
       const isJoined = mKey >= secJoined;
       const hours = sec.hours?.[mKey] ?? 0;
       const travel = sec.travelExpenses?.[mKey] ?? 0;
@@ -2699,7 +2667,7 @@ function renderEmployeeDetail(employeeId) {
 
   if (employeeSectors.length > 0) {
     employeeSectors.forEach((sec) => {
-      const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+      const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
       const isJoined = monthKey >= secJoined;
       const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
       const secTravel = secLogs.reduce((sum, l) => sum + (l.travelExpenses || 0), 0);
@@ -2807,7 +2775,7 @@ function renderEmployeeDetail(employeeId) {
       sectorCardsContainer.innerHTML = employeeSectors
         .map((sec) => {
           const color = sec.color || "#56829d";
-          const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+          const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
           const isJoined = monthKey >= secJoined;
           const secLogs = empMonthLogs.filter((l) => l.sectorId === sec.sectorId);
           const secHours = secLogs.reduce((sum, l) => sum + l.hours, 0);
@@ -3621,7 +3589,7 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
   const sec = employee.sectors?.[sectorId];
   if (!sec) return "";
 
-  const secJoined = sec.joinedMonth || employee.joinedMonth || "9999-99";
+  const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
   const isJoined = monthKey >= secJoined;
 
   const secLogs = state.rawLogs.filter(
@@ -3817,7 +3785,7 @@ function renderSectorDetail(sectorId) {
     if (singleEmp) {
       displayedEmployees = [singleEmp];
       const sec = singleEmp.sectors?.[sector.id];
-      const secJoined = sec.joinedMonth || singleEmp.joinedMonth || "9999-99";
+      const secJoined = sec.joinedMonth || singleEmp.joinedMonth || "2000-01";
       const isJoined = monthKey >= secJoined;
       const secLogs = state.rawLogs.filter(
         (l) => l.userId === singleEmp.id && l.sectorId === sector.id && l.date.startsWith(monthKey)
