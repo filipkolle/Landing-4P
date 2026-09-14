@@ -1216,10 +1216,13 @@ dialog.modal {
   padding: 0;
   max-width: 520px;
   width: 92vw;
+  max-height: 90vh;
+  max-height: 90dvh;
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 25px 60px -10px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8);
   outline: none;
+  overflow: hidden; /* Clips all children and scrollbars strictly inside rounded corners */
 }
 
 dialog.modal::backdrop {
@@ -1233,6 +1236,69 @@ dialog.modal::backdrop {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(86, 130, 157, 0.35) transparent;
+}
+
+/* Custom sleek scrollbar for modal dialogs */
+.modal-box::-webkit-scrollbar,
+dialog.modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-box::-webkit-scrollbar-track,
+dialog.modal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 16px 0;
+}
+
+.modal-box::-webkit-scrollbar-thumb,
+dialog.modal::-webkit-scrollbar-thumb {
+  background: rgba(86, 130, 157, 0.3);
+  border-radius: 10px;
+}
+
+.modal-box::-webkit-scrollbar-thumb:hover,
+dialog.modal::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+#openShiftModalBody,
+#dayModalBody,
+#shiftSignupsList {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(86, 130, 157, 0.35) transparent;
+}
+
+#openShiftModalBody::-webkit-scrollbar,
+#dayModalBody::-webkit-scrollbar,
+#shiftSignupsList::-webkit-scrollbar {
+  width: 5px;
+}
+
+#openShiftModalBody::-webkit-scrollbar-track,
+#dayModalBody::-webkit-scrollbar-track,
+#shiftSignupsList::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+#openShiftModalBody::-webkit-scrollbar-thumb,
+#dayModalBody::-webkit-scrollbar-thumb,
+#shiftSignupsList::-webkit-scrollbar-thumb {
+  background: rgba(86, 130, 157, 0.3);
+  border-radius: 10px;
+}
+
+#openShiftModalBody::-webkit-scrollbar-thumb:hover,
+#dayModalBody::-webkit-scrollbar-thumb:hover,
+#shiftSignupsList::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .modal-header {
