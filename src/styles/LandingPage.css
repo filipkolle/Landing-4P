@@ -591,6 +591,12 @@
   contain: layout style;
 }
 
+.switcher-tabs-left {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 24px;
+}
+
 .switcher-tabs-centered {
   display: flex;
   justify-content: center;
@@ -1220,6 +1226,11 @@
       "content";
     gap: 24px;
     text-align: center;
+  }
+  .switcher-tabs-left {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
   }
   .display-content-wrapper { 
     display: flex;

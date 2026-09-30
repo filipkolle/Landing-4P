@@ -2,13 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Wallet } from 'lucide-react';
 import workImg from '../assets/mockups/delovni_asistent.png';
-import financeImg from '../assets/mockups/financni_asistent.png';
 import dashboardImg from '../assets/mockups/4p_asistent.png';
 
 const expoOut = [0.19, 1, 0.22, 1];
 
 // Preload images so tab switches never wait on network
-const PRELOAD_SRCS = [workImg, financeImg, dashboardImg];
+const PRELOAD_SRCS = [workImg, dashboardImg];
 if (typeof window !== 'undefined') {
   PRELOAD_SRCS.forEach(src => { const i = new Image(); i.src = src; });
 }
@@ -27,18 +26,6 @@ const tabs = [
     ],
   },
   {
-    id: 'finance',
-    label: 'Finančni asistent',
-    title: 'Celovit nadzor nad financami',
-    description: '',
-    image: financeImg,
-    features: [
-      'Spremljanje prihodka in stroškov',
-      'Izračun denarnega toka',
-      'Finančna analitika',
-    ],
-  },
-  {
     id: 'all',
     label: '4P asistent',
     title: 'Vsa moč v eni intuitivni aplikaciji',
@@ -54,7 +41,6 @@ const tabs = [
 
 const themes = {
   delo:    { color: '#5E8DB2' },
-  finance: { color: '#7CB483' },
   all:     { color: '#1A365D' },
 };
 
@@ -76,7 +62,7 @@ const mockupVariants = {
 };
 
 const FeatureSwitcher = () => {
-  const [activeIdx, setActiveIdx] = useState(2); // start on '4P asistent'
+  const [activeIdx, setActiveIdx] = useState(1); // start on '4P asistent'
 
   const handleTabClick = useCallback((idx) => {
     setActiveIdx(idx);
@@ -161,82 +147,87 @@ const FeatureSwitcher = () => {
         </motion.div>
 
         {/* Section header */}
+        {/* Section header */}
         <motion.div
           className="section-header"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: SLIDE_EASE }}
+          style={{ marginBottom: '48px' }}
         >
           <h2>Uporabi samo to, kar <br /><span className="highlight-blue">potrebuješ</span></h2>
         </motion.div>
 
-        {/* Tabs */}
-        <div className="switcher-tabs-centered">
-          <motion.div
-            className="tabs-capsule"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: SLIDE_EASE }}
-          >
-            {tabs.map((t, idx) => (
-              <button
-                key={t.id}
-                className={`tab-capsule-btn ${activeIdx === idx ? 'active' : ''}`}
-                onClick={() => handleTabClick(idx)}
-                style={{ color: activeIdx === idx ? themes[t.id].color : 'inherit' }}
-              >
-                {activeIdx === idx && (
-                  <motion.div
-                    layoutId="activeTabBg"
-                    className="active-bg"
-                    style={{
-                      backgroundColor: `${themes[t.id].color}15`,
-                      border: `1px solid ${themes[t.id].color}30`,
-                    }}
-                    transition={{ type: 'spring', duration: 0.8, bounce: 0.2 }}
-                  />
-                )}
-                <span style={{ position: 'relative', zIndex: 2 }}>{t.label}</span>
-              </button>
-            ))}
-          </motion.div>
-        </div>
-
         {/* Content + Mockup grid — clipped so panels slide in/out of view */}
         <div className="switcher-display-grid">
 
-          {/* ── Text: slides from LEFT ── */}
-          <div className="display-content-wrapper switcher-clip">
-            <AnimatePresence mode="wait" initial={false}>
+          {/* ── Left column: Switcher + Text (slides from LEFT) ── */}
+          <div className="display-content-wrapper">
+            
+            {/* Tabs above the assistant title */}
+            <div className="switcher-tabs-left">
               <motion.div
-                key={tab.id}
-                variants={textVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={transition}
-                style={{ willChange: 'transform, opacity' }}
+                className="tabs-capsule"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, ease: SLIDE_EASE }}
               >
-                <div className="display-header">
-                  <h3 className="display-title" style={{ color: activeColor }}>
-                    {tab.title}
-                  </h3>
-                </div>
-                <div className="display-body">
-                  <p className="display-desc">{tab.description}</p>
-                  <div className="display-features">
-                    {tab.features.map((feature, i) => (
-                      <div key={i} className="display-feature-item">
-                        <div className="feature-dot" style={{ background: activeColor }} />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {tabs.map((t, idx) => (
+                  <button
+                    key={t.id}
+                    className={`tab-capsule-btn ${activeIdx === idx ? 'active' : ''}`}
+                    onClick={() => handleTabClick(idx)}
+                    style={{ color: activeIdx === idx ? themes[t.id].color : 'inherit' }}
+                  >
+                    {activeIdx === idx && (
+                      <motion.div
+                        layoutId="activeTabBg"
+                        className="active-bg"
+                        style={{
+                          backgroundColor: `${themes[t.id].color}15`,
+                          border: `1px solid ${themes[t.id].color}30`,
+                        }}
+                        transition={{ type: 'spring', duration: 0.8, bounce: 0.2 }}
+                      />
+                    )}
+                    <span style={{ position: 'relative', zIndex: 2 }}>{t.label}</span>
+                  </button>
+                ))}
               </motion.div>
-            </AnimatePresence>
+            </div>
+
+            <div className="switcher-clip" style={{ width: '100%' }}>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={tab.id}
+                  variants={textVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={transition}
+                  style={{ willChange: 'transform, opacity' }}
+                >
+                  <div className="display-header">
+                    <h3 className="display-title" style={{ color: activeColor }}>
+                      {tab.title}
+                    </h3>
+                  </div>
+                  <div className="display-body">
+                    <p className="display-desc">{tab.description}</p>
+                    <div className="display-features">
+                      {tab.features.map((feature, i) => (
+                        <div key={i} className="display-feature-item">
+                          <div className="feature-dot" style={{ background: activeColor }} />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* ── Mockup: slides from RIGHT ── */}

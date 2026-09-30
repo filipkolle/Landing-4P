@@ -227,13 +227,16 @@ const AboutPage = () => {
                 </a>
 
                 {/* Requested Google Play Button */}
-                <button 
-                  onClick={() => navigate('/cakalna-vrsta')}
+                <a 
+                  href="https://play.google.com/store/apps/details?id=com.finance4p.app&hl=en"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
                     gap: '8px', 
+                    textDecoration: 'none',
                     backgroundColor: '#000', 
                     color: '#fff', 
                     padding: '8px 12px',
@@ -258,7 +261,7 @@ const AboutPage = () => {
                     <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.02em', fontWeight: 500, opacity: 0.9 }}>GET IT ON</span>
                     <span style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', marginTop: '1px' }}>Google Play</span>
                   </div>
-                </button>
+                </a>
               </div>
             </div>
             

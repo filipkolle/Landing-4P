@@ -196,13 +196,16 @@ const Hero = () => {
               </div>
             </a>
 
-            <button 
-              onClick={() => window.location.href='/cakalna-vrsta'}
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.finance4p.app&hl=en"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
                 gap: isMobile ? '8px' : '12px', 
+                textDecoration: 'none',
                 backgroundColor: '#000', 
                 color: '#fff', 
                 padding: isMobile ? '8px 12px' : '10px 20px',
@@ -227,7 +230,7 @@ const Hero = () => {
                 <span style={{ fontSize: isMobile ? '0.6rem' : '0.75rem', textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.02em', fontWeight: 500, opacity: 0.9 }}>GET IT ON</span>
                 <span style={{ fontSize: isMobile ? '1.1rem' : '1.35rem', fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.01em', marginTop: '1px' }}>Google Play</span>
               </div>
-            </button>
+            </a>
           </div>
         </motion.div>
       </header>

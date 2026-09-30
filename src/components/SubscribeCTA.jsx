@@ -70,13 +70,16 @@ const SubscribeCTA = ({ className = "" }) => {
                   </div>
                 </a>
 
-                <button 
-                  onClick={() => navigate('/cakalna-vrsta')}
+                <a 
+                  href="https://play.google.com/store/apps/details?id=com.finance4p.app&hl=en"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
                     gap: '10px', 
+                    textDecoration: 'none',
                     backgroundColor: '#000', 
                     color: '#fff', 
                     padding: '10px 16px 10px 12px',
@@ -100,7 +103,7 @@ const SubscribeCTA = ({ className = "" }) => {
                     <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.01em', fontWeight: 500 }}>GET IT ON</span>
                     <span style={{ fontSize: '1.25rem', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' }}>Google Play</span>
                   </div>
-                </button>
+                </a>
               </div>
             </div>
             </div>
