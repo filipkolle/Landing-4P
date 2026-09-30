@@ -3166,14 +3166,24 @@ window.openSettingsCategory = function (categoryKey) {
     $("#pageDescription").style.display = "block";
   }
 
-  // Preklopnik za leto je v nastavitvah vedno skrit
-  if ($("#topbarYearSwitcher")) $("#topbarYearSwitcher").style.display = "none";
-  if ($("#topbarMonthSwitcher")) $("#topbarMonthSwitcher").style.display = "none";
-  if ($("#topbarScheduleNavGroup")) $("#topbarScheduleNavGroup").style.display = "none";
+  // Preklopniki so v nastavitvah vedno skriti
+  setTopbarSwitcherVisibility($("#topbarYearSwitcher"), false);
+  setTopbarSwitcherVisibility($("#topbarMonthSwitcher"), false);
+  setTopbarSwitcherVisibility($("#topbarScheduleNavGroup"), false);
 
   renderSettings();
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
+
+function setTopbarSwitcherVisibility(el, isVisible) {
+  if (!el) return;
+  el.style.display = isVisible ? "inline-flex" : "none";
+  if (isVisible) {
+    el.removeAttribute("hidden");
+  } else {
+    el.setAttribute("hidden", "true");
+  }
+}
 
 window.closeSettingsCategory = function () {
   state.selectedSettingsCategory = null;
@@ -3192,10 +3202,10 @@ window.closeSettingsCategory = function () {
     $("#pageDescription").style.display = "block";
   }
 
-  // Preklopnik za leto je v nastavitvah vedno skrit
-  if ($("#topbarYearSwitcher")) $("#topbarYearSwitcher").style.display = "none";
-  if ($("#topbarMonthSwitcher")) $("#topbarMonthSwitcher").style.display = "none";
-  if ($("#topbarScheduleNavGroup")) $("#topbarScheduleNavGroup").style.display = "none";
+  // Preklopniki so v nastavitvah vedno skriti
+  setTopbarSwitcherVisibility($("#topbarYearSwitcher"), false);
+  setTopbarSwitcherVisibility($("#topbarMonthSwitcher"), false);
+  setTopbarSwitcherVisibility($("#topbarScheduleNavGroup"), false);
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -6323,22 +6333,22 @@ function switchView(view, updateHash = true) {
   const scheduleNavGroup = $("#topbarScheduleNavGroup");
 
   if (view === "employees" || view === "sectors") {
-    if (yearSwitcher) yearSwitcher.style.display = "none";
-    if (monthSwitcher) monthSwitcher.style.display = "inline-flex";
-    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
+    setTopbarSwitcherVisibility(yearSwitcher, false);
+    setTopbarSwitcherVisibility(monthSwitcher, true);
+    setTopbarSwitcherVisibility(scheduleNavGroup, false);
   } else if (view === "schedule") {
-    if (yearSwitcher) yearSwitcher.style.display = "none";
-    if (monthSwitcher) monthSwitcher.style.display = "none";
-    if (scheduleNavGroup) scheduleNavGroup.style.display = "inline-flex";
+    setTopbarSwitcherVisibility(yearSwitcher, false);
+    setTopbarSwitcherVisibility(monthSwitcher, false);
+    setTopbarSwitcherVisibility(scheduleNavGroup, true);
   } else if (view === "settings") {
-    if (yearSwitcher) yearSwitcher.style.display = "none";
-    if (monthSwitcher) monthSwitcher.style.display = "none";
-    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
+    setTopbarSwitcherVisibility(yearSwitcher, false);
+    setTopbarSwitcherVisibility(monthSwitcher, false);
+    setTopbarSwitcherVisibility(scheduleNavGroup, false);
   } else {
     // overview
-    if (yearSwitcher) yearSwitcher.style.display = "inline-flex";
-    if (monthSwitcher) monthSwitcher.style.display = "none";
-    if (scheduleNavGroup) scheduleNavGroup.style.display = "none";
+    setTopbarSwitcherVisibility(yearSwitcher, true);
+    setTopbarSwitcherVisibility(monthSwitcher, false);
+    setTopbarSwitcherVisibility(scheduleNavGroup, false);
   }
 
   if (view === "sectors") {

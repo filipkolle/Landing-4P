@@ -3796,88 +3796,176 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
     overflow-x: hidden !important;
   }
 
-  /* 5. Topbar & Header Switchers */
+  /* 5. Topbar & Header Switchers (Desktop ostaja 100% nespremenjen) */
   .topbar {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    flex-wrap: nowrap !important;
   }
 
   .topbar-title-wrap {
-    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Podnaslovi in eyebrow odstranjeni na mobilnih napravah za čist izgled */
+  .eyebrow,
+  .page-subtitle,
+  #pageDescription {
+    display: none !important;
   }
 
   .page-title-row {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    gap: 10px !important;
-    flex-wrap: wrap !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
   }
 
   .topbar h1 {
-    font-size: 22px !important;
-  }
-
-  .eyebrow {
-    font-size: 11px !important;
-  }
-
-  .page-subtitle {
-    font-size: 12.5px !important;
-    margin-top: 2px !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: var(--ink) !important;
+    letter-spacing: -0.02em !important;
   }
 
   .add-sector-top-btn {
-    width: 100% !important;
-    justify-content: center !important;
-    margin-top: 6px !important;
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
   }
 
-  .month-switcher {
-    width: 100% !important;
-    display: flex !important;
-    justify-content: space-between !important;
+  /* Preklopniki v topbarju - pozicionirani desno od naslova v isti liniji */
+  .topbar #topbarYearSwitcher,
+  .topbar #topbarMonthSwitcher {
+    display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
-  }
-
-  .month-pill {
-    flex: 1 !important;
-    min-width: 0 !important;
-    text-align: center !important;
-    height: 38px !important;
-    font-size: 12px !important;
-    padding: 0 10px !important;
-  }
-
-  .icon-button {
-    width: 38px !important;
-    height: 38px !important;
-    font-size: 20px !important;
     flex-shrink: 0 !important;
+    margin-left: auto !important;
+    width: auto !important;
+    gap: 2px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 9px !important;
+    padding: 2px 4px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
 
-  .cal-nav-group {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
+  .topbar #topbarScheduleNavGroup {
+    display: inline-flex !important;
     align-items: center !important;
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+    width: auto !important;
+    gap: 4px !important;
   }
 
-  .cal-today-btn {
-    flex: 0 0 auto !important;
-    height: 38px !important;
-    padding: 0 14px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
+  .topbar #topbarScheduleNavGroup .month-switcher {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 9px !important;
+    padding: 2px 4px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
 
-  .cal-nav-group .month-switcher {
-    flex: 1 !important;
+  /* STRIKTNO SKRIVANJE: Preklopnik je viden SAMO na strani, ki ji pripada */
+  .topbar #topbarYearSwitcher[hidden],
+  .topbar #topbarYearSwitcher[style*="display: none"],
+  .topbar #topbarYearSwitcher[style*="display:none"],
+  .topbar #topbarMonthSwitcher[hidden],
+  .topbar #topbarMonthSwitcher[style*="display: none"],
+  .topbar #topbarMonthSwitcher[style*="display:none"],
+  .topbar #topbarScheduleNavGroup[hidden],
+  .topbar #topbarScheduleNavGroup[style*="display: none"],
+  .topbar #topbarScheduleNavGroup[style*="display:none"] {
+    display: none !important;
+  }
+
+  .topbar .month-pill {
+    flex: 1 1 auto !important;
     min-width: 0 !important;
+    max-width: 125px !important;
+    text-align: center !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 0 4px !important;
+    background: transparent !important;
+    border: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: var(--ink) !important;
+  }
+
+  .topbar .icon-button {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    font-size: 15px !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(86, 130, 157, 0.08) !important;
+    border: 1px solid rgba(86, 130, 157, 0.2) !important;
+    color: var(--primary) !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .topbar .icon-button:hover,
+  .topbar .icon-button:active {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+  }
+
+  .topbar .cal-today-btn {
+    height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    color: var(--ink) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .panel-header .month-switcher {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .panel-header .month-switcher .month-pill {
+    height: 30px !important;
+    font-size: 11px !important;
+    padding: 0 8px !important;
   }
 
   /* 6. Metric Cards Grid */
@@ -4279,7 +4367,18 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   }
 
   .topbar h1 {
-    font-size: 20px !important;
+    font-size: 16.5px !important;
+  }
+
+  .topbar .month-pill {
+    max-width: 105px !important;
+    font-size: 10.5px !important;
+    padding: 0 2px !important;
+  }
+
+  .topbar .cal-today-btn {
+    padding: 0 6px !important;
+    font-size: 10.5px !important;
   }
 }
 

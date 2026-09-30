@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=71" />
+    <link rel="stylesheet" href="styles.css?v=72" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -208,21 +208,21 @@
             <p id="pageDescription" class="page-subtitle" style="display: none;"></p>
           </div>
           <!-- Letni preklopnik (za Overview in letne poglede) -->
-          <div class="month-switcher" id="topbarYearSwitcher" aria-label="Preklop leta">
+          <div class="month-switcher" id="topbarYearSwitcher" aria-label="Preklop leta" style="display: inline-flex;">
             <button class="icon-button" id="prevYear" type="button" aria-label="Prejšnje leto">‹</button>
             <div class="month-pill" id="activeYear">2026</div>
             <button class="icon-button" id="nextYear" type="button" aria-label="Naslednje leto">›</button>
           </div>
 
-          <!-- Mesečni preklopnik (za sekcijo Zaposleni) -->
-          <div class="month-switcher" id="topbarMonthSwitcher" aria-label="Preklop meseca" style="display: none;">
+          <!-- Mesečni preklopnik (za sekcijo Zaposleni in Sektorji) -->
+          <div class="month-switcher" id="topbarMonthSwitcher" aria-label="Preklop meseca" style="display: none;" hidden>
             <button class="icon-button" id="topbarPrevMonth" type="button" aria-label="Prejšnji mesec">‹</button>
             <div class="month-pill" id="topbarActiveMonth">September 2026</div>
             <button class="icon-button" id="topbarNextMonth" type="button" aria-label="Naslednji mesec">›</button>
           </div>
 
           <!-- Navigacija po obdobju (za Urnik) -->
-          <div class="cal-nav-group" id="topbarScheduleNavGroup" style="display: none;">
+          <div class="cal-nav-group" id="topbarScheduleNavGroup" style="display: none;" hidden>
             <button type="button" class="cal-today-btn" id="scheduleTodayBtn">Danes</button>
             <div class="month-switcher">
               <button type="button" class="icon-button" id="schedulePrevBtn" aria-label="Prejšnje obdobje">‹</button>
@@ -1330,6 +1330,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=85"></script>
+    <script src="app.js?v=86"></script>
   </body>
 </html>
