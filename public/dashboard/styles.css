@@ -24,7 +24,13 @@
   box-sizing: border-box;
 }
 
-[hidden] {
+[hidden],
+[style*="display: none"],
+[style*="display:none"],
+.shell[hidden],
+#appShell[hidden],
+.auth-screen[hidden],
+#authScreen[hidden] {
   display: none !important;
 }
 
@@ -3615,8 +3621,20 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
    ========================================================================== */
 
 @media (max-width: 900px) {
-  /* 1. Mobile Shell Layout */
-  .shell {
+  /* 1. Mobile Shell Layout - striktno skrit, ko uporabnik ni prijavljen */
+  .shell[hidden],
+  #appShell[hidden],
+  .shell[style*="display: none"],
+  #appShell[style*="display: none"],
+  .shell[style*="display:none"],
+  #appShell[style*="display:none"],
+  body:has(#authScreen:not([hidden]):not([style*="display: none"])) .shell,
+  body:has(#authScreen:not([hidden]):not([style*="display: none"])) #appShell,
+  body:has(#authScreen:not([hidden]):not([style*="display: none"])) .nav {
+    display: none !important;
+  }
+
+  .shell:not([hidden]) {
     display: flex !important;
     flex-direction: column !important;
     min-height: 100vh !important;

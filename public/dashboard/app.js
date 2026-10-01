@@ -94,6 +94,9 @@ function clearUserState() {
   state.customStatuses = ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"];
   state.userProfiles.clear();
 
+  if ($("#sidebarCompany")) $("#sidebarCompany").textContent = "";
+  if ($("#sidebarUserEmail")) $("#sidebarUserEmail").textContent = "";
+
   if (realtimeChannel && supabaseClient) {
     try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
     realtimeChannel = null;
@@ -381,8 +384,14 @@ async function handleAuthState(session, companyNameOverride = null) {
     state.showExternalEvents =
       localStorage.getItem(getUserStorageKey("show_external_cal")) !== "false";
 
-    if (authScreen) authScreen.hidden = true;
-    if (appShell) appShell.hidden = false;
+    if (authScreen) {
+      authScreen.hidden = true;
+      authScreen.style.display = "none";
+    }
+    if (appShell) {
+      appShell.hidden = false;
+      appShell.style.display = "";
+    }
 
     if ($("#sidebarCompany")) $("#sidebarCompany").textContent = state.companyName;
     if ($("#sidebarUserEmail")) $("#sidebarUserEmail").textContent = session.user.email;
@@ -407,9 +416,16 @@ async function handleAuthState(session, companyNameOverride = null) {
     hideLoadingScreen();
   } else {
     clearUserState();
-    if (authScreen) authScreen.hidden = false;
-    if (appShell) appShell.hidden = true;
+    if (authScreen) {
+      authScreen.hidden = false;
+      authScreen.style.display = "";
+    }
+    if (appShell) {
+      appShell.hidden = true;
+      appShell.style.display = "none";
+    }
     hideLoadingScreen();
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 }
 
