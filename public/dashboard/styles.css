@@ -2752,6 +2752,41 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   text-overflow: ellipsis;
 }
 
+.schedule-shift-chip-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.schedule-shift-chip-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.schedule-shift-chip-hours {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.schedule-shift-chip-note {
+  font-size: 9.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  display: block;
+}
+
 .schedule-shift-chip.is-open-shift {
   border-style: dashed;
 }
@@ -4405,15 +4440,186 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
     border-radius: 10px !important;
   }
 
-  /* Month View Horizontal Scroll */
+  /* Month View Horizontal Scroll & Compact Day Cells */
+  .calendar-main-panel {
+    padding: 8px 6px !important;
+    border-radius: 12px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
   .cal-month-grid {
-    min-width: 560px !important;
-    gap: 6px !important;
+    min-width: 630px !important;
+    gap: 5px !important;
+    width: 100% !important;
+  }
+
+  .cal-month-day-header {
+    padding: 6px 4px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    border-radius: 6px !important;
   }
 
   .schedule-month-cell {
-    min-height: 100px !important;
-    padding: 6px 5px !important;
+    min-height: 96px !important;
+    padding: 5px 4px 6px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    border-radius: 9px !important;
+    gap: 3px !important;
+  }
+
+  .schedule-cell-top {
+    min-height: 20px !important;
+    margin-bottom: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 2px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .cal-day-num {
+    flex-shrink: 0 !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+  }
+
+  .cal-day-num.is-today-badge {
+    width: 21px !important;
+    height: 21px !important;
+    font-size: 10.5px !important;
+  }
+
+  .today-indicator-pill {
+    display: none !important; /* Hide "Danes" text pill in month cell on mobile to prevent squishing */
+  }
+
+  .cal-holiday-badge {
+    display: none !important; /* Holiday names are visible in day details modal on tap */
+  }
+
+  .cal-day-hours-badge {
+    font-size: 8.5px !important;
+    font-weight: 800 !important;
+    padding: 1px 4px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+    line-height: 1.2 !important;
+    margin-left: auto !important;
+  }
+
+  .schedule-quick-add-btn {
+    display: none !important; /* Hidden on mobile to keep day header completely uncluttered */
+  }
+
+  .schedule-cell-shifts-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    margin-top: 1px !important;
+  }
+
+  .schedule-shift-chip {
+    padding: 3px 4px !important;
+    border-radius: 5px !important;
+    border-left-width: 3px !important;
+    gap: 1px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  }
+
+  .schedule-shift-chip-main,
+  .schedule-shift-chip-meta {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .schedule-shift-chip-emp {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .schedule-shift-chip-time {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  .shift-time-icon {
+    display: none !important; /* Hide wide clock emoji on mobile so time fits cleanly */
+  }
+
+  .schedule-shift-chip-sector {
+    font-size: 8.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .schedule-shift-chip-hours {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: var(--ink) !important;
+    flex-shrink: 0 !important;
+    line-height: 1.2 !important;
+    margin-left: 2px !important;
+  }
+
+  .schedule-shift-chip-note {
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+    display: none !important; /* Notes available on tap in modal */
+  }
+
+  .schedule-shift-chip.is-open-shift {
+    padding: 3px 4px !important;
+    gap: 1px !important;
+  }
+
+  .schedule-shift-chip.is-open-shift .schedule-shift-chip-top {
+    gap: 2px !important;
+  }
+
+  .schedule-shift-chip.is-open-shift .schedule-shift-chip-emp {
+    font-size: 9px !important;
   }
 
   /* 12. Nastavitve Hub & Details */
@@ -4592,6 +4798,36 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
     min-height: 28px !important;
     font-size: 11px !important;
     padding: 0 10px !important;
+  }
+
+  .cal-month-grid {
+    min-width: 600px !important;
+    gap: 4px !important;
+  }
+
+  .schedule-month-cell {
+    min-height: 90px !important;
+    padding: 4px 3px 5px !important;
+  }
+
+  .schedule-shift-chip {
+    padding: 2.5px 3.5px !important;
+  }
+
+  .schedule-shift-chip-emp {
+    font-size: 9.5px !important;
+  }
+
+  .schedule-shift-chip-time {
+    font-size: 8.5px !important;
+  }
+
+  .schedule-shift-chip-sector {
+    font-size: 8px !important;
+  }
+
+  .schedule-shift-chip-hours {
+    font-size: 8.5px !important;
   }
 }
 

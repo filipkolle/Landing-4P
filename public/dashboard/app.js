@@ -4441,9 +4441,9 @@ function renderScheduleMonthView(container, dateObj, shifts) {
                 <span class="schedule-shift-chip-emp" style="color: ${color}; font-weight: 800; font-size: 10.5px;">🔓 Odprta izmena</span>
                 <span style="font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${s.requiredSpots}</span>
               </div>
-              <div style="margin-top: 2px;">
-                <div style="font-size: 11px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">● ${s.sectorName}</div>
-                <div style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 1px;">🕒 ${s.startTime}–${s.endTime} (${number.format(s.hours)}h)</div>
+              <div class="schedule-shift-chip-main" style="margin-top: 2px;">
+                <div class="schedule-shift-chip-sector" style="font-size: 11px; font-weight: 700; color: var(--ink);">● ${s.sectorName}</div>
+                <div class="schedule-shift-chip-time" style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 1px;"><span class="shift-time-icon">🕒</span> ${s.startTime}–${s.endTime} (${number.format(s.hours)}h)</div>
               </div>
             </div>
           `;
@@ -4458,15 +4458,15 @@ function renderScheduleMonthView(container, dateObj, shifts) {
           const color = s.color || "#56829d";
           return `
             <div class="schedule-shift-chip" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="Kliknite za urejanje izmene">
-              <div style="display: flex; flex-direction: column; gap: 1px;">
-                <strong class="schedule-shift-chip-emp" style="font-size: 11.5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.userName}</strong>
-                <span class="schedule-shift-chip-time" style="font-size: 10px; color: var(--muted); font-weight: 600;">🕒 ${s.startTime}–${s.endTime}</span>
+              <div class="schedule-shift-chip-main">
+                <strong class="schedule-shift-chip-emp">${s.userName}</strong>
+                <span class="schedule-shift-chip-time"><span class="shift-time-icon">🕒</span> ${s.startTime}–${s.endTime}</span>
               </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px;">
-                <span class="schedule-shift-chip-sector" style="color: ${color}; font-size: 10px;">● ${s.sectorName}</span>
-                <span style="font-size: 10px; font-weight: 700; color: var(--ink);">${number.format(s.hours)}h</span>
+              <div class="schedule-shift-chip-meta">
+                <span class="schedule-shift-chip-sector" style="color: ${color};">● ${s.sectorName}</span>
+                <span class="schedule-shift-chip-hours">${number.format(s.hours)}h</span>
               </div>
-              ${s.note ? `<span style="font-size: 9.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;">${s.note}</span>` : ""}
+              ${s.note ? `<span class="schedule-shift-chip-note">${s.note}</span>` : ""}
             </div>
           `;
         })
