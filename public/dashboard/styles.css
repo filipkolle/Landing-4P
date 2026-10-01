@@ -262,6 +262,20 @@ button {
   margin-top: 4px;
 }
 
+.mobile-switchers-slot {
+  display: none !important;
+}
+
+.desktop-switchers-slot {
+  display: flex;
+  align-items: center;
+}
+
+.header-switchers-group {
+  display: flex;
+  align-items: center;
+}
+
 .month-switcher {
   display: flex;
   align-items: center;
@@ -3682,57 +3696,24 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   }
 
   .sidebar .company-card {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
-    margin: 0 !important;
-    padding: 4px 10px !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    border-radius: 9999px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .sidebar .company-card .label,
-  .sidebar .company-card .company-user-email,
-  .sidebar .company-card #sidebarStats {
     display: none !important;
   }
 
-  .sidebar .company-card h2 {
-    font-size: 12px !important;
-    margin: 0 !important;
-    max-width: 110px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    color: #ffffff !important;
-    font-weight: 700 !important;
+  .desktop-switchers-slot {
+    display: none !important;
   }
 
-  .sidebar .company-card .logout-btn {
-    margin: 0 !important;
-    padding: 4px 8px !important;
-    font-size: 11px !important;
-    border-radius: 6px !important;
-    background: rgba(239, 68, 68, 0.18) !important;
-    border: 1px solid rgba(239, 68, 68, 0.35) !important;
-    color: #fca5a5 !important;
-    display: inline-flex !important;
+  .mobile-switchers-slot {
+    display: flex !important;
     align-items: center !important;
-    gap: 4px !important;
-    cursor: pointer !important;
-    min-height: auto !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
   }
 
-  .sidebar .company-card .logout-btn:hover {
-    background: rgba(239, 68, 68, 0.35) !important;
-    color: #ffffff !important;
-  }
-
-  .sidebar .company-card .logout-btn span:last-child {
-    display: none !important; /* Icon-only on mobile to stay compact */
+  .header-switchers-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
   }
 
   /* 3. Mobile Fixed Bottom Navigation Bar */
@@ -3827,10 +3808,11 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
 
   .topbar-title-wrap {
     display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     min-width: 0 !important;
-    flex: 1 1 auto !important;
+    width: 100% !important;
   }
 
   /* Podnaslovi in eyebrow odstranjeni na mobilnih napravah za čist izgled */
@@ -3843,15 +3825,16 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   .page-title-row {
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
     min-width: 0 !important;
-    flex-wrap: nowrap !important;
   }
 
   .topbar h1 {
-    font-size: 18px !important;
+    font-size: 22px !important;
     font-weight: 800 !important;
-    line-height: 1.15 !important;
+    line-height: 1.2 !important;
     margin: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -3861,74 +3844,73 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   }
 
   .add-sector-top-btn {
-    font-size: 11px !important;
-    padding: 3px 8px !important;
-    height: 28px !important;
-    border-radius: 6px !important;
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+    height: 30px !important;
+    border-radius: 7px !important;
     white-space: nowrap !important;
     margin: 0 !important;
+    margin-left: auto !important;
   }
 
-  /* Preklopniki v topbarju - pozicionirani desno od naslova v isti liniji */
-  .topbar #topbarYearSwitcher,
-  .topbar #topbarMonthSwitcher {
+  /* Preklopniki v mobilnem hederju (povečani in prilagojeni za header) */
+  .mobile-switchers-slot #topbarYearSwitcher,
+  .mobile-switchers-slot #topbarMonthSwitcher {
     display: inline-flex !important;
     align-items: center !important;
     flex-shrink: 0 !important;
-    margin-left: auto !important;
     width: auto !important;
-    gap: 2px !important;
+    gap: 3px !important;
     background: #ffffff !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 9px !important;
-    padding: 2px 4px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 10px !important;
+    padding: 3px 5px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
   }
 
-  .topbar #topbarScheduleNavGroup {
+  .mobile-switchers-slot #topbarScheduleNavGroup {
     display: inline-flex !important;
     align-items: center !important;
     flex-shrink: 0 !important;
-    margin-left: auto !important;
     width: auto !important;
-    gap: 4px !important;
+    gap: 5px !important;
   }
 
-  .topbar #topbarScheduleNavGroup .month-switcher {
+  .mobile-switchers-slot #topbarScheduleNavGroup .month-switcher {
     width: auto !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 2px !important;
+    gap: 3px !important;
     background: #ffffff !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 9px !important;
-    padding: 2px 4px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 10px !important;
+    padding: 3px 5px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
   }
 
   /* STRIKTNO SKRIVANJE: Preklopnik je viden SAMO na strani, ki ji pripada */
-  .topbar #topbarYearSwitcher[hidden],
-  .topbar #topbarYearSwitcher[style*="display: none"],
-  .topbar #topbarYearSwitcher[style*="display:none"],
-  .topbar #topbarMonthSwitcher[hidden],
-  .topbar #topbarMonthSwitcher[style*="display: none"],
-  .topbar #topbarMonthSwitcher[style*="display:none"],
-  .topbar #topbarScheduleNavGroup[hidden],
-  .topbar #topbarScheduleNavGroup[style*="display: none"],
-  .topbar #topbarScheduleNavGroup[style*="display:none"] {
+  .mobile-switchers-slot #topbarYearSwitcher[hidden],
+  .mobile-switchers-slot #topbarYearSwitcher[style*="display: none"],
+  .mobile-switchers-slot #topbarYearSwitcher[style*="display:none"],
+  .mobile-switchers-slot #topbarMonthSwitcher[hidden],
+  .mobile-switchers-slot #topbarMonthSwitcher[style*="display: none"],
+  .mobile-switchers-slot #topbarMonthSwitcher[style*="display:none"],
+  .mobile-switchers-slot #topbarScheduleNavGroup[hidden],
+  .mobile-switchers-slot #topbarScheduleNavGroup[style*="display: none"],
+  .mobile-switchers-slot #topbarScheduleNavGroup[style*="display:none"] {
     display: none !important;
   }
 
-  .topbar .month-pill {
+  .mobile-switchers-slot .month-pill {
     flex: 1 1 auto !important;
     min-width: 0 !important;
-    max-width: 195px !important;
+    max-width: 185px !important;
     text-align: center !important;
-    height: 28px !important;
-    line-height: 28px !important;
-    font-size: 11px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
-    padding: 0 6px !important;
+    padding: 0 8px !important;
     background: transparent !important;
     border: none !important;
     white-space: nowrap !important;
@@ -3937,47 +3919,55 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
     color: var(--ink) !important;
   }
 
-  .topbar .cal-period-pill {
-    max-width: 205px !important;
-    font-size: 11px !important;
+  .mobile-switchers-slot #activeYear {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    padding: 0 10px !important;
+  }
+
+  .mobile-switchers-slot .cal-period-pill {
+    max-width: 195px !important;
+    font-size: 12px !important;
     padding: 0 6px !important;
     letter-spacing: -0.01em !important;
   }
 
-  .topbar .icon-button {
-    width: 26px !important;
-    height: 26px !important;
-    min-width: 26px !important;
-    font-size: 15px !important;
-    border-radius: 6px !important;
+  .mobile-switchers-slot .icon-button {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    font-size: 18px !important;
+    border-radius: 7px !important;
     flex-shrink: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: rgba(86, 130, 157, 0.08) !important;
-    border: 1px solid rgba(86, 130, 157, 0.2) !important;
+    background: rgba(86, 130, 157, 0.12) !important;
+    border: 1px solid rgba(86, 130, 157, 0.22) !important;
     color: var(--primary) !important;
     padding: 0 !important;
     line-height: 1 !important;
+    cursor: pointer !important;
   }
 
-  .topbar .icon-button:hover,
-  .topbar .icon-button:active {
+  .mobile-switchers-slot .icon-button:hover,
+  .mobile-switchers-slot .icon-button:active {
     background: var(--primary) !important;
     color: #ffffff !important;
   }
 
-  .topbar .cal-today-btn {
-    height: 32px !important;
-    padding: 0 8px !important;
-    font-size: 11px !important;
+  .mobile-switchers-slot .cal-today-btn {
+    height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
-    border-radius: 8px !important;
+    border-radius: 9px !important;
     flex-shrink: 0 !important;
     background: #ffffff !important;
-    border: 1px solid var(--border) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
     color: var(--ink) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
+    cursor: pointer !important;
   }
 
   .panel-header .month-switcher {
@@ -4448,33 +4438,38 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   }
 
   .topbar h1 {
-    font-size: 15.5px !important;
+    font-size: 19px !important;
   }
 
-  .topbar .month-pill {
-    max-width: 175px !important;
-    font-size: 10.5px !important;
+  .mobile-switchers-slot .month-pill {
+    max-width: 165px !important;
+    font-size: 11.5px !important;
     padding: 0 4px !important;
   }
 
-  .topbar .cal-period-pill {
-    max-width: 185px !important;
-    font-size: 10px !important;
-    padding: 0 3px !important;
+  .mobile-switchers-slot #activeYear {
+    font-size: 13px !important;
+    padding: 0 6px !important;
+  }
+
+  .mobile-switchers-slot .cal-period-pill {
+    max-width: 175px !important;
+    font-size: 11px !important;
+    padding: 0 4px !important;
     letter-spacing: -0.015em !important;
   }
 
-  .topbar .cal-today-btn {
-    padding: 0 6px !important;
-    font-size: 10px !important;
-    height: 28px !important;
+  .mobile-switchers-slot .cal-today-btn {
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    height: 32px !important;
   }
 
-  .topbar .icon-button {
-    width: 24px !important;
-    height: 26px !important;
-    min-width: 24px !important;
-    font-size: 14px !important;
+  .mobile-switchers-slot .icon-button {
+    width: 27px !important;
+    height: 27px !important;
+    min-width: 27px !important;
+    font-size: 16px !important;
   }
 }
 

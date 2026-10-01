@@ -611,12 +611,16 @@ $("#signupForm")?.addEventListener("submit", async (e) => {
 });
 
 // Logout
-$("#logoutBtn")?.addEventListener("click", async () => {
+async function performLogout() {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
   clearUserState();
   handleAuthState(null);
-});
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+$("#logoutBtn")?.addEventListener("click", performLogout);
+$("#settingsLogoutBtn")?.addEventListener("click", performLogout);
 
 // --------------------------------------------------------------------------
 // Data Fetching & Syncing
@@ -3198,6 +3202,24 @@ function setTopbarSwitcherVisibility(el, isVisible) {
     el.removeAttribute("hidden");
   } else {
     el.setAttribute("hidden", "true");
+  }
+}
+
+function syncSwitcherLocation() {
+  const switchersGroup = $("#headerSwitchersGroup");
+  const mobileSlot = $("#mobileSwitchersSlot");
+  const desktopSlot = $("#desktopSwitchersSlot");
+  if (!switchersGroup || !mobileSlot || !desktopSlot) return;
+
+  const isMobile = window.innerWidth <= 900;
+  if (isMobile) {
+    if (mobileSlot.firstElementChild !== switchersGroup) {
+      mobileSlot.appendChild(switchersGroup);
+    }
+  } else {
+    if (desktopSlot.firstElementChild !== switchersGroup) {
+      desktopSlot.appendChild(switchersGroup);
+    }
   }
 }
 
@@ -6366,6 +6388,7 @@ function switchView(view, updateHash = true) {
     setTopbarSwitcherVisibility(monthSwitcher, false);
     setTopbarSwitcherVisibility(scheduleNavGroup, false);
   }
+  syncSwitcherLocation();
 
   if (view === "sectors") {
     const listContainer = $("#sectorsListContainer");
@@ -7237,6 +7260,8 @@ $("#purgeEmployeeHistoryBtn")?.addEventListener("click", () => {
 initSupabase();
 renderAll();
 switchView(state.activeView, true);
+syncSwitcherLocation();
+window.addEventListener("resize", syncSwitcherLocation);
 
 // Varnostni izhod za loading screen v primeru počasne povezave
 setTimeout(hideLoadingScreen, 3000);
