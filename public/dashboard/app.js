@@ -6647,22 +6647,6 @@ function renderTasks() {
   const totalStandard = activeCount + completedCount;
   const completedRate = totalStandard > 0 ? Math.round((completedCount / totalStandard) * 100) : 0;
 
-  // Assigned workers with active tasks
-  const assignedWorkerIds = new Set(
-    allTasks
-      .filter(t => !t.is_completed && t.assigned_user_id)
-      .map(t => t.assigned_user_id)
-  );
-  const assignedWorkersCount = assignedWorkerIds.size;
-
-  // Update metric card elements
-  if ($("#tasksActiveCount")) $("#tasksActiveCount").textContent = activeCount;
-  if ($("#tasksActiveSub")) $("#tasksActiveSub").textContent = activeCount === 1 ? "1 naloga v teku" : `${activeCount} v teku za izvedbo`;
-  if ($("#tasksRecurringCount")) $("#tasksRecurringCount").textContent = recurringCount;
-  if ($("#tasksCompletedCount")) $("#tasksCompletedCount").textContent = completedCount;
-  if ($("#tasksCompletedRate")) $("#tasksCompletedRate").textContent = `${completedRate}% zaključenih`;
-  if ($("#tasksAssignedWorkersCount")) $("#tasksAssignedWorkersCount").textContent = assignedWorkersCount;
-
   // Update tab counts
   if ($("#tabCountAll")) $("#tabCountAll").textContent = allTasks.length;
   if ($("#tabCountActive")) $("#tabCountActive").textContent = activeCount;
