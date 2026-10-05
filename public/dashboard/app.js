@@ -32,7 +32,7 @@ const DEFAULT_SHIFT_PRESETS = [
 
 function getInitialView() {
   const hash = (window.location.hash || "").replace(/^#/, "").trim();
-  const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
+  const validViews = ["overview", "sectors", "employees", "schedule", "tasks", "settings"];
   if (validViews.includes(hash)) {
     return hash;
   }
@@ -56,6 +56,8 @@ const state = {
   scheduleShifts: null,
   openShifts: [],
   shiftPresets: null,
+  tasks: [],
+  tasksFilter: { status: "all", employee: "all", search: "" },
   sectors: [],
   jobs: [],
   employees: [],
@@ -87,6 +89,8 @@ function clearUserState() {
   state.pendingRequests = [];
   state.scheduleShifts = null;
   state.shiftPresets = null;
+  state.tasks = [];
+  state.tasksFilter = { status: "all", employee: "all", search: "" };
   state.employeeCustomStatuses = {};
   state.employeeWorkTypes = {};
   state.externalEvents = [];
@@ -637,6 +641,7 @@ async function loadAllData() {
   await fetchScheduleShifts();
   await fetchOpenShifts();
   await fetchShiftPresets();
+  await fetchEmployerTasks();
   renderAll();
 }
 
@@ -1002,6 +1007,16 @@ function setupRealtimeListeners() {
             await fetchShiftPresets();
             renderShiftModalPresets();
             renderShiftPresetsSettings();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "employer_tasks" },
+        async () => {
+          if (state.currentUser) {
+            await fetchEmployerTasks();
+            renderTasks();
           }
         }
       )
@@ -5024,7 +5039,9 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (startInput) startInput.value = openShift.startTime || "08:00";
     if (endInput) endInput.value = openShift.endTime || "16:00";
     if (spotsInput) spotsInput.value = openShift.requiredSpots || 1;
-    if (noteInput) noteInput.value = openShift.note || "";
+    const parsedOpenNote = parseShiftNoteAndTasks(openShift.note || "");
+    if (noteInput) noteInput.value = parsedOpenNote.textNote;
+    window.currentShiftTasks = parsedOpenNote.tasks;
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
 
     // Show signups
@@ -5058,7 +5075,9 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (dateInput) dateInput.value = shift.date;
     if (startInput) startInput.value = shift.startTime || "08:00";
     if (endInput) endInput.value = shift.endTime || "16:00";
-    if (noteInput) noteInput.value = shift.note || "";
+    const parsedShiftNote = parseShiftNoteAndTasks(shift.note || "");
+    if (noteInput) noteInput.value = parsedShiftNote.textNote;
+    window.currentShiftTasks = parsedShiftNote.tasks;
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
   } else {
     // Add Mode
@@ -5093,6 +5112,7 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (startInput) startInput.value = "08:00";
     if (endInput) endInput.value = "16:00";
     if (noteInput) noteInput.value = "";
+    window.currentShiftTasks = [];
     if (deleteBtn) deleteBtn.style.display = "none";
 
     // Recurrence setup for Add Mode
@@ -5106,6 +5126,11 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (endDateInput) endDateInput.value = computeFridayOfWeek(baseDate);
     window.selectShiftDaysPreset("workweek");
   }
+
+  const customTaskInput = $("#shiftCustomTaskInput");
+  if (customTaskInput) customTaskInput.value = "";
+  window.populateShiftRecurringTasksDropdown();
+  window.renderShiftModalTasks();
 
   renderShiftModalPresets();
   updateShiftDurationDisplay();
@@ -6308,6 +6333,641 @@ window.toggleExternalEventsVisibility = function (e) {
   renderSchedule();
 };
 
+// ==========================================================================
+// Tasks & Assignments (Naloge in zadolžitve delavcev) & Shift To-Do Checklist
+// ==========================================================================
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function parseShiftNoteAndTasks(fullNote) {
+  if (!fullNote) return { textNote: "", tasks: [] };
+  const lines = fullNote.split("\n");
+  const tasks = [];
+  const textLines = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Matches markdown checklist: "- [ ] Task" or "- [x] Task" or "* [ ] Task"
+    const match = trimmed.match(/^[-*]\s*\[([ xX])\]\s*(.*)$/);
+    if (match) {
+      tasks.push({
+        title: match[2].trim(),
+        completed: match[1].toLowerCase() === "x"
+      });
+    } else {
+      textLines.push(line);
+    }
+  }
+
+  return {
+    textNote: textLines.join("\n").trim(),
+    tasks: tasks
+  };
+}
+
+function serializeShiftNoteAndTasks(textNote, tasks) {
+  const parts = [];
+  const cleanText = (textNote || "").trim();
+  if (cleanText) parts.push(cleanText);
+
+  if (Array.isArray(tasks) && tasks.length > 0) {
+    for (const t of tasks) {
+      if (!t.title || !t.title.trim()) continue;
+      parts.push(`- [${t.completed ? "x" : " "}] ${t.title.trim()}`);
+    }
+  }
+
+  return parts.join("\n");
+}
+
+// Global active shift tasks buffer for shiftModal
+window.currentShiftTasks = [];
+
+window.renderShiftModalTasks = function () {
+  const listEl = $("#shiftTasksList");
+  const counterEl = $("#shiftTasksCounter");
+  if (!listEl) return;
+
+  const tasks = window.currentShiftTasks || [];
+  if (counterEl) {
+    const completedCount = tasks.filter(t => t.completed).length;
+    counterEl.textContent = tasks.length === 0 
+      ? "0 nalog" 
+      : `${completedCount}/${tasks.length} opravljeno`;
+  }
+
+  if (tasks.length === 0) {
+    listEl.innerHTML = `<span style="font-size: 11.5px; color: var(--muted); font-style: italic; padding: 4px 0;">Za to izmeno še ni dodanih nalog.</span>`;
+    return;
+  }
+
+  listEl.innerHTML = tasks.map((t, idx) => `
+    <div class="shift-task-item ${t.completed ? "checked" : ""}">
+      <input type="checkbox" class="shift-task-checkbox" ${t.completed ? "checked" : ""} onchange="window.toggleShiftTask(${idx})" />
+      <span class="shift-task-text">${escapeHtml(t.title)}</span>
+      <button type="button" class="shift-task-remove-btn" onclick="window.removeShiftTask(${idx})" title="Odstrani zadolžitev">✕</button>
+    </div>
+  `).join("");
+};
+
+window.populateShiftRecurringTasksDropdown = function () {
+  const selectEl = $("#shiftRecurringTaskSelect");
+  if (!selectEl) return;
+
+  const recurringTasks = (state.tasks || []).filter(t => t.is_recurring);
+  let optionsHtml = `<option value="">⚡ Izberi iz rednih nalog / predlog (${recurringTasks.length})...</option>`;
+  
+  if (recurringTasks.length === 0) {
+    optionsHtml = `<option value="">Ni še shranjenih rednih predlog (dodajte v sekciji Naloge)</option>`;
+  } else {
+    optionsHtml += recurringTasks.map(t => {
+      const locStr = t.location ? ` [${t.location}]` : "";
+      return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}${escapeHtml(locStr)}</option>`;
+    }).join("");
+  }
+  selectEl.innerHTML = optionsHtml;
+};
+
+window.addRecurringTaskToShift = function () {
+  const selectEl = $("#shiftRecurringTaskSelect");
+  if (!selectEl || !selectEl.value) return;
+
+  const task = (state.tasks || []).find(t => t.id === selectEl.value);
+  if (!task) return;
+
+  if (!window.currentShiftTasks) window.currentShiftTasks = [];
+  window.currentShiftTasks.push({
+    title: task.title,
+    completed: false
+  });
+  selectEl.value = "";
+  window.renderShiftModalTasks();
+};
+
+window.addCustomTaskToShift = function () {
+  const inputEl = $("#shiftCustomTaskInput");
+  if (!inputEl) return;
+  const val = inputEl.value.trim();
+  if (!val) return;
+
+  if (!window.currentShiftTasks) window.currentShiftTasks = [];
+  window.currentShiftTasks.push({
+    title: val,
+    completed: false
+  });
+  inputEl.value = "";
+  window.renderShiftModalTasks();
+};
+
+window.removeShiftTask = function (index) {
+  if (!window.currentShiftTasks) return;
+  window.currentShiftTasks.splice(index, 1);
+  window.renderShiftModalTasks();
+};
+
+window.toggleShiftTask = function (index) {
+  if (!window.currentShiftTasks || !window.currentShiftTasks[index]) return;
+  window.currentShiftTasks[index].completed = !window.currentShiftTasks[index].completed;
+  window.renderShiftModalTasks();
+};
+
+// --- Supabase Data Methods for Employer Tasks ---
+
+async function fetchEmployerTasks() {
+  // 1. Try local cache first for instant rendering
+  try {
+    const cached = localStorage.getItem(getUserStorageKey("employer_tasks"));
+    if (cached) {
+      state.tasks = JSON.parse(cached);
+    }
+  } catch (e) {}
+
+  if (!supabaseClient || !state.currentUser) return state.tasks || [];
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("employer_tasks")
+      .select("*")
+      .eq("employer_id", state.currentUser.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      state.tasks = data;
+      try {
+        localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(data));
+      } catch (e) {}
+    } else if (error) {
+      console.warn("fetchEmployerTasks note:", error.message);
+    }
+  } catch (err) {
+    console.warn("fetchEmployerTasks error:", err);
+  }
+
+  return state.tasks || [];
+}
+
+async function saveEmployerTask(taskData) {
+  if (!state.tasks) state.tasks = [];
+
+  const existingIdx = state.tasks.findIndex(t => t.id === taskData.id);
+  if (existingIdx !== -1) {
+    state.tasks[existingIdx] = { ...state.tasks[existingIdx], ...taskData, updated_at: new Date().toISOString() };
+  } else {
+    state.tasks.unshift({
+      ...taskData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  try {
+    localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks));
+  } catch (e) {}
+
+  renderTasks();
+  if (state.activeView === "schedule") {
+    window.populateShiftRecurringTasksDropdown();
+  }
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      const { error } = await supabaseClient.from("employer_tasks").upsert({
+        id: taskData.id,
+        employer_id: state.currentUser.id,
+        assigned_user_id: taskData.assigned_user_id || null,
+        title: taskData.title,
+        description: taskData.description || null,
+        location: taskData.location || null,
+        due_date: taskData.due_date || null,
+        due_time: taskData.due_time || null,
+        is_recurring: !!taskData.is_recurring,
+        is_completed: !!taskData.is_completed,
+        completed_at: taskData.is_completed ? (taskData.completed_at || new Date().toISOString()) : null
+      });
+      if (error) console.warn("Supabase saveEmployerTask error:", error.message);
+    } catch (err) {
+      console.warn("Supabase saveEmployerTask error:", err);
+    }
+  }
+}
+
+async function deleteEmployerTask(taskId) {
+  if (!taskId) return;
+  state.tasks = (state.tasks || []).filter(t => t.id !== taskId);
+  try {
+    localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks));
+  } catch (e) {}
+  renderTasks();
+  if (state.activeView === "schedule") {
+    window.populateShiftRecurringTasksDropdown();
+  }
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient.from("employer_tasks").delete().eq("id", taskId);
+    } catch (err) {
+      console.warn("Supabase deleteEmployerTask error:", err);
+    }
+  }
+}
+
+async function toggleEmployerTask(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+
+  task.is_completed = !task.is_completed;
+  task.completed_at = task.is_completed ? new Date().toISOString() : null;
+  task.updated_at = new Date().toISOString();
+
+  try {
+    localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks));
+  } catch (e) {}
+
+  renderTasks();
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient.from("employer_tasks").update({
+        is_completed: task.is_completed,
+        completed_at: task.completed_at,
+        updated_at: task.updated_at
+      }).eq("id", taskId);
+    } catch (err) {
+      console.warn("Supabase toggleEmployerTask error:", err);
+    }
+  }
+}
+
+window.setTasksTab = function (tab) {
+  if (!state.tasksFilter) state.tasksFilter = { status: 'all', employee: 'all', search: '' };
+  state.tasksFilter.status = tab;
+
+  document.querySelectorAll(".tasks-tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.taskTab === tab);
+  });
+
+  renderTasks();
+};
+
+function renderTasks() {
+  if (!state.tasks) state.tasks = [];
+  if (!state.tasksFilter) {
+    state.tasksFilter = { status: 'all', employee: 'all', search: '' };
+  }
+
+  // Active employees set
+  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
+  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+  const empMap = new Map(state.employees.map(e => [e.id, e.name]));
+
+  // Update Worker Filter options in task control panel
+  const workerFilterSelect = $("#tasksWorkerFilter");
+  if (workerFilterSelect) {
+    const currentVal = state.tasksFilter.employee || "all";
+    let workerOpts = `<option value="all">Vsi delavci</option><option value="unassigned">Brez dodelitve / Splošno</option>`;
+    activeEmployees.forEach(e => {
+      workerOpts += `<option value="${escapeHtml(e.id)}" ${e.id === currentVal ? "selected" : ""}>${escapeHtml(e.name)}</option>`;
+    });
+    workerFilterSelect.innerHTML = workerOpts;
+  }
+
+  // Metrics calculation
+  const allTasks = state.tasks;
+  const activeCount = allTasks.filter(t => !t.is_completed && !t.is_recurring).length;
+  const recurringCount = allTasks.filter(t => t.is_recurring).length;
+  const completedCount = allTasks.filter(t => t.is_completed).length;
+  const totalStandard = activeCount + completedCount;
+  const completedRate = totalStandard > 0 ? Math.round((completedCount / totalStandard) * 100) : 0;
+
+  // Assigned workers with active tasks
+  const assignedWorkerIds = new Set(
+    allTasks
+      .filter(t => !t.is_completed && t.assigned_user_id)
+      .map(t => t.assigned_user_id)
+  );
+  const assignedWorkersCount = assignedWorkerIds.size;
+
+  // Update metric card elements
+  if ($("#tasksActiveCount")) $("#tasksActiveCount").textContent = activeCount;
+  if ($("#tasksActiveSub")) $("#tasksActiveSub").textContent = activeCount === 1 ? "1 naloga v teku" : `${activeCount} v teku za izvedbo`;
+  if ($("#tasksRecurringCount")) $("#tasksRecurringCount").textContent = recurringCount;
+  if ($("#tasksCompletedCount")) $("#tasksCompletedCount").textContent = completedCount;
+  if ($("#tasksCompletedRate")) $("#tasksCompletedRate").textContent = `${completedRate}% zaključenih`;
+  if ($("#tasksAssignedWorkersCount")) $("#tasksAssignedWorkersCount").textContent = assignedWorkersCount;
+
+  // Update tab counts
+  if ($("#tabCountAll")) $("#tabCountAll").textContent = allTasks.length;
+  if ($("#tabCountActive")) $("#tabCountActive").textContent = activeCount;
+  if ($("#tabCountRecurring")) $("#tabCountRecurring").textContent = recurringCount;
+  if ($("#tabCountCompleted")) $("#tabCountCompleted").textContent = completedCount;
+
+  // Filter tasks for the list
+  const statusFilter = state.tasksFilter.status || 'all';
+  const employeeFilter = state.tasksFilter.employee || 'all';
+  const searchLower = (state.tasksFilter.search || '').trim().toLowerCase();
+
+  const filteredTasks = allTasks.filter(task => {
+    // 1. Status tab filter
+    if (statusFilter === 'active' && (task.is_completed || task.is_recurring)) return false;
+    if (statusFilter === 'recurring' && !task.is_recurring) return false;
+    if (statusFilter === 'completed' && !task.is_completed) return false;
+
+    // 2. Worker filter
+    if (employeeFilter === 'unassigned') {
+      if (task.assigned_user_id) return false;
+    } else if (employeeFilter !== 'all') {
+      if (task.assigned_user_id !== employeeFilter) return false;
+    }
+
+    // 3. Search filter
+    if (searchLower) {
+      const titleMatch = (task.title || '').toLowerCase().includes(searchLower);
+      const descMatch = (task.description || '').toLowerCase().includes(searchLower);
+      const locMatch = (task.location || '').toLowerCase().includes(searchLower);
+      const empName = task.assigned_user_id ? (empMap.get(task.assigned_user_id) || '').toLowerCase() : '';
+      const empMatch = empName.includes(searchLower);
+      if (!titleMatch && !descMatch && !locMatch && !empMatch) return false;
+    }
+
+    return true;
+  });
+
+  const container = $("#tasksListContainer");
+  if (!container) return;
+
+  if (filteredTasks.length === 0) {
+    let emptyTitle = "Ni najdenih nalog";
+    let emptyDesc = "Trenutno ni nalog, ki bi ustrezale izbranim kriterijem ali filtrom.";
+    if (allTasks.length === 0) {
+      emptyTitle = "Še nimate ustvarjenih nalog";
+      emptyDesc = "Ustvarite prvo nalogo ali redno predlogo z lokacijo, rokom izvedbe in dodeljenim delavcem.";
+    } else if (statusFilter === 'recurring') {
+      emptyTitle = "Ni rednih ponavljajočih se nalog";
+      emptyDesc = "Ustvarite redno predlogo, ki jo lahko dodajate neposredno v urnik ali hitro dodeljujete delavcem.";
+    }
+
+    container.innerHTML = `
+      <div class="tasks-empty-state">
+        <div class="tasks-empty-icon">✓</div>
+        <h3>${escapeHtml(emptyTitle)}</h3>
+        <p>${escapeHtml(emptyDesc)}</p>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="ghost-button" onclick="openTaskModal(null, true)">🔁 Nova redna predloga</button>
+          <button type="button" class="primary-button" onclick="openTaskModal()">+ Nova naloga</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const todayIso = formatLocalDate(new Date());
+
+  container.innerHTML = filteredTasks.map(task => {
+    const isCompleted = !!task.is_completed;
+    const isRecurring = !!task.is_recurring;
+    const workerName = task.assigned_user_id ? empMap.get(task.assigned_user_id) || "Neznan delavec" : null;
+
+    let isOverdue = false;
+    if (!isCompleted && task.due_date && task.due_date < todayIso) {
+      isOverdue = true;
+    }
+
+    let dueDateStr = "";
+    if (task.due_date) {
+      try {
+        const [y, m, d] = task.due_date.split("-");
+        dueDateStr = `${parseInt(d, 10)}. ${parseInt(m, 10)}. ${y}`;
+        if (task.due_time) {
+          dueDateStr += ` ob ${task.due_time}`;
+        }
+      } catch (e) {
+        dueDateStr = task.due_date;
+      }
+    }
+
+    return `
+      <div class="task-card ${isCompleted ? "completed" : ""} ${isRecurring ? "recurring" : ""}" id="taskCard_${escapeHtml(task.id)}">
+        <button type="button" class="task-checkbox-btn" onclick="toggleEmployerTask('${escapeHtml(task.id)}')" title="${isCompleted ? "Označi kot neopravljeno" : "Označi kot opravljeno"}">
+          ${isCompleted ? "✓" : ""}
+        </button>
+
+        <div class="task-card-body">
+          <div class="task-title-row">
+            <h4 class="task-title">${escapeHtml(task.title)}</h4>
+          </div>
+          ${task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : ""}
+
+          <div class="task-meta-row">
+            ${isRecurring ? `<span class="task-badge badge-recurring">🔁 Redna predloga</span>` : ""}
+            
+            ${workerName ? `
+              <span class="task-badge badge-worker">
+                👤 ${escapeHtml(workerName)}
+              </span>
+            ` : `
+              <span class="task-badge badge-worker" style="background: #f8fafc; color: #64748b;">
+                👥 Vsi delavci / Brez
+              </span>
+            `}
+
+            ${task.location ? `
+              <span class="task-badge badge-location">
+                📍 ${escapeHtml(task.location)}
+              </span>
+            ` : ""}
+
+            ${dueDateStr ? `
+              <span class="task-badge badge-date ${isOverdue ? "overdue" : ""}">
+                📅 ${isOverdue ? "Zamujeno: " : "Rok: "}${escapeHtml(dueDateStr)}
+              </span>
+            ` : ""}
+          </div>
+        </div>
+
+        <div class="task-actions">
+          <button type="button" class="task-action-btn" onclick="openTaskModalById('${escapeHtml(task.id)}')" title="Uredi nalogo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button type="button" class="task-action-btn delete" onclick="confirmDeleteTask('${escapeHtml(task.id)}')" title="Izbriši nalogo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+window.openTaskModal = function (task = null, forceRecurring = false) {
+  const modal = $("#taskModal");
+  if (!modal) return;
+
+  const idInput = $("#modalTaskId");
+  const titleInput = $("#modalTaskTitle");
+  const descInput = $("#modalTaskDescription");
+  const workerSelect = $("#modalTaskWorker");
+  const locInput = $("#modalTaskLocation");
+  const dueDateInput = $("#modalTaskDueDate");
+  const dueTimeInput = $("#modalTaskDueTime");
+  const recurringCheckbox = $("#modalTaskIsRecurring");
+  const deleteBtn = $("#deleteTaskModalBtn");
+  const modalTitle = $("#taskModalTitle");
+
+  // Populate active workers
+  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
+  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+  let workerOptions = `<option value="">Vsi delavci / Brez dodelitve</option>`;
+  activeEmployees.forEach(e => {
+    workerOptions += `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`;
+  });
+  if (workerSelect) workerSelect.innerHTML = workerOptions;
+
+  if (task) {
+    if (modalTitle) modalTitle.textContent = "Uredi zadolžitev / nalogo";
+    if (idInput) idInput.value = task.id;
+    if (titleInput) titleInput.value = task.title || "";
+    if (descInput) descInput.value = task.description || "";
+    if (workerSelect) workerSelect.value = task.assigned_user_id || "";
+    if (locInput) locInput.value = task.location || "";
+    if (dueDateInput) dueDateInput.value = task.due_date || "";
+    if (dueTimeInput) dueTimeInput.value = task.due_time || "";
+    if (recurringCheckbox) recurringCheckbox.checked = !!task.is_recurring;
+    if (deleteBtn) deleteBtn.style.display = "inline-flex";
+  } else {
+    if (modalTitle) modalTitle.textContent = forceRecurring ? "Nova redna predloga naloge" : "Nova zadolžitev / naloga";
+    if (idInput) idInput.value = "";
+    if (titleInput) titleInput.value = "";
+    if (descInput) descInput.value = "";
+    if (workerSelect) workerSelect.value = "";
+    if (locInput) locInput.value = "";
+    if (dueDateInput) dueDateInput.value = "";
+    if (dueTimeInput) dueTimeInput.value = "";
+    if (recurringCheckbox) recurringCheckbox.checked = !!forceRecurring;
+    if (deleteBtn) deleteBtn.style.display = "none";
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.hidden = false;
+  }
+};
+
+window.openTaskModalById = function (taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (task) window.openTaskModal(task);
+};
+
+window.closeTaskModal = function () {
+  const modal = $("#taskModal");
+  if (!modal) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.hidden = true;
+  }
+};
+
+window.confirmDeleteTask = async function (taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  const taskTitle = task ? `"${task.title}"` : "to nalogo";
+  const ok = await window.showConfirmDialog({
+    title: "Izbris naloge",
+    message: `Ali ste prepričani, da želite izbrisati zadolžitev ${taskTitle}?`,
+    confirmText: "Izbriši",
+    cancelText: "Prekliči",
+    isDanger: true
+  });
+  if (ok) {
+    await deleteEmployerTask(taskId);
+  }
+};
+
+window.handleDeleteTaskFromModal = async function () {
+  const idInput = $("#modalTaskId");
+  const taskId = idInput?.value;
+  if (!taskId) return;
+  const ok = await window.showConfirmDialog({
+    title: "Izbris naloge",
+    message: "Ali ste prepričani, da želite izbrisati to nalogo?",
+    confirmText: "Izbriši",
+    cancelText: "Prekliči",
+    isDanger: true
+  });
+  if (ok) {
+    window.closeTaskModal();
+    await deleteEmployerTask(taskId);
+  }
+};
+
+// Event listeners for Tasks
+$("#taskModalForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const idInput = $("#modalTaskId");
+  const titleInput = $("#modalTaskTitle");
+  const descInput = $("#modalTaskDescription");
+  const workerSelect = $("#modalTaskWorker");
+  const locInput = $("#modalTaskLocation");
+  const dueDateInput = $("#modalTaskDueDate");
+  const dueTimeInput = $("#modalTaskDueTime");
+  const recurringCheckbox = $("#modalTaskIsRecurring");
+
+  const title = (titleInput?.value || "").trim();
+  if (!title) return;
+
+  const existingId = idInput?.value;
+  const taskId = existingId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "task_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+
+  const existingTask = existingId ? (state.tasks || []).find(t => t.id === existingId) : null;
+
+  const taskData = {
+    id: taskId,
+    employer_id: state.currentUser?.id,
+    assigned_user_id: workerSelect?.value || null,
+    title: title,
+    description: (descInput?.value || "").trim() || null,
+    location: (locInput?.value || "").trim() || null,
+    due_date: dueDateInput?.value || null,
+    due_time: dueTimeInput?.value || null,
+    is_recurring: !!recurringCheckbox?.checked,
+    is_completed: existingTask ? existingTask.is_completed : false,
+    completed_at: existingTask ? existingTask.completed_at : null
+  };
+
+  await saveEmployerTask(taskData);
+  window.closeTaskModal();
+});
+
+$("#tasksSearchInput")?.addEventListener("input", (e) => {
+  if (!state.tasksFilter) state.tasksFilter = { status: 'all', employee: 'all', search: '' };
+  state.tasksFilter.search = e.target.value;
+  renderTasks();
+});
+
+$("#tasksWorkerFilter")?.addEventListener("change", (e) => {
+  if (!state.tasksFilter) state.tasksFilter = { status: 'all', employee: 'all', search: '' };
+  state.tasksFilter.employee = e.target.value;
+  renderTasks();
+});
+
+const taskModalElement = $("#taskModal");
+taskModalElement?.addEventListener("click", (e) => {
+  if (e.target === taskModalElement) window.closeTaskModal();
+});
+
 function renderAll() {
   if ($("#activeYear")) $("#activeYear").textContent = activeMonth().year;
   if ($("#activeMonth")) $("#activeMonth").textContent = activeMonth().label;
@@ -6320,6 +6980,7 @@ function renderAll() {
   renderFilters();
   renderEmployees();
   renderSchedule();
+  renderTasks();
   renderSettings();
   renderPendingRequestsNotification();
   updateExternalCalStatusUI();
@@ -6331,7 +6992,7 @@ window.changeActiveMonth = function (offset) {
 };
 
 function switchView(view, updateHash = true) {
-  const validViews = ["overview", "sectors", "employees", "schedule", "settings"];
+  const validViews = ["overview", "sectors", "employees", "schedule", "tasks", "settings"];
   if (!validViews.includes(view)) view = "overview";
 
   state.activeView = view;
@@ -6353,6 +7014,7 @@ function switchView(view, updateHash = true) {
     sectors: "Sektorji",
     employees: "Zaposleni",
     schedule: "Urnik BETA",
+    tasks: "Naloge in zadolžitve",
     settings: "Nastavitve",
   };
   const selectedSec = (view === "sectors" && state.selectedSectorId) ? state.sectors.find((s) => s.id === state.selectedSectorId) : null;
@@ -6378,7 +7040,7 @@ function switchView(view, updateHash = true) {
     setTopbarSwitcherVisibility(yearSwitcher, false);
     setTopbarSwitcherVisibility(monthSwitcher, false);
     setTopbarSwitcherVisibility(scheduleNavGroup, true);
-  } else if (view === "settings") {
+  } else if (view === "tasks" || view === "settings") {
     setTopbarSwitcherVisibility(yearSwitcher, false);
     setTopbarSwitcherVisibility(monthSwitcher, false);
     setTopbarSwitcherVisibility(scheduleNavGroup, false);
@@ -6414,6 +7076,13 @@ function switchView(view, updateHash = true) {
       pageDesc.style.display = "block";
     }
     renderSchedule();
+  } else if (view === "tasks") {
+    if (addSectorBtn) addSectorBtn.style.display = "none";
+    if (pageDesc) {
+      pageDesc.textContent = "Ustvarjanje in dodeljevanje nalog ter ponavljajočih se zadolžitev za zaposlene.";
+      pageDesc.style.display = "block";
+    }
+    renderTasks();
   } else if (view === "settings") {
     if (addSectorBtn) addSectorBtn.style.display = "none";
     if (state.selectedSettingsCategory) {
@@ -6959,7 +7628,8 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   const sectorId = secSelect?.value;
   const startTime = startInput?.value;
   const endTime = endInput?.value;
-  const note = (noteInput?.value || "").trim();
+  const rawNoteText = (noteInput?.value || "").trim();
+  const note = serializeShiftNoteAndTasks(rawNoteText, window.currentShiftTasks);
 
   const typeInput = $("#modalShiftType");
   const isTypeOpen = typeInput?.value === "open";
