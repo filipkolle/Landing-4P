@@ -4481,7 +4481,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
                 <span class="schedule-shift-chip-sector" style="color: ${color};">● ${s.sectorName}</span>
                 <span class="schedule-shift-chip-hours">${number.format(s.hours)}h</span>
               </div>
-              ${s.note ? `<span class="schedule-shift-chip-note">${s.note}</span>` : ""}
+              ${s.note ? `<span class="schedule-shift-chip-note">${formatShiftNoteChip(s.note)}</span>` : ""}
             </div>
           `;
         })
@@ -4655,7 +4655,7 @@ function renderScheduleWeekView(container, days, shifts) {
                 <strong style="font-size: 12px; color: var(--ink);">${number.format(s.hours)} ur</strong>
               </div>
 
-              ${s.note ? `<div class="cal-shift-note-box" style="margin-top: 2px; font-size: 11px;">${s.note}</div>` : ""}
+              ${s.note ? `<div class="cal-shift-note-box" style="margin-top: 4px; font-size: 11px;">${renderShiftNoteSummaryHtml(s.note)}</div>` : ""}
             </article>
           `;
         })
@@ -5246,13 +5246,8 @@ window.openOpenShiftDetailsModal = function (openShiftId) {
         `}
       </div>
 
-      <!-- Opomba / Navodila -->
-      ${openShift.note && openShift.note !== "Odprta izmena" ? `
-        <div style="background: var(--surface-soft); padding: 10px 12px; border-radius: 8px; border-left: 3px solid ${color}; font-size: 12px; color: var(--muted);">
-          <strong style="color: var(--ink); display: block; margin-bottom: 2px;">Opomba za zaposlene:</strong>
-          ${openShift.note}
-        </div>
-      ` : ""}
+      <!-- Opomba / Zadolžitve za zaposlene -->
+      ${renderShiftNoteAndTasksHtml(openShift.note, color)}
     `;
   }
 
@@ -5465,6 +5460,12 @@ window.openDayDetailsModal = function (dateStr) {
                     `).join("")}
                   </div>
                 ` : `<div style="font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic;">Še ni prijavljenih zaposlenih</div>`}
+
+                ${os.note && os.note !== "Odprta izmena" ? `
+                  <div style="margin-top: 8px;">
+                    ${renderShiftNoteAndTasksHtml(os.note, color, true)}
+                  </div>
+                ` : ""}
               </div>
             `;
           }).join("")}
@@ -5499,25 +5500,32 @@ window.openDayDetailsModal = function (dateStr) {
         ${regularDayShifts.map((s) => {
           const color = s.color || "#56829d";
           return `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff; border: 1px solid var(--line); border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${s.id}');" title="Kliknite za urejanje izmene">
-              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-                <span class="avatar" style="width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; background: ${color}20; color: ${color}; font-weight: 700;">${initials(s.userName)}</span>
-                <div style="min-width: 0;">
-                  <div style="font-weight: 700; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.userName}</div>
-                  <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                    <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
-                      <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
-                      ${s.sectorName}
-                    </span>
-                    ${s.note ? `<span style="font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.note}</span>` : ""}
+            <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid var(--line); border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${s.id}');" title="Kliknite za urejanje izmene">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                  <span class="avatar" style="width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; background: ${color}20; color: ${color}; font-weight: 700;">${initials(s.userName)}</span>
+                  <div style="min-width: 0;">
+                    <div style="font-weight: 700; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.userName}</div>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                      <span class="sector-code-badge" style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}35; font-size: 10px; padding: 1px 6px;">
+                        <span class="sector-color-dot" style="background-color: ${color}; width: 6px; height: 6px;"></span>
+                        ${s.sectorName}
+                      </span>
+                    </div>
                   </div>
+                </div>
+
+                <div style="text-align: right; flex-shrink: 0;">
+                  <div style="font-size: 13px; font-weight: 700; color: var(--ink);">${s.startTime} – ${s.endTime}</div>
+                  <div style="font-size: 11.5px; font-weight: 700; color: var(--primary);">${number.format(s.hours)} h</div>
                 </div>
               </div>
 
-              <div style="text-align: right; flex-shrink: 0;">
-                <div style="font-size: 13px; font-weight: 700; color: var(--ink);">${s.startTime} – ${s.endTime}</div>
-                <div style="font-size: 11.5px; font-weight: 700; color: var(--primary);">${number.format(s.hours)} h</div>
-              </div>
+              ${s.note && s.note !== "Odprta izmena" ? `
+                <div>
+                  ${renderShiftNoteAndTasksHtml(s.note, color, true)}
+                </div>
+              ` : ""}
             </div>
           `;
         }).join("")}
@@ -6348,29 +6356,124 @@ function escapeHtml(str) {
 }
 
 function parseShiftNoteAndTasks(fullNote) {
-  if (!fullNote) return { textNote: "", tasks: [] };
-  const lines = fullNote.split("\n");
-  const tasks = [];
-  const textLines = [];
+  if (!fullNote || typeof fullNote !== "string") {
+    return { textNote: "", tasks: [] };
+  }
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Matches markdown checklist: "- [ ] Task" or "- [x] Task" or "* [ ] Task"
-    const match = trimmed.match(/^[-*]\s*\[([ xX])\]\s*(.*)$/);
-    if (match) {
-      tasks.push({
-        title: match[2].trim(),
-        completed: match[1].toLowerCase() === "x"
-      });
-    } else {
-      textLines.push(line);
+  // Remove [Odprta izmena] tag if present
+  let cleanStr = fullNote.replace(/\[Odprta izmena\]\s*/gi, "").trim();
+  if (!cleanStr) return { textNote: "", tasks: [] };
+
+  // Check if there are checklist tasks: - [ ], - [x], * [ ], etc.
+  const taskRegex = /(?:^|[\n\r]|\s+)[-*]\s*\[([ xX])\]\s*/;
+  const firstIndex = cleanStr.search(taskRegex);
+
+  if (firstIndex === -1) {
+    // Also check for bullet-pointed lines like: • Task or - Task (separated by newlines)
+    const lines = cleanStr.split(/[\r\n]+/);
+    const bulletTasks = [];
+    const plainLines = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const bMatch = trimmed.match(/^[\u2022\u2023\u25E6\u2043\u2219*-]\s+(.+)$/);
+      if (bMatch) {
+        bulletTasks.push({ title: bMatch[1].trim(), completed: false });
+      } else if (trimmed) {
+        plainLines.push(trimmed);
+      }
+    }
+    if (bulletTasks.length > 0) {
+      return { textNote: plainLines.join("\n").trim(), tasks: bulletTasks };
+    }
+    return { textNote: cleanStr, tasks: [] };
+  }
+
+  const textNote = firstIndex > 0 ? cleanStr.substring(0, firstIndex).trim() : "";
+  const tasksSection = cleanStr.substring(firstIndex);
+
+  const tasks = [];
+  const parts = tasksSection.split(/(?:^|[\n\r]|\s+)[-*]\s*\[([ xX])\]\s*/);
+  for (let i = 1; i < parts.length; i += 2) {
+    const isCompleted = (parts[i] || "").toLowerCase() === "x";
+    const title = (parts[i + 1] || "").trim();
+    if (title) {
+      tasks.push({ title, completed: isCompleted });
     }
   }
 
-  return {
-    textNote: textLines.join("\n").trim(),
-    tasks: tasks
-  };
+  return { textNote, tasks };
+}
+
+function renderShiftNoteAndTasksHtml(note, accentColor = "#56829d", isCompact = false) {
+  if (!note || note === "Odprta izmena" || !note.trim()) return "";
+  const { textNote, tasks } = parseShiftNoteAndTasks(note);
+  if (!textNote && tasks.length === 0) return "";
+
+  const hasTasks = tasks.length > 0;
+  const headerTitle = hasTasks && textNote 
+    ? "Opomba in zadolžitve:" 
+    : (hasTasks ? `Zadolžitve (${tasks.length}):` : "Opomba za zaposlene:");
+
+  let html = `
+    <div class="shift-note-tasks-box" style="background: var(--surface-soft); padding: ${isCompact ? "8px 10px" : "12px 14px"}; border-radius: 9px; border: 1px solid var(--line); border-left: 3.5px solid ${accentColor}; font-size: ${isCompact ? "11.5px" : "12.5px"}; text-align: left;">
+      <div style="font-weight: 700; color: var(--ink); margin-bottom: 6px; font-size: ${isCompact ? "11.5px" : "12px"}; display: flex; align-items: center; justify-content: space-between;">
+        <span>${escapeHtml(headerTitle)}</span>
+      </div>
+  `;
+
+  if (textNote) {
+    html += `<div style="color: var(--muted); margin-bottom: ${hasTasks ? "8px" : "0"}; line-height: 1.45; white-space: pre-line;">${escapeHtml(textNote)}</div>`;
+  }
+
+  if (hasTasks) {
+    html += `
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: ${isCompact ? "4px" : "6px"};">
+        ${tasks.map(t => {
+          const isDone = Boolean(t.completed);
+          return `
+            <li style="display: flex; align-items: flex-start; gap: 8px; font-size: ${isCompact ? "11.5px" : "12.5px"}; color: ${isDone ? "var(--muted)" : "var(--ink)"}; line-height: 1.35; background: #ffffff; padding: ${isCompact ? "5px 8px" : "7px 11px"}; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,0.02); ${isDone ? "opacity: 0.85;" : ""}">
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isDone ? "#16a34a" : accentColor}; margin-top: 5px; flex-shrink: 0;"></span>
+              <span style="flex: 1; ${isDone ? "text-decoration: line-through;" : "font-weight: 500;"}">${escapeHtml(t.title)}</span>
+              ${isDone ? `<span style="font-size: 10px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 1.5px 6px; border-radius: 4px; flex-shrink: 0;">Opravljeno</span>` : ""}
+            </li>
+          `;
+        }).join("")}
+      </ul>
+    `;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderShiftNoteSummaryHtml(note) {
+  if (!note || note === "Odprta izmena" || !note.trim()) return "";
+  const { textNote, tasks } = parseShiftNoteAndTasks(note);
+  if (!textNote && tasks.length === 0) return "";
+  const parts = [];
+  if (textNote) {
+    parts.push(`<div>${escapeHtml(textNote)}</div>`);
+  }
+  if (tasks.length > 0) {
+    const taskItems = tasks.map(t => `
+      <div style="display: flex; align-items: center; gap: 4px; ${t.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
+        <span style="display: inline-block; width: 4.5px; height: 4.5px; border-radius: 50%; background: ${t.completed ? '#16a34a' : 'var(--primary)'}; flex-shrink: 0;"></span>
+        <span>${escapeHtml(t.title)}</span>
+      </div>
+    `).join("");
+    parts.push(`<div style="display: flex; flex-direction: column; gap: 2px; margin-top: ${textNote ? '3px' : '0'};">${taskItems}</div>`);
+  }
+  return parts.join("");
+}
+
+function formatShiftNoteChip(note) {
+  if (!note || note === "Odprta izmena") return "";
+  const { textNote, tasks } = parseShiftNoteAndTasks(note);
+  if (textNote) return escapeHtml(textNote);
+  if (tasks.length > 0) {
+    return tasks.length === 1 ? `• ${escapeHtml(tasks[0].title)}` : `• ${tasks.length} nalog`;
+  }
+  return escapeHtml(note);
 }
 
 function serializeShiftNoteAndTasks(textNote, tasks) {
