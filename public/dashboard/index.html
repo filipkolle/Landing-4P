@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=82" />
+    <link rel="stylesheet" href="styles.css?v=83" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -1198,19 +1198,19 @@
             </p>
 
             <!-- Hitro dodajanje iz seznama rednih nalog / predlog -->
-            <div class="shift-task-quick-add-row" style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <select id="shiftRecurringTaskSelect" class="cal-select" style="flex: 1; font-size: 12px; height: 34px;">
-                <option value="">⚡ Izberi iz rednih nalog / predlog...</option>
+            <div class="shift-task-quick-add-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+              <select id="shiftRecurringTaskSelect" class="cal-select" style="flex: 1 1 0; min-width: 0; width: 0; font-size: 12px; height: 35px; padding: 0 10px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; box-sizing: border-box;">
+                <option value="">⚡ Izberi iz rednih nalog...</option>
               </select>
-              <button type="button" class="ghost-button" onclick="addRecurringTaskToShift()" style="font-size: 11.5px; height: 34px; padding: 0 12px; white-space: nowrap; font-weight: 700;">
+              <button type="button" class="ghost-button" onclick="addRecurringTaskToShift()" style="font-size: 11.5px; height: 35px; padding: 0 14px; white-space: nowrap; font-weight: 700; flex-shrink: 0; box-sizing: border-box;">
                 + Dodaj
               </button>
             </div>
 
             <!-- Vnos nove naloge za to izmeno -->
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <input type="text" id="shiftCustomTaskInput" placeholder="Ali vpišite novo nalogo za to izmeno..." style="flex: 1; font-size: 12.5px; height: 34px;" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); addCustomTaskToShift(); }" />
-              <button type="button" class="primary-button" onclick="addCustomTaskToShift()" style="font-size: 11.5px; height: 34px; padding: 0 14px; white-space: nowrap;">
+            <div class="shift-task-quick-add-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box;">
+              <input type="text" id="shiftCustomTaskInput" placeholder="Ali vpišite novo nalogo za to izmeno..." style="flex: 1 1 0; min-width: 0; width: 0; font-size: 12.5px; height: 35px; padding: 0 12px; box-sizing: border-box;" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); addCustomTaskToShift(); }" />
+              <button type="button" class="primary-button" onclick="addCustomTaskToShift()" style="font-size: 11.5px; height: 35px; padding: 0 14px; white-space: nowrap; font-weight: 700; flex-shrink: 0; box-sizing: border-box;">
                 + Dodaj
               </button>
             </div>
@@ -1525,6 +1525,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=93"></script>
+    <script src="app.js?v=94"></script>
   </body>
 </html>

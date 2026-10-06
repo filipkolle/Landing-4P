@@ -3982,6 +3982,40 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
 }
 
 /* Shift modal To-Do tasks checklist */
+.shift-tasks-section {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.shift-task-quick-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.shift-task-quick-add-row select,
+.shift-task-quick-add-row input {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.shift-task-quick-add-row button {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
 .shift-tasks-list {
   display: flex;
   flex-direction: column;

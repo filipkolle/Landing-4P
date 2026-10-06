@@ -6526,10 +6526,10 @@ window.populateShiftRecurringTasksDropdown = function () {
   if (!selectEl) return;
 
   const recurringTasks = (state.tasks || []).filter(t => t.is_recurring);
-  let optionsHtml = `<option value="">⚡ Izberi iz rednih nalog / predlog (${recurringTasks.length})...</option>`;
+  let optionsHtml = `<option value="">⚡ Izberi iz rednih nalog (${recurringTasks.length})...</option>`;
   
   if (recurringTasks.length === 0) {
-    optionsHtml = `<option value="">Ni še shranjenih rednih predlog (dodajte v sekciji Naloge)</option>`;
+    optionsHtml = `<option value="">Ni še shranjenih rednih predlog</option>`;
   } else {
     optionsHtml += recurringTasks.map(t => {
       const locStr = t.location ? ` [${t.location}]` : "";
