@@ -964,7 +964,7 @@ async function fetchEmployeeAbsences() {
       .order("start_date", { ascending: true });
 
     if (!error && Array.isArray(data)) {
-      state.absences = data.map((d) => {
+      const rawAbsences = data.map((d) => {
         const emp = state.employees.find((e) => e.id === d.user_id);
         const empName = emp ? emp.name : (state.userProfiles.get(d.user_id) || "Zaposleni");
         return {
@@ -980,12 +980,35 @@ async function fetchEmployeeAbsences() {
           createdAt: d.created_at,
         };
       });
+
+      // Avtomatsko filtriranje podvojenih/prekrivajočih se odsotnosti
+      const uniqueAbsences = [];
+      for (const item of rawAbsences) {
+        const hasOverlap = uniqueAbsences.some(
+          (u) => u.userId === item.userId && u.startDate <= item.endDate && u.endDate >= item.startDate
+        );
+        if (!hasOverlap) {
+          uniqueAbsences.push(item);
+        }
+      }
+
+      state.absences = uniqueAbsences;
       localStorage.setItem(getUserStorageKey("employee_absences"), JSON.stringify(state.absences));
       return state.absences;
     } else {
       if (error) console.log("employee_absences fetch note:", error.message);
       const cached = localStorage.getItem(getUserStorageKey("employee_absences"));
-      state.absences = cached ? JSON.parse(cached) : [];
+      const rawCached = cached ? JSON.parse(cached) : [];
+      const uniqueCached = [];
+      for (const item of rawCached) {
+        const hasOverlap = uniqueCached.some(
+          (u) => u.userId === item.userId && u.startDate <= item.endDate && u.endDate >= item.startDate
+        );
+        if (!hasOverlap) {
+          uniqueCached.push(item);
+        }
+      }
+      state.absences = uniqueCached;
     }
   } catch (err) {
     console.warn("fetchEmployeeAbsences error:", err);
@@ -1024,7 +1047,16 @@ function getAbsencesForDate(dateStr) {
   if (state.scheduleEmployeeFilter && state.scheduleEmployeeFilter !== "all") {
     absences = absences.filter((a) => a.userId === state.scheduleEmployeeFilter);
   }
-  return absences;
+  // Zagotovi natanko 1 odsotnost na zaposlenega na posamezen dan (brez podvajanja)
+  const seenUserIds = new Set();
+  const uniqueAbsences = [];
+  for (const ab of absences) {
+    if (!seenUserIds.has(ab.userId)) {
+      seenUserIds.add(ab.userId);
+      uniqueAbsences.push(ab);
+    }
+  }
+  return uniqueAbsences;
 }
 
 function countWorkingDaysBetween(startDateStr, endDateStr) {
@@ -6042,12 +6074,28 @@ window.handleAbsenceFormSubmit = async function (e) {
     return;
   }
 
+  const absenceId = $("#absenceModalId")?.value || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "abs_" + Date.now() + "_" + Math.random().toString(36).slice(2));
+
+  // Prepreči podvajanje / prekrivanje odsotnosti za istega zaposlenega
+  const overlappingAbsence = (state.absences || []).find((a) => {
+    if (a.userId !== userId) return false;
+    if (absenceId && a.id === absenceId) return false;
+    return a.startDate <= endDate && a.endDate >= startDate;
+  });
+
+  if (overlappingAbsence) {
+    const existingType = getAbsenceTypeLabel(overlappingAbsence.type);
+    showNotification(
+      `Napaka: Zaposleni ${employee.name} že ima vneseno odsotnost (${existingType}: ${overlappingAbsence.startDate} do ${overlappingAbsence.endDate}). Za istega zaposlenega ne morete vnesti več odsotnosti na isti dan!`,
+      "error"
+    );
+    return;
+  }
+
   const workDays = countWorkingDaysBetween(startDate, endDate);
   if (workDays === 0) {
     showNotification("Izbrano obdobje ne vsebuje delovnih dni (ponedeljek – petek).", "warning");
   }
-
-  const absenceId = $("#absenceModalId")?.value || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "abs_" + Date.now() + "_" + Math.random().toString(36).slice(2));
 
   const record = {
     id: absenceId,
