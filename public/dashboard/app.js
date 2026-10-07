@@ -58,6 +58,7 @@ const state = {
   shiftPresets: null,
   tasks: [],
   tasksFilter: { status: "all", employee: "all", search: "" },
+  absences: [],
   sectors: [],
   jobs: [],
   employees: [],
@@ -88,9 +89,11 @@ function clearUserState() {
   state.approvedRequests = [];
   state.pendingRequests = [];
   state.scheduleShifts = null;
+  state.openShifts = [];
   state.shiftPresets = null;
   state.tasks = [];
   state.tasksFilter = { status: "all", employee: "all", search: "" };
+  state.absences = [];
   state.employeeCustomStatuses = {};
   state.employeeWorkTypes = {};
   state.externalEvents = [];
@@ -387,6 +390,9 @@ async function handleAuthState(session, companyNameOverride = null) {
     );
     state.showExternalEvents =
       localStorage.getItem(getUserStorageKey("show_external_cal")) !== "false";
+    state.absences = JSON.parse(
+      localStorage.getItem(getUserStorageKey("employee_absences")) || "[]"
+    );
 
     if (authScreen) {
       authScreen.hidden = true;
@@ -642,6 +648,7 @@ async function loadAllData() {
   await fetchOpenShifts();
   await fetchShiftPresets();
   await fetchEmployerTasks();
+  await fetchEmployeeAbsences();
   renderAll();
 }
 
@@ -943,7 +950,126 @@ async function fetchShiftPresets() {
   return state.shiftPresets;
 }
 
-// 2. Real-time Listener & Polling for workplace_requests, work_logs, schedule_shifts, open_shifts
+async function fetchEmployeeAbsences() {
+  if (!supabaseClient || !state.currentUser) {
+    const cached = localStorage.getItem(getUserStorageKey("employee_absences"));
+    state.absences = cached ? JSON.parse(cached) : [];
+    return state.absences;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from("employee_absences")
+      .select("*")
+      .eq("employer_id", state.currentUser.id)
+      .order("start_date", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      state.absences = data.map((d) => {
+        const emp = state.employees.find((e) => e.id === d.user_id);
+        const empName = emp ? emp.name : (state.userProfiles.get(d.user_id) || "Zaposleni");
+        return {
+          id: d.id,
+          userId: d.user_id,
+          userName: empName,
+          type: d.type || "vacation",
+          startDate: d.start_date,
+          endDate: d.end_date,
+          hoursPerDay: Number(d.hours_per_day) || 8,
+          payRatePercent: Number(d.pay_rate_percent) !== undefined && d.pay_rate_percent !== null ? Number(d.pay_rate_percent) : (d.type === 'sick_leave' ? 80 : 100),
+          note: d.note || "",
+          createdAt: d.created_at,
+        };
+      });
+      localStorage.setItem(getUserStorageKey("employee_absences"), JSON.stringify(state.absences));
+      return state.absences;
+    } else {
+      if (error) console.log("employee_absences fetch note:", error.message);
+      const cached = localStorage.getItem(getUserStorageKey("employee_absences"));
+      state.absences = cached ? JSON.parse(cached) : [];
+    }
+  } catch (err) {
+    console.warn("fetchEmployeeAbsences error:", err);
+    const cached = localStorage.getItem(getUserStorageKey("employee_absences"));
+    state.absences = cached ? JSON.parse(cached) : [];
+  }
+  return state.absences;
+}
+
+function getAbsenceTypeLabel(type) {
+  if (type === "vacation") return "Dopust";
+  if (type === "sick_leave") return "Bolniška";
+  return "Odsotnost";
+}
+
+function getAbsenceTypeShortLabel(type) {
+  if (type === "vacation") return "Dopust";
+  if (type === "sick_leave") return "Bolniška";
+  return "Odsoten";
+}
+
+function isDateInAbsence(dateStr, absence) {
+  if (!absence || !absence.startDate || !absence.endDate) return false;
+  return dateStr >= absence.startDate && dateStr <= absence.endDate;
+}
+
+function getAbsenceForEmployeeOnDate(userId, dateStr) {
+  if (!userId || !dateStr) return null;
+  const absences = state.absences || [];
+  return absences.find((a) => a.userId === userId && isDateInAbsence(dateStr, a)) || null;
+}
+
+function getAbsencesForDate(dateStr) {
+  if (!dateStr) return [];
+  let absences = (state.absences || []).filter((a) => isDateInAbsence(dateStr, a));
+  if (state.scheduleEmployeeFilter && state.scheduleEmployeeFilter !== "all") {
+    absences = absences.filter((a) => a.userId === state.scheduleEmployeeFilter);
+  }
+  return absences;
+}
+
+function countWorkingDaysBetween(startDateStr, endDateStr) {
+  if (!startDateStr || !endDateStr || startDateStr > endDateStr) return 0;
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const dayOfWeek = cur.getDay(); // 0 = Sun, 6 = Sat
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+function getAbsencesForEmployeeInMonth(userId, monthKey) {
+  if (!userId || !monthKey) return [];
+  const startOfMonth = `${monthKey}-01`;
+  const [y, m] = monthKey.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const endOfMonth = `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+
+  return (state.absences || []).filter((a) => {
+    if (a.userId !== userId) return false;
+    return a.startDate <= endOfMonth && a.endDate >= startOfMonth;
+  });
+}
+
+function countWorkingDaysInMonth(absence, monthKey) {
+  if (!absence || !monthKey) return 0;
+  const startOfMonth = `${monthKey}-01`;
+  const [y, m] = monthKey.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const endOfMonth = `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+
+  const effectiveStart = absence.startDate < startOfMonth ? startOfMonth : absence.startDate;
+  const effectiveEnd = absence.endDate > endOfMonth ? endOfMonth : absence.endDate;
+
+  return countWorkingDaysBetween(effectiveStart, effectiveEnd);
+}
+
+// 2. Real-time Listener & Polling for workplace_requests, work_logs, schedule_shifts, open_shifts, employee_absences
 function setupRealtimeListeners() {
   if (!supabaseClient) return;
 
@@ -1017,6 +1143,17 @@ function setupRealtimeListeners() {
           if (state.currentUser) {
             await fetchEmployerTasks();
             renderTasks();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "employee_absences" },
+        async () => {
+          if (state.currentUser) {
+            await fetchEmployeeAbsences();
+            renderSchedule();
+            if (state.activeEmployeeId) renderEmployeeDetail(state.activeEmployeeId);
           }
         }
       )
@@ -2947,6 +3084,66 @@ function renderEmployeeDetail(employeeId) {
     }
   }
 
+  // --- Odsotnosti v izbranem mesecu (Dopust & Bolniška) ---
+  const empMonthAbsences = getAbsencesForEmployeeInMonth(employeeId, monthKey);
+  const vacationAbsences = empMonthAbsences.filter((a) => a.type === "vacation");
+  const sickAbsences = empMonthAbsences.filter((a) => a.type === "sick_leave");
+
+  const vacationDays = vacationAbsences.reduce((sum, a) => sum + countWorkingDaysInMonth(a, monthKey), 0);
+  const vacationHours = vacationAbsences.reduce((sum, a) => sum + (countWorkingDaysInMonth(a, monthKey) * a.hoursPerDay), 0);
+
+  const sickDays = sickAbsences.reduce((sum, a) => sum + countWorkingDaysInMonth(a, monthKey), 0);
+  const sickHours = sickAbsences.reduce((sum, a) => sum + (countWorkingDaysInMonth(a, monthKey) * a.hoursPerDay), 0);
+
+  if ($("#empDetailVacationDays")) $("#empDetailVacationDays").textContent = `${vacationDays} ${vacationDays === 1 ? 'dan' : (vacationDays === 2 ? 'dneva' : 'dni')}`;
+  if ($("#empDetailVacationHours")) $("#empDetailVacationHours").textContent = `${number.format(vacationHours)} h (${vacationAbsences.length > 0 ? vacationAbsences[0].payRatePercent : 100} %)`;
+
+  if ($("#empDetailSickDays")) $("#empDetailSickDays").textContent = `${sickDays} ${sickDays === 1 ? 'dan' : (sickDays === 2 ? 'dneva' : 'dni')}`;
+  if ($("#empDetailSickHours")) $("#empDetailSickHours").textContent = `${number.format(sickHours)} h (${sickAbsences.length > 0 ? sickAbsences[0].payRatePercent : 80} %)`;
+
+  // Seznam odsotnosti zaposlenega
+  const empAbsencesContainer = $("#empAbsencesListContainer");
+  if (empAbsencesContainer) {
+    const allEmpAbsences = (state.absences || []).filter((a) => a.userId === employeeId);
+    if (allEmpAbsences.length === 0) {
+      empAbsencesContainer.innerHTML = `<div class="empty-state" style="padding: 16px; font-size: 13px;">Zaposleni nima zabeleženih odsotnosti (dopustov ali bolniških).</div>`;
+    } else {
+      empAbsencesContainer.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${allEmpAbsences.map((ab) => {
+            const typeLabel = getAbsenceTypeLabel(ab.type);
+            const icon = ab.type === "vacation" ? "🌴" : (ab.type === "sick_leave" ? "🩺" : "📋");
+            const workDays = countWorkingDaysBetween(ab.startDate, ab.endDate);
+            const totalAbHours = workDays * ab.hoursPerDay;
+            const isInThisMonth = ab.startDate <= `${monthKey}-31` && ab.endDate >= `${monthKey}-01`;
+            return `
+              <div class="absence-existing-card" style="${isInThisMonth ? 'border-color: #a7f3d0;' : ''}">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 20px;">${icon}</span>
+                  <div>
+                    <div style="font-weight: 700; color: var(--ink); font-size: 13.5px;">
+                      ${typeLabel} (${ab.payRatePercent} %)
+                      ${isInThisMonth ? `<span class="chip" style="background: #ecfdf5; color: #047857; font-size: 9.5px; font-weight: 800; padding: 1px 6px; margin-left: 6px;">Ta mesec</span>` : ""}
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--muted); margin-top: 2px;">
+                      ${ab.startDate} do ${ab.endDate} · <strong>${workDays} delovnih dni</strong> (${number.format(totalAbHours)} h pri ${ab.hoursPerDay}h/dan)
+                      ${ab.note ? ` · <span style="font-style: italic; color: var(--ink);">${ab.note}</span>` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button type="button" class="ghost-button" onclick="deleteAbsence('${ab.id}')" style="padding: 4px 8px; font-size: 11px; color: #ef4444; border-color: #fecaca; background: #fff;" title="Izbriši odsotnost">
+                    🗑️ Izbriši
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+  }
+
   // Sector breakdown cards
   const sectorCardsContainer = $("#empSectorCardsContainer");
   if (sectorCardsContainer) {
@@ -4488,6 +4685,24 @@ function renderScheduleMonthView(container, dateObj, shifts) {
         .join("");
     }
 
+    const dayAbsences = getAbsencesForDate(dateStr);
+    let absencesHtml = "";
+    if (dayAbsences.length > 0) {
+      absencesHtml = `
+        <div class="schedule-cell-absences-wrap">
+          ${dayAbsences.map((ab) => `
+            <div class="schedule-absence-chip ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
+              <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
+                <span style="font-size: 10px;">${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
+                <span style="font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Odsoten: ${ab.userName}</span>
+              </div>
+              <span style="font-size: 9px; font-weight: 800; flex-shrink: 0; padding: 1px 4px; border-radius: 3px; background: ${ab.type === 'vacation' ? '#dcfce7; color: #15803d;' : (ab.type === 'sick_leave' ? '#fef3c7; color: #b45309;' : '#e2e8f0; color: #475569;')}">${getAbsenceTypeShortLabel(ab.type)}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     html += `
       <div class="schedule-month-cell ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
         <div class="schedule-cell-top">
@@ -4507,6 +4722,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
           ${extEventsHtml}
           ${openShiftsHtml}
           ${shiftsHtml}
+          ${absencesHtml}
         </div>
       </div>
     `;
@@ -4626,8 +4842,31 @@ function renderScheduleWeekView(container, days, shifts) {
         .join("");
     }
 
+    const dayAbsences = getAbsencesForDate(dateStr);
+    let absencesWeekHtml = "";
+    if (dayAbsences.length > 0) {
+      absencesWeekHtml = `
+        <div class="schedule-week-absences-section">
+          ${dayAbsences.map((ab) => `
+            <div class="schedule-week-absence-card ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <span>${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
+                  <span>Odsoten: <strong>${ab.userName}</strong></span>
+                </span>
+                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; background: ${ab.type === 'vacation' ? '#dcfce7; color: #15803d;' : (ab.type === 'sick_leave' ? '#fef3c7; color: #b45309;' : '#f1f5f9; color: #475569;')}">
+                  ${getAbsenceTypeLabel(ab.type)}
+                </span>
+              </div>
+              ${ab.note ? `<div style="font-size: 10px; opacity: 0.85; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ab.note}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     let shiftsHtml = "";
-    if (regularDayShifts.length === 0 && openShiftsForDay.length === 0 && dayExtEvents.length === 0) {
+    if (regularDayShifts.length === 0 && openShiftsForDay.length === 0 && dayExtEvents.length === 0 && dayAbsences.length === 0) {
       shiftsHtml = `<div class="cal-empty-day-placeholder" style="padding: 18px 8px; font-size: 11px;">Ni načrtovanih izmen</div>`;
     } else {
       shiftsHtml = extEventsHtml + openShiftsHtml + regularDayShifts
@@ -4679,6 +4918,7 @@ function renderScheduleWeekView(container, days, shifts) {
         </div>
         <div class="cal-week-body" style="display: flex; flex-direction: column; gap: 8px;">
           ${shiftsHtml}
+          ${absencesWeekHtml}
           <button type="button" class="schedule-week-add-btn" onclick="event.stopPropagation(); openShiftModal(null, '${dateStr}')">
             <span>+</span> Dodaj izmeno
           </button>
@@ -4986,6 +5226,28 @@ window.handleRemoveOpenShiftSignup = async function (openShiftId, signupId, empl
   }
 };
 
+window.populateModalShiftEmployees = function (selectedDate, currentSelectedId) {
+  const empSelect = $("#modalShiftEmployee");
+  if (!empSelect) return;
+  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
+  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+
+  empSelect.innerHTML = `
+    <option value="">Izberite zaposlenega...</option>
+    ${activeEmployees
+      .map((e) => {
+        const absence = selectedDate ? getAbsenceForEmployeeOnDate(e.id, selectedDate) : null;
+        const isSelected = e.id === currentSelectedId;
+        if (absence) {
+          const typeLabel = getAbsenceTypeLabel(absence.type);
+          return `<option value="${e.id}" disabled style="color: #dc2626; font-weight: 700; background: #fef2f2;" ${isSelected ? 'selected' : ''}>⚠️ ${e.name} (Odsoten - ${typeLabel})</option>`;
+        }
+        return `<option value="${e.id}" ${isSelected ? 'selected' : ''}>${e.name}</option>`;
+      })
+      .join("")}
+  `;
+};
+
 window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSectorId = null, isOpenShift = false) {
   const modal = $("#shiftModal");
   if (!modal) return;
@@ -5006,15 +5268,11 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
   const deleteBtn = $("#deleteShiftBtn");
   const modeGroup = $("#shiftModeGroup");
 
-  // Populate Employee Select (Only currently active employees with approved requests)
-  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
-  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
-  empSelect.innerHTML = `
-    <option value="">Izberite zaposlenega...</option>
-    ${activeEmployees
-      .map((e) => `<option value="${e.id}">${e.name}</option>`)
-      .join("")}
-  `;
+  // Determine initial date for employee absence check
+  const initialDate = shiftId ? (shift ? shift.date : (openShift ? openShift.date : defaultDate)) : (defaultDate || (dateInput ? dateInput.value : "") || formatLocalDate(new Date()));
+  const initialEmpId = (shiftId && shift) ? shift.userId : (state.employees.length > 0 ? state.employees[0].id : "");
+
+  window.populateModalShiftEmployees(initialDate, initialEmpId);
 
   // Populate Sector Select
   secSelect.innerHTML = `
@@ -5473,6 +5731,36 @@ window.openDayDetailsModal = function (dateStr) {
     `;
   }
 
+  // 4.5 Odsotnosti (Dopust & Bolniška)
+  const dayAbsencesList = getAbsencesForDate(dateStr);
+  if (dayAbsencesList.length > 0) {
+    html += `
+      <div>
+        <div style="font-size: 12px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+          <span>🌴 / 🩺 Odsotnosti (${dayAbsencesList.length})</span>
+          <button type="button" class="ghost-button" onclick="closeDayDetailsModal(); openAbsenceModal(null, '${dateStr}')" style="font-size: 11px; padding: 2px 7px; font-weight: 700; border-color: #a7f3d0; background: #ecfdf5; color: #065f46;">+ Vnesi odsotnost</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${dayAbsencesList.map((ab) => `
+            <div style="background: ${ab.type === 'vacation' ? '#ecfdf5' : (ab.type === 'sick_leave' ? '#fffbeb' : '#f8fafc')}; border: 1px solid ${ab.type === 'vacation' ? '#a7f3d0' : (ab.type === 'sick_leave' ? '#fde68a' : 'var(--line)')}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Kliknite za urejanje odsotnosti">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 18px;">${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
+                  <div>
+                    <div style="font-weight: 800; font-size: 13.5px; color: var(--ink);">Odsoten: ${ab.userName}</div>
+                    <div style="font-size: 11px; color: var(--muted);">${ab.startDate} do ${ab.endDate} (${ab.hoursPerDay} h/dan)</div>
+                  </div>
+                </div>
+                <span class="absence-badge-pill ${ab.type}">${getAbsenceTypeLabel(ab.type)} (${ab.payRatePercent} %)</span>
+              </div>
+              ${ab.note ? `<div style="margin-top: 6px; font-size: 11.5px; color: var(--muted); font-style: italic;">${ab.note}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   // 5. Redne izmene zaposlenih
   html += `
     <div>
@@ -5556,6 +5844,291 @@ window.handleAddShiftFromDayModal = function () {
   const dateStr = state.selectedDayModalDate;
   closeDayDetailsModal();
   openShiftModal(null, dateStr);
+};
+
+// --------------------------------------------------------------------------
+// Absence Modal & Management Logic (Dopust & Bolniška)
+// --------------------------------------------------------------------------
+window.openAbsenceModal = function (defaultUserId, defaultDate) {
+  const modal = $("#absenceModal");
+  if (!modal) return;
+
+  const idInput = $("#absenceModalId");
+  const empSelect = $("#absenceModalEmployee");
+  const startInput = $("#absenceModalStartDate");
+  const endInput = $("#absenceModalEndDate");
+  const hoursInput = $("#absenceModalHoursPerDay");
+  const payPercentInput = $("#absenceModalPayPercent");
+  const noteInput = $("#absenceModalNote");
+
+  if (idInput) idInput.value = "";
+  if (hoursInput) hoursInput.value = "8";
+  if (noteInput) noteInput.value = "";
+
+  // Set default type to vacation
+  const vacRadio = document.querySelector('input[name="absenceType"][value="vacation"]');
+  if (vacRadio) vacRadio.checked = true;
+  updateAbsenceTypeSelection();
+
+  // Populate active employees
+  const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
+  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+  if (empSelect) {
+    empSelect.innerHTML = `
+      <option value="">Izberite zaposlenega...</option>
+      ${activeEmployees
+        .map((e) => `<option value="${e.id}">${e.name}</option>`)
+        .join("")}
+    `;
+    if (defaultUserId && activeEmployees.some((e) => e.id === defaultUserId)) {
+      empSelect.value = defaultUserId;
+    } else if (activeEmployees.length > 0) {
+      empSelect.value = activeEmployees[0].id;
+    }
+  }
+
+  const baseDate = defaultDate || formatLocalDate(new Date());
+  if (startInput) startInput.value = baseDate;
+  if (endInput) endInput.value = baseDate;
+
+  calculateAbsencePreview();
+  if (empSelect && empSelect.value) {
+    renderExistingAbsencesForEmployee(empSelect.value);
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.hidden = false;
+  }
+};
+
+window.closeAbsenceModal = function () {
+  const modal = $("#absenceModal");
+  if (!modal) return;
+  if (typeof modal.close === "function") {
+    modal.close();
+  } else {
+    modal.hidden = true;
+  }
+};
+
+window.updateAbsenceTypeSelection = function () {
+  const selectedType = document.querySelector('input[name="absenceType"]:checked')?.value || "vacation";
+  const optVac = $("#optAbsenceVacation");
+  const optSick = $("#optAbsenceSick");
+  const optOther = $("#optAbsenceOther");
+  const payPercentInput = $("#absenceModalPayPercent");
+
+  if (optVac) optVac.classList.toggle("active", selectedType === "vacation");
+  if (optSick) optSick.classList.toggle("active", selectedType === "sick_leave");
+  if (optOther) optOther.classList.toggle("active", selectedType === "other");
+
+  if (payPercentInput) {
+    if (selectedType === "vacation") payPercentInput.value = 100;
+    else if (selectedType === "sick_leave") payPercentInput.value = 80;
+    else if (selectedType === "other") payPercentInput.value = 0;
+  }
+
+  calculateAbsencePreview();
+};
+
+window.calculateAbsencePreview = function () {
+  const selectedType = document.querySelector('input[name="absenceType"]:checked')?.value || "vacation";
+  const startVal = $("#absenceModalStartDate")?.value;
+  const endVal = $("#absenceModalEndDate")?.value;
+  const hoursPerDay = Number($("#absenceModalHoursPerDay")?.value) || 8;
+  const payPercent = Number($("#absenceModalPayPercent")?.value) || 0;
+
+  const daysCount = countWorkingDaysBetween(startVal, endVal);
+  const totalHours = daysCount * hoursPerDay;
+
+  const daysEl = $("#absencePreviewDays");
+  const hoursEl = $("#absencePreviewHours");
+  const rateEl = $("#absencePreviewRate");
+  const badgeEl = $("#absencePreviewBadge");
+
+  if (daysEl) daysEl.textContent = `${daysCount} ${daysCount === 1 ? 'dan' : (daysCount === 2 ? 'dneva' : 'dni')} (pon-pet)`;
+  if (hoursEl) hoursEl.textContent = `${number.format(totalHours)} h`;
+  if (rateEl) {
+    rateEl.textContent = `${payPercent} %`;
+    rateEl.style.color = selectedType === "vacation" ? "#16a34a" : (selectedType === "sick_leave" ? "#d97706" : "#64748b");
+  }
+  if (badgeEl) {
+    badgeEl.className = `absence-badge-pill ${selectedType}`;
+    badgeEl.textContent = `${selectedType === 'vacation' ? '🌴 Dopust' : (selectedType === 'sick_leave' ? '🩺 Bolniška' : '📋 Drugo')}`;
+  }
+};
+
+window.handleAbsenceEmployeeChange = function () {
+  const empId = $("#absenceModalEmployee")?.value;
+  renderExistingAbsencesForEmployee(empId);
+};
+
+window.renderExistingAbsencesForEmployee = function (userId) {
+  const sec = $("#absenceExistingSection");
+  const list = $("#absenceExistingList");
+  if (!sec || !list) return;
+
+  if (!userId) {
+    sec.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+
+  const empAbsences = (state.absences || []).filter((a) => a.userId === userId);
+  if (empAbsences.length === 0) {
+    sec.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+
+  sec.style.display = "block";
+  list.innerHTML = empAbsences
+    .map((ab) => {
+      const typeLabel = getAbsenceTypeLabel(ab.type);
+      const icon = ab.type === "vacation" ? "🌴" : (ab.type === "sick_leave" ? "🩺" : "📋");
+      const workDays = countWorkingDaysBetween(ab.startDate, ab.endDate);
+      const totalHours = workDays * ab.hoursPerDay;
+      return `
+        <div class="absence-existing-card">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${icon}</span>
+            <div>
+              <div style="font-weight: 700; color: var(--ink);">
+                ${typeLabel} (${ab.payRatePercent} %)
+              </div>
+              <div style="font-size: 11px; color: var(--muted); margin-top: 1px;">
+                ${ab.startDate} do ${ab.endDate} · ${workDays} dni (${number.format(totalHours)} h)
+                ${ab.note ? ` · <span style="font-style: italic;">${ab.note}</span>` : ""}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="ghost-button" onclick="deleteAbsence('${ab.id}')" style="padding: 4px 8px; font-size: 11px; color: #ef4444; border-color: #fecaca; background: #fff;" title="Izbriši odsotnost">
+            🗑️ Izbriši
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+};
+
+window.handleAbsenceFormSubmit = async function (e) {
+  e.preventDefault();
+  if (!state.currentUser) return;
+
+  const empSelect = $("#absenceModalEmployee");
+  const userId = empSelect?.value;
+  const employee = state.employees.find((emp) => emp.id === userId);
+  if (!userId || !employee) {
+    showNotification("Prosimo, izberite zaposlenega.", "error");
+    return;
+  }
+
+  const type = document.querySelector('input[name="absenceType"]:checked')?.value || "vacation";
+  const startDate = $("#absenceModalStartDate")?.value;
+  const endDate = $("#absenceModalEndDate")?.value;
+  const hoursPerDay = Number($("#absenceModalHoursPerDay")?.value) || 8;
+  const payRatePercent = Number($("#absenceModalPayPercent")?.value) || 100;
+  const note = $("#absenceModalNote")?.value?.trim() || "";
+
+  if (!startDate || !endDate) {
+    showNotification("Prosimo, vnesite datum začetka in zaključka.", "error");
+    return;
+  }
+
+  if (startDate > endDate) {
+    showNotification("Datum zaključka ne more biti pred datumom začetka.", "error");
+    return;
+  }
+
+  const workDays = countWorkingDaysBetween(startDate, endDate);
+  if (workDays === 0) {
+    showNotification("Izbrano obdobje ne vsebuje delovnih dni (ponedeljek – petek).", "warning");
+  }
+
+  const absenceId = $("#absenceModalId")?.value || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "abs_" + Date.now() + "_" + Math.random().toString(36).slice(2));
+
+  const record = {
+    id: absenceId,
+    employer_id: state.currentUser.id,
+    user_id: userId,
+    type,
+    start_date: startDate,
+    end_date: endDate,
+    hours_per_day: hoursPerDay,
+    pay_rate_percent: payRatePercent,
+    note,
+    updated_at: new Date().toISOString(),
+  };
+
+  const stateRecord = {
+    id: absenceId,
+    userId,
+    userName: employee.name,
+    type,
+    startDate,
+    endDate,
+    hoursPerDay,
+    payRatePercent,
+    note,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (!state.absences) state.absences = [];
+  const existingIdx = state.absences.findIndex((a) => a.id === absenceId);
+  if (existingIdx >= 0) {
+    state.absences[existingIdx] = stateRecord;
+  } else {
+    state.absences.push(stateRecord);
+  }
+
+  localStorage.setItem(getUserStorageKey("employee_absences"), JSON.stringify(state.absences));
+
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from("employee_absences").upsert(record);
+    } catch (err) {
+      console.warn("Supabase absence upsert note:", err);
+    }
+  }
+
+  closeAbsenceModal();
+  showNotification(`Odsotnost (${getAbsenceTypeLabel(type)}) za ${employee.name} je bila uspešno shranjena.`, "success");
+
+  renderSchedule();
+  if (state.activeEmployeeId) {
+    renderEmployeeDetail(state.activeEmployeeId);
+  }
+};
+
+window.deleteAbsence = async function (id) {
+  if (!confirm("Ali ste prepričani, da želite izbrisati to odsotnost?")) return;
+
+  const ab = (state.absences || []).find((a) => a.id === id);
+  state.absences = (state.absences || []).filter((a) => a.id !== id);
+  localStorage.setItem(getUserStorageKey("employee_absences"), JSON.stringify(state.absences));
+
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from("employee_absences").delete().eq("id", id);
+    } catch (err) {
+      console.warn("Supabase absence delete note:", err);
+    }
+  }
+
+  showNotification("Odsotnost je bila izbrisana.", "info");
+
+  if (ab && $("#absenceModalEmployee")?.value === ab.userId) {
+    renderExistingAbsencesForEmployee(ab.userId);
+  } else {
+    closeAbsenceModal();
+  }
+
+  renderSchedule();
+  if (state.activeEmployeeId) {
+    renderEmployeeDetail(state.activeEmployeeId);
+  }
 };
 
 function updateShiftDurationDisplay() {
@@ -7687,6 +8260,14 @@ $("#modalShiftEndTime")?.addEventListener("input", () => {
   updateShiftDurationDisplay();
   if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
 });
+$("#modalShiftDate")?.addEventListener("change", (e) => {
+  const curEmp = $("#modalShiftEmployee")?.value;
+  window.populateModalShiftEmployees(e.target.value, curEmp);
+});
+$("#modalShiftStartDate")?.addEventListener("change", (e) => {
+  const curEmp = $("#modalShiftEmployee")?.value;
+  window.populateModalShiftEmployees(e.target.value, curEmp);
+});
 $("#modalShiftStartDate")?.addEventListener("input", () => {
   if (typeof updateShiftRecurrenceCalculation === "function") updateShiftRecurrenceCalculation();
 });
@@ -7732,7 +8313,7 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
     const startStr = $("#modalShiftStartDate")?.value;
     const endStr = $("#modalShiftEndDate")?.value;
     const selectedDays = window.selectedShiftDays || new Set([1, 2, 3, 4, 5]);
-    const dates = getDatesInRange(startStr, endStr, selectedDays);
+    let dates = getDatesInRange(startStr, endStr, selectedDays);
 
     if (dates.length === 0) {
       alert("Prosimo, izberite veljavno časovno obdobje in vsaj en ujemajoč dan v tednu.");
@@ -7742,6 +8323,23 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
     if (!sectorId || !startTime || !endTime) {
       alert("Prosimo, izpolnite vsa obvezna polja (sektor, ura začetka in zaključka).");
       return;
+    }
+
+    // Preveri odsotnost zaposlenega pri ponavljajočih se izmenah
+    if (!isTypeOpen && userId) {
+      const absentDates = dates.filter((d) => getAbsenceForEmployeeOnDate(userId, d));
+      if (absentDates.length > 0) {
+        const emp = state.employees.find((item) => item.id === userId);
+        const empName = emp ? emp.name : "Zaposleni";
+        if (absentDates.length === dates.length) {
+          showNotification(`Napaka: ${empName} je v celotnem izbranem obdobju odsoten (dopust / bolniška) in mu ni mogoče ustvariti izmen!`, "error");
+          return;
+        }
+        const validDates = dates.filter((d) => !getAbsenceForEmployeeOnDate(userId, d));
+        showNotification(`Opozorilo: ${empName} je odsoten na ${absentDates.length} ${absentDates.length === 1 ? 'dan' : 'dni'}. Izmene bodo ustvarjene za preostalih ${validDates.length} dni.`, "warning");
+        dates = validDates;
+        if (dates.length === 0) return;
+      }
     }
 
     if (isTypeOpen) {
@@ -7927,6 +8525,16 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   // Assigned single shift
   if (!userId || !sectorId || !date || !startTime || !endTime) {
     alert("Prosimo, izpolnite vsa obvezna polja.");
+    return;
+  }
+
+  // Preveri odsotnost zaposlenega
+  const absence = getAbsenceForEmployeeOnDate(userId, date);
+  if (absence) {
+    const emp = state.employees.find((item) => item.id === userId);
+    const empName = emp ? emp.name : "Zaposleni";
+    const typeText = getAbsenceTypeLabel(absence.type);
+    showNotification(`Napaka: ${empName} je na dan ${date} na ${typeText.toLowerCase()} in mu ni mogoče dodeliti izmene!`, "error");
     return;
   }
 

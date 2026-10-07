@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=84" />
+    <link rel="stylesheet" href="styles.css?v=85" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -479,13 +479,18 @@
 
             <!-- Glavna kartica zaposlenega z metriko -->
             <section class="panel employee-profile-panel" style="margin-bottom: 20px;">
-              <div class="emp-profile-header">
+              <div class="emp-profile-header" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
                 <div class="emp-profile-info">
                   <span class="avatar emp-profile-avatar" id="empDetailAvatar">--</span>
                   <div>
                     <h2 id="empDetailName" style="margin: 0 0 4px; font-size: 22px;">-</h2>
                     <div id="empDetailBadges" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
                   </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button type="button" class="ghost-button" id="empDetailAbsenceBtn" onclick="openAbsenceModal(state.activeEmployeeId)" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff;">
+                    <span>🌴 / 🩺</span> Vnesi odsotnost
+                  </button>
                 </div>
               </div>
 
@@ -532,6 +537,14 @@
                   </div>
                   <strong id="empDetailOvertime">0 h</strong>
                   <span id="empDetailOvertimeSub">Presežek mesečne norme</span>
+                </article>
+                <article class="metric">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <p style="margin: 0;">Odsotnosti</p>
+                    <span id="empDetailAbsenceBadge" style="font-size: 11px; font-weight: 700; background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 6px;">Dopust & Bolniška</span>
+                  </div>
+                  <strong id="empDetailAbsenceSummary">0 dni (0 h)</strong>
+                  <span id="empDetailAbsenceSub">Dopust: 0 dni · Bolniška: 0 dni</span>
                 </article>
               </div>
             </section>
@@ -618,8 +631,12 @@
               </select>
             </div>
 
-            <!-- Gumbi za urnik (osebni dogodki in dodajanje izmene) -->
+            <!-- Gumbi za urnik (odsotnosti, osebni dogodki in dodajanje izmene) -->
             <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" class="ghost-button" id="openAbsenceBtn" onclick="openAbsenceModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 14px; font-weight: 700; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);" title="Vnesi dopust ali bolniško za delavca">
+                <span>🌴 / 🩺</span>
+                <span>Vnesi odsotnost</span>
+              </button>
               <button type="button" class="ghost-button" id="openCalendarSyncBtn" onclick="openCalendarSyncModal()" style="display: none; align-items: center; gap: 6px; font-size: 13px; padding: 9px 14px; font-weight: 700; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);" title="Prikaži osebne dogodke na 4P urniku">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 <span>Moji dogodki na urniku</span>
@@ -1292,6 +1309,117 @@
       </div>
     </dialog>
 
+    <!-- Modal za vnos in upravljanje odsotnosti (Dopust / Bolniška) -->
+    <dialog id="absenceModal" class="modal" style="max-width: 540px; width: 100%;">
+      <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
+        <div class="modal-header" style="margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line);">
+          <div>
+            <h2 id="absenceModalTitle" style="margin: 0; font-size: 19px; font-weight: 800; color: var(--ink);">🌴 / 🩺 Vnos odsotnosti</h2>
+            <p style="margin: 4px 0 0; font-size: 13px; color: var(--muted);">Zabeležite dopust ali bolniško odsotnost delavca za urnik in obračun.</p>
+          </div>
+          <button type="button" class="icon-button modal-close" onclick="closeAbsenceModal()" aria-label="Zapri">✕</button>
+        </div>
+
+        <form id="absenceModalForm" class="modal-form" onsubmit="handleAbsenceFormSubmit(event)" style="display: flex; flex-direction: column; gap: 14px;">
+          <input type="hidden" id="absenceModalId" value="" />
+
+          <!-- Izbira zaposlenega -->
+          <div class="form-group">
+            <label for="absenceModalEmployee">Zaposleni <span class="required">*</span></label>
+            <select id="absenceModalEmployee" required class="cal-select" style="width: 100%;" onchange="handleAbsenceEmployeeChange()">
+              <option value="">Izberite zaposlenega...</option>
+            </select>
+          </div>
+
+          <!-- Tip odsotnosti -->
+          <div class="form-group">
+            <label>Tip odsotnosti <span class="required">*</span></label>
+            <div class="absence-type-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <label class="absence-type-option active" id="optAbsenceVacation">
+                <input type="radio" name="absenceType" value="vacation" checked onchange="updateAbsenceTypeSelection()" style="display: none;" />
+                <span style="font-size: 20px; display: block;">🌴</span>
+                <span style="font-weight: 700; font-size: 12.5px; color: var(--ink); display: block; margin-top: 2px;">Dopust</span>
+                <span style="font-size: 10.5px; color: #16a34a; font-weight: 600; display: block;">100 % osnova</span>
+              </label>
+              <label class="absence-type-option" id="optAbsenceSick">
+                <input type="radio" name="absenceType" value="sick_leave" onchange="updateAbsenceTypeSelection()" style="display: none;" />
+                <span style="font-size: 20px; display: block;">🩺</span>
+                <span style="font-weight: 700; font-size: 12.5px; color: var(--ink); display: block; margin-top: 2px;">Bolniška</span>
+                <span style="font-size: 10.5px; color: #d97706; font-weight: 600; display: block;">80 % osnova</span>
+              </label>
+              <label class="absence-type-option" id="optAbsenceOther">
+                <input type="radio" name="absenceType" value="other" onchange="updateAbsenceTypeSelection()" style="display: none;" />
+                <span style="font-size: 20px; display: block;">📋</span>
+                <span style="font-weight: 700; font-size: 12.5px; color: var(--ink); display: block; margin-top: 2px;">Drugo</span>
+                <span style="font-size: 10.5px; color: var(--muted); font-weight: 600; display: block;">Neplačano</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Datumi od - do -->
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="absenceModalStartDate">Datum začetka <span class="required">*</span></label>
+              <input type="date" id="absenceModalStartDate" required class="cal-input" onchange="calculateAbsencePreview()" />
+            </div>
+            <div class="form-group">
+              <label for="absenceModalEndDate">Datum zaključka <span class="required">*</span></label>
+              <input type="date" id="absenceModalEndDate" required class="cal-input" onchange="calculateAbsencePreview()" />
+            </div>
+          </div>
+
+          <!-- Ure na dan in % plačila -->
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="absenceModalHoursPerDay">Ure na delovni dan <span class="required">*</span></label>
+              <input type="number" id="absenceModalHoursPerDay" value="8" min="1" max="24" step="0.5" required class="cal-input" oninput="calculateAbsencePreview()" />
+            </div>
+            <div class="form-group">
+              <label for="absenceModalPayPercent">% izplačila <span class="required">*</span></label>
+              <div style="position: relative;">
+                <input type="number" id="absenceModalPayPercent" value="100" min="0" max="200" step="1" required class="cal-input" oninput="calculateAbsencePreview()" style="padding-right: 28px;" />
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); pointer-events: none;">%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opomba -->
+          <div class="form-group">
+            <label for="absenceModalNote">Opomba (opcijsko)</label>
+            <input type="text" id="absenceModalNote" class="cal-input" placeholder="Npr. Odobren letni dopust, potrdilo zdravnika..." />
+          </div>
+
+          <!-- Predogled izračuna -->
+          <div id="absenceCalcPreview" style="background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--ink);">
+            <div style="font-weight: 700; color: var(--ink); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+              <span>Povzetek odsotnosti</span>
+              <span id="absencePreviewBadge" class="absence-badge-pill vacation">🌴 Dopust</span>
+            </div>
+            <div style="display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap; color: var(--muted);">
+              <div>Delovnih dni: <strong id="absencePreviewDays" style="color: var(--ink);">0 dni</strong></div>
+              <div>Skupaj ur: <strong id="absencePreviewHours" style="color: var(--ink);">0 h</strong></div>
+              <div>Obračun: <strong id="absencePreviewRate" style="color: #16a34a;">100 %</strong></div>
+            </div>
+          </div>
+
+          <!-- Seznam obstoječih odsotnosti zaposlenega -->
+          <div id="absenceExistingSection" style="margin-top: 4px; display: none;">
+            <div style="font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+              Vpisane odsotnosti tega delavca
+            </div>
+            <div id="absenceExistingList" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;"></div>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="ghost-button" onclick="closeAbsenceModal()" style="padding: 9px 18px; font-size: 13px; font-weight: 600;">Prekliči</button>
+            <button type="submit" class="primary-button" id="saveAbsenceBtn" style="padding: 9px 20px; font-size: 13px; font-weight: 700;">
+              Shrani odsotnost
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
     <!-- Modal za uvoz osebnih dogodkov na urnik (Google & Apple koledar) -->
     <dialog id="calendarSyncModal" class="modal" style="max-width: 520px; width: 100%; border: none; border-radius: 18px; padding: 0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
       <div class="modal-box" style="padding: 24px 26px; gap: 16px;">
@@ -1525,6 +1653,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=95"></script>
+    <script src="app.js?v=96"></script>
   </body>
 </html>
