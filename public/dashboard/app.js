@@ -2168,7 +2168,7 @@ function renderOverviewSchedule() {
       const shiftsChips = regularDayShifts.map((s) => {
         const color = s.color || "#56829d";
         return `
-          <div class="overview-sched-shift-chip" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="${s.userName || 'Zaposleni'} · ${s.sectorName || ''} (${s.startTime} - ${s.endTime})">
+          <div class="overview-sched-shift-chip" style="border: 1px solid ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="${s.userName || 'Zaposleni'} · ${s.sectorName || ''} (${s.startTime} - ${s.endTime})">
             <div>
               <strong style="font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${s.userName || 'Izmena'}</strong>
               <div style="font-size: 9.5px; color: var(--muted); font-weight: 600; margin-top: 1px;">🕒 ${s.startTime}–${s.endTime}</div>
@@ -2187,9 +2187,9 @@ function renderOverviewSchedule() {
         const signupsCount = os.signups ? os.signups.length : 0;
         const isFull = signupsCount >= os.requiredSpots;
         return `
-          <div class="overview-sched-shift-chip" style="border-left-color: ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.07)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${os.id}')" title="Odprta izmena: ${os.sectorName || ''} (${signupsCount}/${os.requiredSpots})">
+          <div class="overview-sched-shift-chip" style="border: 1px ${isFull ? 'solid #10b981' : 'dashed ' + color}; background: ${isFull ? '#ecfdf5' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${os.id}')" title="Odprta izmena: ${os.sectorName || ''} (${signupsCount}/${os.requiredSpots})">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-              <span style="font-size: 10px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta</span>
+              <span style="font-size: 10px; font-weight: 800; color: ${isFull ? '#10b981' : color}; text-transform: uppercase;">Odprta</span>
               <span style="font-size: 9.5px; font-weight: 700; padding: 1px 4px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${os.requiredSpots}</span>
             </div>
             <div style="font-size: 10.5px; font-weight: 700; color: var(--ink); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${os.sectorName || ''}</div>
@@ -4451,9 +4451,9 @@ function renderScheduleMonthView(container, dateObj, shifts) {
           const signupsCount = s.signups ? s.signups.length : 0;
           const isFull = signupsCount >= s.requiredSpots;
           return `
-            <div class="schedule-shift-chip is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 3.5px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.09)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')" title="Odprta izmena: ${signupsCount}/${s.requiredSpots} prijavljenih. Kliknite za podrobnosti.">
+            <div class="schedule-shift-chip is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid #10b981' : 'dashed ' + color}; background: ${isFull ? '#ecfdf5' : 'rgba(245, 158, 11, 0.09)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')" title="Odprta izmena: ${signupsCount}/${s.requiredSpots} prijavljenih. Kliknite za podrobnosti.">
               <div class="schedule-shift-chip-top">
-                <span class="schedule-shift-chip-emp" style="color: ${color}; font-weight: 800; font-size: 10.5px;">🔓 Odprta izmena</span>
+                <span class="schedule-shift-chip-emp" style="color: ${isFull ? '#10b981' : color}; font-weight: 800; font-size: 10.5px;">Odprta izmena</span>
                 <span style="font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${s.requiredSpots}</span>
               </div>
               <div class="schedule-shift-chip-main" style="margin-top: 2px;">
@@ -4472,7 +4472,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
         .map((s) => {
           const color = s.color || "#56829d";
           return `
-            <div class="schedule-shift-chip" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="Kliknite za urejanje izmene">
+            <div class="schedule-shift-chip" style="border: 1px solid ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="Kliknite za urejanje izmene">
               <div class="schedule-shift-chip-main">
                 <strong class="schedule-shift-chip-emp">${s.userName}</strong>
                 <span class="schedule-shift-chip-time"><span class="shift-time-icon">🕒</span> ${s.startTime}–${s.endTime}</span>
@@ -4577,9 +4577,9 @@ function renderScheduleWeekView(container, days, shifts) {
           const signupsCount = s.signups ? s.signups.length : 0;
           const isFull = signupsCount >= s.requiredSpots;
           return `
-            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid' : 'dashed'} ${color}; border-left: 4px solid ${color}; background: ${isFull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')">
+            <article class="schedule-week-shift-card is-open-shift ${isFull ? 'is-full' : ''}" style="border: 1px ${isFull ? 'solid #10b981' : 'dashed ' + color}; background: ${isFull ? '#ecfdf5' : 'rgba(245, 158, 11, 0.08)'};" onclick="event.stopPropagation(); openOpenShiftDetailsModal('${s.id}')">
               <div class="schedule-week-shift-emp-row" style="margin-bottom: 2px;">
-                <span style="font-size: 11px; font-weight: 800; color: ${color}; text-transform: uppercase;">🔓 Odprta izmena</span>
+                <span style="font-size: 11px; font-weight: 800; color: ${isFull ? '#10b981' : color}; text-transform: uppercase;">Odprta izmena</span>
                 <span style="font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 100px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">
                   ${signupsCount}/${s.requiredSpots} mest
                 </span>
@@ -4596,9 +4596,8 @@ function renderScheduleWeekView(container, days, shifts) {
                 </div>
               </div>
 
-              <div style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed ${color}40; display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; color: ${isFull ? '#15803d' : '#b45309'}; font-weight: 700;">
+              <div style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed ${isFull ? '#10b98140' : color + '40'}; display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; color: ${isFull ? '#15803d' : '#b45309'}; font-weight: 700;">
                 <span>${isFull ? '✓ Zasedeno' : `➕ Še ${s.requiredSpots - signupsCount} ${getSpotsLabel(s.requiredSpots - signupsCount)}`}</span>
-                <span style="font-size: 10px; color: var(--muted); font-weight: 500;">Podrobnosti ›</span>
               </div>
             </article>
           `;
@@ -4635,7 +4634,7 @@ function renderScheduleWeekView(container, days, shifts) {
         .map((s) => {
           const color = s.color || "#56829d";
           return `
-            <article class="schedule-week-shift-card" style="border-left-color: ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')">
+            <article class="schedule-week-shift-card" style="border: 1px solid ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')">
               <div class="schedule-week-shift-emp-stacked">
                 <div class="schedule-week-shift-emp">
                   <span class="avatar" style="width: 24px; height: 24px; font-size: 9.5px; flex-shrink: 0;">${initials(s.userName)}</span>
@@ -5432,7 +5431,7 @@ window.openDayDetailsModal = function (dateStr) {
     html += `
       <div>
         <div style="font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;">
-          <span>🔓</span> Odprte izmene (${dayOpenShifts.length})
+          Odprte izmene (${dayOpenShifts.length})
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${dayOpenShifts.map((os) => {
@@ -5440,10 +5439,10 @@ window.openDayDetailsModal = function (dateStr) {
             const signupsCount = os.signups ? os.signups.length : 0;
             const isFull = signupsCount >= os.requiredSpots;
             return `
-              <div style="background: #ffffff; border: 1px solid ${color}40; border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openOpenShiftDetailsModal('${os.id}');" title="Kliknite za podrobnosti odprte izmene">
+              <div style="background: ${isFull ? '#ecfdf5' : '#ffffff'}; border: 1px ${isFull ? 'solid #10b981' : 'dashed ' + color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openOpenShiftDetailsModal('${os.id}');" title="Kliknite za podrobnosti odprte izmene">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-weight: 800; font-size: 13px; color: ${color};">🔓 ${os.sectorName}</span>
+                    <span style="font-weight: 800; font-size: 13px; color: ${isFull ? '#10b981' : color};">${os.sectorName}</span>
                     <span style="font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 4px; background: ${isFull ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'}">${signupsCount}/${os.requiredSpots} mest</span>
                   </div>
                   <div style="font-size: 12px; font-weight: 700; color: var(--ink);">
@@ -5500,7 +5499,7 @@ window.openDayDetailsModal = function (dateStr) {
         ${regularDayShifts.map((s) => {
           const color = s.color || "#56829d";
           return `
-            <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid var(--line); border-left: 4px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${s.id}');" title="Kliknite za urejanje izmene">
+            <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid ${color}; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease;" onclick="closeDayDetailsModal(); openShiftModal('${s.id}');" title="Kliknite za urejanje izmene">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
                   <span class="avatar" style="width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; background: ${color}20; color: ${color}; font-weight: 700;">${initials(s.userName)}</span>
@@ -5861,7 +5860,7 @@ function generateScheduleICalendar() {
 
     const signupsCount = os.signups ? os.signups.length : 0;
     const uid = `open-shift-${os.id || Math.random().toString(36).slice(2)}@finance4p.si`;
-    const summary = `🔓 Odprta izmena: ${os.sectorName || "Delo"} (${signupsCount}/${os.requiredSpots || 1})`;
+    const summary = `Odprta izmena: ${os.sectorName || "Delo"} (${signupsCount}/${os.requiredSpots || 1})`;
     const desc = `Odprta izmena: ${os.sectorName || ""}\\nPotrebno oseb: ${os.requiredSpots || 1}\\nPrijavljenih: ${signupsCount}\\nČas: ${os.startTime} – ${os.endTime} (${os.hours || 0} ur)${os.note ? `\\nOpomba: ${os.note}` : ""}\\n\\nUrnik Finance 4P`;
 
     lines.push("BEGIN:VEVENT");

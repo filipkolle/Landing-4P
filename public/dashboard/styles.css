@@ -481,7 +481,6 @@ button {
 .overview-sched-shift-chip {
   background: #ffffff;
   border: 1px solid var(--line);
-  border-left: 3.5px solid var(--primary);
   border-radius: 6px;
   padding: 5px 6px;
   font-size: 11px;
@@ -2706,7 +2705,6 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   border-radius: 7px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-left: 3.5px solid var(--primary);
   cursor: pointer;
   font-size: 11px;
   transition: all 140ms ease;
@@ -2792,7 +2790,9 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
 }
 
 .schedule-shift-chip.is-open-shift.is-full {
-  border-style: solid;
+  border-style: solid !important;
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
 }
 
 .open-shift-signups-container {
@@ -2934,7 +2934,6 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
 .schedule-week-shift-card {
   background: #ffffff;
   border: 1px solid var(--line);
-  border-left: 3.5px solid var(--primary);
   border-radius: 8px;
   padding: 10px;
   display: flex;
@@ -2943,6 +2942,16 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   cursor: pointer;
   transition: all 140ms ease;
+}
+
+.schedule-week-shift-card.is-open-shift {
+  border-style: dashed;
+}
+
+.schedule-week-shift-card.is-open-shift.is-full {
+  border-style: solid !important;
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
 }
 
 .schedule-week-shift-card:hover {
@@ -4949,7 +4958,6 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   .schedule-shift-chip {
     padding: 3px 4px !important;
     border-radius: 5px !important;
-    border-left-width: 3px !important;
     gap: 1px !important;
     min-width: 0 !important;
     max-width: 100% !important;
