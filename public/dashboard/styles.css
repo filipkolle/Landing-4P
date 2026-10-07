@@ -5375,9 +5375,14 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin-top: auto;
+  margin-top: auto !important;
+  margin-bottom: 0px;
   padding-top: 8px;
   border-top: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.schedule-week-absences-section + .schedule-week-add-btn {
+  margin-top: 0 !important;
 }
 
 .schedule-week-absence-card {

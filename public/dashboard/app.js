@@ -4866,7 +4866,7 @@ function renderScheduleWeekView(container, days, shifts) {
     }
 
     let shiftsHtml = "";
-    if (regularDayShifts.length === 0 && openShiftsForDay.length === 0 && dayExtEvents.length === 0 && dayAbsences.length === 0) {
+    if (regularDayShifts.length === 0 && openShiftsForDay.length === 0 && dayExtEvents.length === 0) {
       shiftsHtml = `<div class="cal-empty-day-placeholder" style="padding: 18px 8px; font-size: 11px;">Ni načrtovanih izmen</div>`;
     } else {
       shiftsHtml = extEventsHtml + openShiftsHtml + regularDayShifts
