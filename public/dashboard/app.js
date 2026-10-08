@@ -7427,7 +7427,6 @@ function renderTasks() {
         <h3>${escapeHtml(emptyTitle)}</h3>
         <p>${escapeHtml(emptyDesc)}</p>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="ghost-button" onclick="openTaskModal(null, true)">🔁 Nova redna predloga</button>
           <button type="button" class="primary-button" onclick="openTaskModal()">+ Nova naloga</button>
         </div>
       </div>
