@@ -294,22 +294,27 @@ END $$;
 -- Predogled podjetja po kodi (vrne SAMO ime podjetja)
 CREATE OR REPLACE FUNCTION public.lookup_employer_by_code(p_code TEXT)
 RETURNS TABLE (company_name TEXT) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_clean TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
+  v_clean := replace(upper(trim(p_code)), ' ', '');
   RETURN QUERY
     SELECT COALESCE(ep.company_name, 'Podjetje')
     FROM public.employer_profiles ep
-    WHERE ep.connect_code = upper(trim(p_code)) AND ep.id <> auth.uid();
+    WHERE ep.connect_code = v_clean;
 END $$;
 
 -- Predogled zaposlenega po kodi (za delodajalca, vrne SAMO ime zaposlenega)
 CREATE OR REPLACE FUNCTION public.lookup_employee_by_code(p_code TEXT)
 RETURNS TABLE (user_name TEXT) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_user UUID;
+DECLARE
+  v_user UUID;
+  v_clean TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
-  SELECT uc.user_id INTO v_user FROM public.user_connect_codes uc WHERE uc.connect_code = upper(trim(p_code));
-  IF v_user IS NULL OR v_user = auth.uid() THEN RETURN; END IF;
+  v_clean := replace(upper(trim(p_code)), ' ', '');
+  SELECT uc.user_id INTO v_user FROM public.user_connect_codes uc WHERE uc.connect_code = v_clean;
+  IF v_user IS NULL THEN RETURN; END IF;
   RETURN QUERY SELECT public.resolve_user_display_name(v_user);
 END $$;
 
@@ -322,15 +327,16 @@ DECLARE
   v_company TEXT;
   v_existing public.employer_connections%ROWTYPE;
   v_id UUID;
+  v_clean TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
   IF p_consent IS NOT TRUE THEN RAISE EXCEPTION 'Za povezavo morate potrditi soglasje o deljenju podatkov.'; END IF;
 
+  v_clean := replace(upper(trim(p_code)), ' ', '');
   SELECT ep.id, COALESCE(ep.company_name, 'Podjetje') INTO v_employer, v_company
-  FROM public.employer_profiles ep WHERE ep.connect_code = upper(trim(p_code));
+  FROM public.employer_profiles ep WHERE ep.connect_code = v_clean;
 
   IF v_employer IS NULL THEN RAISE EXCEPTION 'Delodajalec s to kodo ne obstaja.'; END IF;
-  IF v_employer = auth.uid() THEN RAISE EXCEPTION 'S samim seboj se ne morete povezati.'; END IF;
 
   SELECT * INTO v_existing FROM public.employer_connections c WHERE c.employer_id = v_employer AND c.user_id = auth.uid();
 
@@ -361,6 +367,7 @@ DECLARE
   v_status TEXT;
   v_row_status TEXT;
   v_wp UUID;
+  v_clean TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
   IF p_workplace_ids IS NULL OR array_length(p_workplace_ids, 1) IS NULL THEN
@@ -370,9 +377,9 @@ BEGIN
     RAISE EXCEPTION 'Izbrani sektor ne pripada vašemu podjetju.';
   END IF;
 
-  SELECT uc.user_id INTO v_user FROM public.user_connect_codes uc WHERE uc.connect_code = upper(trim(p_code));
+  v_clean := replace(upper(trim(p_code)), ' ', '');
+  SELECT uc.user_id INTO v_user FROM public.user_connect_codes uc WHERE uc.connect_code = v_clean;
   IF v_user IS NULL THEN RAISE EXCEPTION 'Uporabnik s to kodo ne obstaja.'; END IF;
-  IF v_user = auth.uid() THEN RAISE EXCEPTION 'Samega sebe ne morete povabiti.'; END IF;
 
   v_name := public.resolve_user_display_name(v_user);
   SELECT COALESCE(ep.company_name, 'Podjetje') INTO v_company FROM public.employer_profiles ep WHERE ep.id = auth.uid();

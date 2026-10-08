@@ -1647,7 +1647,7 @@ window.closeConnectEmployeeModal = function () {
 };
 
 window.onConnectEmployeeCodeInput = async function (val) {
-  const clean = (val || "").trim().toUpperCase();
+  const clean = (val || "").replace(/\s+/g, "").toUpperCase();
   const foundDiv = $("#connectEmployeeFoundName");
   const foundText = $("#connectEmployeeFoundNameText");
   const notFoundDiv = $("#connectEmployeeNotFound");
@@ -1666,6 +1666,7 @@ window.onConnectEmployeeCodeInput = async function (val) {
       }
     } catch (e) {
       console.warn("lookup_employee_by_code note:", e);
+      if (notFoundDiv) notFoundDiv.style.display = "block";
     }
   }
 };
@@ -1673,7 +1674,7 @@ window.onConnectEmployeeCodeInput = async function (val) {
 window.handleSendEmployeeInvitation = async function (event) {
   event.preventDefault();
   const codeInput = $("#connectEmployeeCode");
-  const code = (codeInput ? codeInput.value : "").trim().toUpperCase();
+  const code = (codeInput ? codeInput.value : "").replace(/\s+/g, "").toUpperCase();
 
   if (code.length !== 5) {
     alert("Prosimo, vnesite veljavno 5-mestno kodo zaposlenega.");
