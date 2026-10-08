@@ -9125,14 +9125,58 @@ window.onManualLogSectorChanged = function () {
   const empId = $("#manualLogEmployeeSelect")?.value;
   const secId = $("#manualLogSectorSelect")?.value;
   const rateInput = $("#manualLogHourlyRate");
-  if (!rateInput) return;
+  const rateGroup = $("#manualLogRateGroup");
+  const hoursAndRateRow = $("#manualLogHoursAndRateRow");
+  const fixedNotice = $("#manualLogFixedSalaryNotice");
+  const fixedSalaryAmountEl = $("#manualLogFixedSalaryAmount");
 
   const emp = state.employees.find((e) => e.id === empId);
   const sec = emp?.sectors?.[secId];
-  if (sec && sec.rate > 0) {
-    rateInput.value = sec.rate;
+  const mEmp = (state.manualEmployees || []).find((e) => e.id === empId);
+
+  // Preveri, ali ima delavec fiksno mesečno plačo
+  const isFixed = Boolean(
+    sec?.isFixed ||
+    sec?.type === "fixed" ||
+    sec?.type === "recurring" ||
+    mEmp?.pay_type === "fixed" ||
+    mEmp?.pay_type === "recurring"
+  );
+  const netSalary = sec?.netSalary || mEmp?.net_salary || 0;
+
+  if (isFixed) {
+    if (rateGroup) rateGroup.style.display = "none";
+    if (rateInput) {
+      rateInput.value = "0";
+      rateInput.required = false;
+    }
+    if (hoursAndRateRow) {
+      hoursAndRateRow.style.gridTemplateColumns = "1fr";
+    }
+    if (fixedNotice) {
+      fixedNotice.style.display = "flex";
+      if (fixedSalaryAmountEl) {
+        fixedSalaryAmountEl.textContent = netSalary > 0 ? currency.format(netSalary) + "/mesec" : "Fiksna mesečna plača";
+      }
+    }
   } else {
-    rateInput.value = "10.00";
+    if (rateGroup) rateGroup.style.display = "";
+    if (rateInput) {
+      rateInput.required = true;
+      if (sec && sec.rate > 0) {
+        rateInput.value = sec.rate;
+      } else if (mEmp && mEmp.hourly_rate > 0) {
+        rateInput.value = mEmp.hourly_rate;
+      } else {
+        rateInput.value = "10.00";
+      }
+    }
+    if (hoursAndRateRow) {
+      hoursAndRateRow.style.gridTemplateColumns = "1fr 1fr";
+    }
+    if (fixedNotice) {
+      fixedNotice.style.display = "none";
+    }
   }
 
   calculateManualLogEarningsPreview();
@@ -9157,20 +9201,45 @@ window.recalcManualLogHoursFromTime = function () {
 };
 
 window.calculateManualLogEarningsPreview = function () {
+  const empId = $("#manualLogEmployeeSelect")?.value;
+  const secId = $("#manualLogSectorSelect")?.value;
   const hours = parseFloat($("#manualLogHours")?.value) || 0;
   const rate = parseFloat($("#manualLogHourlyRate")?.value) || 0;
   const travel = parseFloat($("#manualLogTravelExpenses")?.value) || 0;
 
-  const workAmount = hours * rate;
+  const emp = state.employees.find((e) => e.id === empId);
+  const sec = emp?.sectors?.[secId];
+  const mEmp = (state.manualEmployees || []).find((e) => e.id === empId);
+  const isFixed = Boolean(
+    sec?.isFixed ||
+    sec?.type === "fixed" ||
+    sec?.type === "recurring" ||
+    mEmp?.pay_type === "fixed" ||
+    mEmp?.pay_type === "recurring"
+  );
+
+  const workAmount = isFixed ? 0 : (hours * rate);
   const total = workAmount + travel;
 
   const workAmountEl = $("#manualLogWorkAmountPreview");
   const travelAmountEl = $("#manualLogTravelAmountPreview");
   const totalEl = $("#manualLogTotalEarningsPreview");
 
-  if (workAmountEl) workAmountEl.textContent = currency.format(workAmount);
+  if (workAmountEl) {
+    workAmountEl.innerHTML = isFixed
+      ? `<span style="color: #059669; font-weight: 600;">(v fiksni plači)</span>`
+      : currency.format(workAmount);
+  }
   if (travelAmountEl) travelAmountEl.textContent = currency.format(travel);
-  if (totalEl) totalEl.textContent = currency.format(total);
+  if (totalEl) {
+    if (isFixed) {
+      totalEl.innerHTML = travel > 0
+        ? `<span>${currency.format(travel)} <span style="font-size: 11px; font-weight: 500; color: var(--muted);">(potni stroški)</span></span>`
+        : `<span style="font-size: 13.5px; color: #059669; font-weight: 700;">Vključeno v fiksno plačo</span>`;
+    } else {
+      totalEl.textContent = currency.format(total);
+    }
+  }
 };
 
 window.handleSaveManualWorkLog = async function (event) {
@@ -9206,9 +9275,20 @@ window.handleSaveManualWorkLog = async function (event) {
   }
 
   const emp = state.employees.find((e) => e.id === empId);
+  const sec = emp?.sectors?.[sectorId];
+  const mEmp = (state.manualEmployees || []).find((e) => e.id === empId);
+  const isFixed = Boolean(
+    sec?.isFixed ||
+    sec?.type === "fixed" ||
+    sec?.type === "recurring" ||
+    mEmp?.pay_type === "fixed" ||
+    mEmp?.pay_type === "recurring"
+  );
+  const effectiveRate = isFixed ? 0 : rateVal;
+  const totalEarnings = isFixed ? travelVal : ((hoursVal * effectiveRate) + travelVal);
+
   const isRealUser = emp && !emp.isManual;
   const logId = editId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "log_" + Date.now() + "_" + Math.floor(Math.random() * 10000));
-  const totalEarnings = (hoursVal * rateVal) + travelVal;
 
   const logEntry = {
     id: logId,
@@ -9222,9 +9302,10 @@ window.handleSaveManualWorkLog = async function (event) {
     end_time: endTimeVal,
     earnings: totalEarnings,
     travel_expenses: travelVal,
-    hourly_rate: rateVal,
+    hourly_rate: effectiveRate,
     note: noteVal,
     is_paid: isPaidVal,
+    is_fixed: isFixed,
     is_manual: true,
     created_at: new Date().toISOString(),
   };

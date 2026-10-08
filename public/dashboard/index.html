@@ -1790,18 +1790,24 @@
             </div>
 
             <!-- Število ur in urna postavka -->
-            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-              <div class="form-group">
+            <div class="form-row" id="manualLogHoursAndRateRow" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group" id="manualLogHoursGroup">
                 <label for="manualLogHours">Število ur <span class="required">*</span></label>
                 <input type="number" id="manualLogHours" step="0.25" min="0.25" max="24" value="8" required class="cal-input" oninput="calculateManualLogEarningsPreview()" />
               </div>
-              <div class="form-group">
+              <div class="form-group" id="manualLogRateGroup">
                 <label for="manualLogHourlyRate">Urna postavka (€/h) <span class="required">*</span></label>
                 <div style="position: relative;">
                   <input type="number" id="manualLogHourlyRate" step="0.5" min="0" value="10" required class="cal-input" oninput="calculateManualLogEarningsPreview()" style="padding-right: 28px;" />
                   <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); pointer-events: none;">€</span>
                 </div>
               </div>
+            </div>
+
+            <!-- Fiksna plača obvestilo (če je delavec na fiksni plači) -->
+            <div id="manualLogFixedSalaryNotice" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 14px; color: #065f46; font-size: 13px; font-weight: 600; align-items: center; gap: 8px;">
+              <span style="font-size: 18px;">💶</span>
+              <span>Delavec ima fiksno plačo (<strong id="manualLogFixedSalaryAmount">0,00 €</strong>). Vnos urne postavke ni potreben – pomembne so samo oddelane ure.</span>
             </div>
 
             <!-- Potni stroški -->
@@ -1869,6 +1875,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=102"></script>
+    <script src="app.js?v=103"></script>
   </body>
 </html>
