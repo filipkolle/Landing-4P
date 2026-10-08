@@ -441,10 +441,7 @@
               <div class="filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
                 <select id="sectorFilter" aria-label="Filtriraj po sektorju"></select>
-                <button type="button" class="ghost-button" onclick="openManualWorkLogModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px;">
-                  <span>⏱️</span> Vnesi ure
-                </button>
-                <button type="button" class="primary-button" id="openNewEmployeeModalBtn" onclick="openCreateEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px;">
+                <button type="button" class="primary-button" id="openNewEmployeeModalBtn" onclick="openCreateEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px; white-space: nowrap;">
                   <span>+</span> Dodaj zaposlenega
                 </button>
               </div>
@@ -1872,6 +1869,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=101"></script>
+    <script src="app.js?v=102"></script>
   </body>
 </html>
