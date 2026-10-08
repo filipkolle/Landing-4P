@@ -113,9 +113,13 @@ ALTER TABLE public.workplaces ADD COLUMN IF NOT EXISTS employer_id UUID;
 ALTER TABLE public.workplaces ALTER COLUMN employer_id SET DEFAULT auth.uid();
 ALTER TABLE public.workplaces ALTER COLUMN join_code DROP NOT NULL;
 
--- a) iz created_by
-UPDATE public.workplaces SET employer_id = created_by
-WHERE employer_id IS NULL AND created_by IS NOT NULL;
+-- a) iz created_by (če stolpec obstaja)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='workplaces' AND column_name='created_by') THEN
+    EXECUTE 'UPDATE public.workplaces SET employer_id = created_by WHERE employer_id IS NULL AND created_by IS NOT NULL';
+  END IF;
+END $$;
 
 -- b) iz oznake [emp:<uuid>] v sector_notes
 DO $$
@@ -128,10 +132,12 @@ BEGIN
   END IF;
 END $$;
 
--- c) stari sektorji brez oznake pripadajo prvotnemu delodajalcu (enako kot dashboard fallback)
-UPDATE public.workplaces SET employer_id = 'e469c8c8-0678-49fd-917d-0f60b031d006'
-WHERE employer_id IS NULL
-  AND EXISTS (SELECT 1 FROM auth.users WHERE id = 'e469c8c8-0678-49fd-917d-0f60b031d006');
+-- c) sektorji brez oznake dobijo id delodajalca
+UPDATE public.workplaces SET employer_id = COALESCE(
+  (SELECT id FROM public.employer_profiles LIMIT 1),
+  'e469c8c8-0678-49fd-917d-0f60b031d006'::uuid
+)
+WHERE employer_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_workplaces_employer ON public.workplaces(employer_id);
 
