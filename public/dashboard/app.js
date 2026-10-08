@@ -3524,10 +3524,15 @@ function renderEmployeeDetail(employeeId) {
               <td><strong style="color: var(--primary-dark);">${log.isFixed ? (log.travelExpenses > 0 ? currency.format(log.travelExpenses) : `<span style="color: var(--muted); font-size: 11px;">(v fiksni plači)</span>`) : currency.format(log.earnings)}</strong></td>
               <td>${log.note ? `<em>${log.note}</em>` : `<span style="color: var(--muted);">-</span>`}</td>
               <td>${paidControl}</td>
-              <td style="text-align: center;">
-                <button type="button" class="ghost-button" onclick="handleDeleteWorkLog('${log.id}', '${employee.id}')" style="padding: 4px 7px; font-size: 11px; color: #ef4444; border-color: #fecaca; background: #fff;" title="Izbriši ta vnos delovnih ur">
-                  🗑️
-                </button>
+              <td style="text-align: center; white-space: nowrap;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                  <button type="button" class="ghost-button" onclick="openEditWorkLog('${log.id}', '${employee.id}')" style="padding: 4px 8px; font-size: 12px; color: var(--primary-dark); border-color: var(--line); background: #fff; border-radius: 6px;" title="Uredi ta vnos delovnih ur">
+                    ✏️
+                  </button>
+                  <button type="button" class="ghost-button" onclick="handleDeleteWorkLog('${log.id}', '${employee.id}')" style="padding: 4px 8px; font-size: 12px; color: #ef4444; border-color: #fecaca; background: #fff; border-radius: 6px;" title="Izbriši ta vnos delovnih ur">
+                    🗑️
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -9062,35 +9067,76 @@ window.openManualWorkLogModal = function (preselectedEmployeeId = null, logId = 
     empSelect.innerHTML = state.employees
       .map((e) => `<option value="${e.id}">${e.name}${e.isManual ? " (Ročni profil)" : ""}</option>`)
       .join("");
+  }
 
-    if (preselectedEmployeeId && state.employees.some((e) => e.id === preselectedEmployeeId)) {
-      empSelect.value = preselectedEmployeeId;
-    } else if (state.selectedEmployeeId) {
-      empSelect.value = state.selectedEmployeeId;
+  // Preveri, ali urejamo obstoječ vnos
+  const existingLog = logId
+    ? (state.rawLogs.find((l) => l.id === logId) ||
+       getStoredManualWorkLogs().find((l) => l.id === logId) ||
+       (state.workLogs || []).find((l) => l.id === logId))
+    : null;
+
+  if (existingLog) {
+    if (editIdInput) editIdInput.value = existingLog.id;
+    if (titleEl) titleEl.textContent = "Uredi vnos delovnih ur";
+    if (saveBtn) saveBtn.textContent = "Shrani spremembe";
+
+    const targetEmpId = existingLog.userId || existingLog.user_id || existingLog.manual_employee_id || preselectedEmployeeId || state.selectedEmployeeId;
+    if (empSelect && targetEmpId) {
+      empSelect.value = targetEmpId;
     }
+    onManualLogEmployeeChanged();
+
+    const targetSecId = existingLog.sectorId || existingLog.workplace_id;
+    if (sectorSelect && targetSecId) {
+      sectorSelect.value = targetSecId;
+    }
+    onManualLogSectorChanged();
+
+    if (dateInput) dateInput.value = existingLog.date || "";
+    if (startTimeInput) startTimeInput.value = existingLog.startTime || existingLog.start_time || "";
+    if (endTimeInput) endTimeInput.value = existingLog.endTime || existingLog.end_time || "";
+    if (hoursInput) hoursInput.value = existingLog.hours != null ? existingLog.hours : 8;
+    if (travelInput) travelInput.value = existingLog.travelExpenses != null ? existingLog.travelExpenses : (existingLog.travel_expenses != null ? existingLog.travel_expenses : "0.00");
+    if (rateInput && !existingLog.isFixed) {
+      rateInput.value = existingLog.rate != null ? existingLog.rate : (existingLog.hourly_rate != null ? existingLog.hourly_rate : 10);
+    }
+    if (noteInput) noteInput.value = existingLog.note || "";
+    if (isPaidInput) isPaidInput.checked = Boolean(existingLog.isPaid === true || existingLog.is_paid === true);
+  } else {
+    if (editIdInput) editIdInput.value = "";
+    if (titleEl) titleEl.textContent = "Vnos delovnih ur";
+    if (saveBtn) saveBtn.textContent = "Shrani delovne ure";
+
+    if (empSelect) {
+      if (preselectedEmployeeId && state.employees.some((e) => e.id === preselectedEmployeeId)) {
+        empSelect.value = preselectedEmployeeId;
+      } else if (state.selectedEmployeeId) {
+        empSelect.value = state.selectedEmployeeId;
+      }
+    }
+    onManualLogEmployeeChanged();
+
+    // Set date to today if empty
+    if (dateInput) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      dateInput.value = todayStr;
+    }
+
+    if (startTimeInput) startTimeInput.value = "";
+    if (endTimeInput) endTimeInput.value = "";
+    if (hoursInput) hoursInput.value = "8";
+    if (travelInput) travelInput.value = "0.00";
+    if (noteInput) noteInput.value = "";
+    if (isPaidInput) isPaidInput.checked = false;
   }
-
-  onManualLogEmployeeChanged();
-
-  // Set date to today if empty
-  if (dateInput) {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    dateInput.value = todayStr;
-  }
-
-  if (startTimeInput) startTimeInput.value = "";
-  if (endTimeInput) endTimeInput.value = "";
-  if (hoursInput) hoursInput.value = "8";
-  if (travelInput) travelInput.value = "0.00";
-  if (noteInput) noteInput.value = "";
-  if (isPaidInput) isPaidInput.checked = false;
-  if (editIdInput) editIdInput.value = "";
-
-  if (titleEl) titleEl.textContent = "Vnos delovnih ur";
-  if (saveBtn) saveBtn.textContent = "Shrani delovne ure";
 
   calculateManualLogEarningsPreview();
   modal.showModal();
+};
+
+window.openEditWorkLog = function (logId, employeeId) {
+  openManualWorkLogModal(employeeId, logId);
 };
 
 window.closeManualWorkLogModal = function () {
@@ -9341,7 +9387,7 @@ window.handleSaveManualWorkLog = async function (event) {
   }
 
   closeManualWorkLogModal();
-  showToast(`Vnos ur (${hoursVal} h) za zaposlenega »${emp ? emp.name : ''}« je uspešno shranjen!`, "success");
+  showToast(editId ? "Vnos delovnih ur je bil uspešno posodobljen!" : `Vnos ur (${hoursVal} h) za zaposlenega »${emp ? emp.name : ''}« je uspešno shranjen!`, "success");
 };
 
 window.handleDeleteWorkLog = async function (logId, employeeId) {
