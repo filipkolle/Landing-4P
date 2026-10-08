@@ -438,9 +438,15 @@
                 <h2>Baza zaposlenih</h2>
                 <p>Podatki, ki jih delodajalec vidi za povezane vire dohodka. Kliknite na zaposlenega za podroben pregled po sektorjih.</p>
               </div>
-              <div class="filters">
+              <div class="filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
                 <select id="sectorFilter" aria-label="Filtriraj po sektorju"></select>
+                <button type="button" class="ghost-button" onclick="openManualWorkLogModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px;">
+                  <span>⏱️</span> Vnesi ure
+                </button>
+                <button type="button" class="primary-button" id="openNewEmployeeModalBtn" onclick="openCreateEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px;">
+                  <span>+</span> Dodaj zaposlenega
+                </button>
               </div>
             </div>
             <section class="panel table-panel">
@@ -487,9 +493,12 @@
                     <div id="empDetailBadges" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
                   </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <button type="button" class="ghost-button" id="empDetailAbsenceBtn" onclick="openAbsenceModal(state.activeEmployeeId)" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <button type="button" class="ghost-button" id="empDetailAbsenceBtn" onclick="openAbsenceModal(state.selectedEmployeeId)" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff;">
                     <span>🌴 / 🩺</span> Vnesi odsotnost
+                  </button>
+                  <button type="button" class="primary-button" id="empDetailAddHoursBtn" onclick="openManualWorkLogModal(state.selectedEmployeeId)" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 8px 16px;">
+                    <span>⏱️</span> Vnesi delovne ure
                   </button>
                 </div>
               </div>
@@ -567,11 +576,14 @@
                   <h2>Zabeleženi delovni dnevi</h2>
                   <p>Kronološki seznam vseh vpisov delovnih ur za ta mesec</p>
                 </div>
-                <div class="panel-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                <div class="panel-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;">
                   <label for="empLogsSectorFilter" style="font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap;">Sektor:</label>
                   <select id="empLogsSectorFilter" aria-label="Filtriraj po sektorju" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; background: var(--surface); color: var(--ink); font-weight: 500; cursor: pointer;">
                     <option value="all">Vsi sektorji</option>
                   </select>
+                  <button type="button" class="ghost-button" onclick="openManualWorkLogModal(state.selectedEmployeeId)" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);">
+                    <span>+</span> Dodaj ure
+                  </button>
                 </div>
               </div>
               <div class="table-wrap">
@@ -587,6 +599,7 @@
                       <th>Zaslužek</th>
                       <th>Opomba</th>
                       <th>Status izplačila</th>
+                      <th style="width: 70px; text-align: center;">Dejanja</th>
                     </tr>
                   </thead>
                   <tbody id="empDailyLogsTable"></tbody>
@@ -1626,6 +1639,215 @@
       </div>
     </dialog>
 
+    <!-- Modal za ustvarjanje in urejanje profila zaposlenega (delodajalec) -->
+    <dialog id="employeeModal" class="modal" style="max-width: 520px; width: 100%;">
+      <div class="modal-box" style="padding: 0; overflow: hidden;">
+        <form method="dialog" id="employeeForm" onsubmit="event.preventDefault(); handleSaveEmployee(event);">
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 22px;">👤</span>
+              <div>
+                <h2 id="employeeModalTitle" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);">Nov profil zaposlenega</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: var(--muted);">Ustvarite profil delavca in določite sektor ter obliko plačila</p>
+              </div>
+            </div>
+            <button type="button" class="ghost-button close-btn" onclick="closeEmployeeModal()" title="Zapri">✕</button>
+          </div>
+
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+            <input type="hidden" id="employeeModalId" value="" />
+
+            <!-- Ime in priimek -->
+            <div class="form-group">
+              <label for="employeeModalName">Ime in priimek <span class="required">*</span></label>
+              <input type="text" id="employeeModalName" required class="cal-input" placeholder="Npr. Janez Novak" />
+            </div>
+
+            <!-- Kontaktni podatki: E-pošta in Telefon -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label for="employeeModalEmail">E-poštni naslov</label>
+                <input type="email" id="employeeModalEmail" class="cal-input" placeholder="janez@email.si" />
+              </div>
+              <div class="form-group">
+                <label for="employeeModalPhone">Telefonska številka</label>
+                <input type="tel" id="employeeModalPhone" class="cal-input" placeholder="041 123 456" />
+              </div>
+            </div>
+
+            <!-- Sektor in delovno mesto -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label for="employeeModalSector">Dodeljen sektor <span class="required">*</span></label>
+                <select id="employeeModalSector" required class="cal-select"></select>
+              </div>
+              <div class="form-group">
+                <label for="employeeModalJobTitle">Delovno mesto / funkcija</label>
+                <input type="text" id="employeeModalJobTitle" class="cal-input" placeholder="Npr. Kuhar, Natakar..." />
+              </div>
+            </div>
+
+            <!-- Tip plačila -->
+            <div class="form-group">
+              <label>Način obračuna plačila <span class="required">*</span></label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <label class="absence-type-option active" id="optPayHourly" style="padding: 10px 6px; cursor: pointer;">
+                  <input type="radio" name="employeePayType" value="hourly" checked onchange="updateEmployeePayTypeUI()" style="display: none;" />
+                  <span style="font-weight: 700; font-size: 12px; display: block;">Urna postavka</span>
+                  <span style="font-size: 10.5px; color: var(--muted); display: block;">€ / uro</span>
+                </label>
+                <label class="absence-type-option" id="optPayFixed" style="padding: 10px 6px; cursor: pointer;">
+                  <input type="radio" name="employeePayType" value="fixed" onchange="updateEmployeePayTypeUI()" style="display: none;" />
+                  <span style="font-weight: 700; font-size: 12px; display: block;">Fiksna plača</span>
+                  <span style="font-size: 10.5px; color: var(--muted); display: block;">€ / mesec</span>
+                </label>
+                <label class="absence-type-option" id="optPayProject" style="padding: 10px 6px; cursor: pointer;">
+                  <input type="radio" name="employeePayType" value="project" onchange="updateEmployeePayTypeUI()" style="display: none;" />
+                  <span style="font-weight: 700; font-size: 12px; display: block;">Projektno</span>
+                  <span style="font-size: 10.5px; color: var(--muted); display: block;">Po projektu</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Znesek postavke -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label id="employeeModalRateLabel" for="employeeModalRate">Urna postavka (€/h) <span class="required">*</span></label>
+                <div style="position: relative;">
+                  <input type="number" id="employeeModalRate" min="0" step="0.5" value="10.00" required class="cal-input" style="padding-right: 28px;" />
+                  <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); pointer-events: none;">€</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="employeeModalStatus">Status zaposlitve</label>
+                <select id="employeeModalStatus" class="cal-select">
+                  <option value="Zaposlen">Zaposlen</option>
+                  <option value="Študent">Študent</option>
+                  <option value="Pogodbeno">Pogodbeno</option>
+                  <option value="Preizkusna doba">Preizkusna doba</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Opomba -->
+            <div class="form-group">
+              <label for="employeeModalNotes">Opomba (interni zaznamek)</label>
+              <input type="text" id="employeeModalNotes" class="cal-input" placeholder="Npr. Študentska napotnica, vikend izmene..." />
+            </div>
+          </div>
+
+          <div class="modal-actions" style="padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="ghost-button" onclick="closeEmployeeModal()">Prekliči</button>
+            <button type="submit" class="primary-button" id="saveEmployeeBtn">Ustvari profil zaposlenega</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Modal za ročni vnos delovnih ur (delodajalec) -->
+    <dialog id="manualWorkLogModal" class="modal" style="max-width: 520px; width: 100%;">
+      <div class="modal-box" style="padding: 0; overflow: hidden;">
+        <form method="dialog" id="manualWorkLogForm" onsubmit="event.preventDefault(); handleSaveManualWorkLog(event);">
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 22px;">⏱️</span>
+              <div>
+                <h2 id="manualWorkLogModalTitle" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);">Vnos delovnih ur</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: var(--muted);">Ročni vnos opravljenih ur in izračun zaslužka za zaposlenega</p>
+              </div>
+            </div>
+            <button type="button" class="ghost-button close-btn" onclick="closeManualWorkLogModal()" title="Zapri">✕</button>
+          </div>
+
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+            <input type="hidden" id="manualLogEditId" value="" />
+
+            <!-- Izbira zaposlenega -->
+            <div class="form-group">
+              <label for="manualLogEmployeeSelect">Zaposleni <span class="required">*</span></label>
+              <select id="manualLogEmployeeSelect" required class="cal-select" onchange="onManualLogEmployeeChanged()"></select>
+            </div>
+
+            <!-- Izbira sektorja -->
+            <div class="form-group">
+              <label for="manualLogSectorSelect">Sektor dela <span class="required">*</span></label>
+              <select id="manualLogSectorSelect" required class="cal-select" onchange="onManualLogSectorChanged()"></select>
+            </div>
+
+            <!-- Datum dela -->
+            <div class="form-group">
+              <label for="manualLogDate">Datum dela <span class="required">*</span></label>
+              <input type="date" id="manualLogDate" required class="cal-input" />
+            </div>
+
+            <!-- Čas izmene (od - do) -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label for="manualLogStartTime">Čas začetka (opcijsko)</label>
+                <input type="time" id="manualLogStartTime" class="cal-input" onchange="recalcManualLogHoursFromTime()" />
+              </div>
+              <div class="form-group">
+                <label for="manualLogEndTime">Čas zaključka (opcijsko)</label>
+                <input type="time" id="manualLogEndTime" class="cal-input" onchange="recalcManualLogHoursFromTime()" />
+              </div>
+            </div>
+
+            <!-- Število ur in urna postavka -->
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label for="manualLogHours">Število ur <span class="required">*</span></label>
+                <input type="number" id="manualLogHours" step="0.25" min="0.25" max="24" value="8" required class="cal-input" oninput="calculateManualLogEarningsPreview()" />
+              </div>
+              <div class="form-group">
+                <label for="manualLogHourlyRate">Urna postavka (€/h) <span class="required">*</span></label>
+                <div style="position: relative;">
+                  <input type="number" id="manualLogHourlyRate" step="0.5" min="0" value="10" required class="cal-input" oninput="calculateManualLogEarningsPreview()" style="padding-right: 28px;" />
+                  <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); pointer-events: none;">€</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Potni stroški -->
+            <div class="form-group">
+              <label for="manualLogTravelExpenses">Potni stroški (€)</label>
+              <div style="position: relative;">
+                <input type="number" id="manualLogTravelExpenses" step="0.5" min="0" value="0.00" class="cal-input" oninput="calculateManualLogEarningsPreview()" style="padding-right: 28px;" />
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); pointer-events: none;">€</span>
+              </div>
+            </div>
+
+            <!-- Predogled izračunanega zaslužka -->
+            <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Skupni zaslužek vnosa</span>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">Delo: <span id="manualLogWorkAmountPreview">0,00 €</span> + Potni: <span id="manualLogTravelAmountPreview">0,00 €</span></div>
+              </div>
+              <strong id="manualLogTotalEarningsPreview" style="font-size: 18px; color: var(--primary-dark);">0,00 €</strong>
+            </div>
+
+            <!-- Opomba -->
+            <div class="form-group">
+              <label for="manualLogNote">Opomba (opcijsko)</label>
+              <input type="text" id="manualLogNote" class="cal-input" placeholder="Npr. Ročni vnos ur, popoldanska izmena..." />
+            </div>
+
+            <!-- Že izplačano checkbox -->
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                <input type="checkbox" id="manualLogIsPaid" style="width: 17px; height: 17px; accent-color: var(--primary);" />
+                <span>Ta vnos je že izplačan</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-actions" style="padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="ghost-button" onclick="closeManualWorkLogModal()">Prekliči</button>
+            <button type="submit" class="primary-button" id="saveManualLogBtn">Shrani delovne ure</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
     <!-- 7. Splošno potrditveno okno (Custom Confirm Modal) -->
     <dialog id="customConfirmModal" class="modal" style="max-width: 460px; width: 92vw;">
       <div class="modal-box" style="padding: 24px 28px; gap: 16px;">
@@ -1650,6 +1872,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=100"></script>
+    <script src="app.js?v=101"></script>
   </body>
 </html>

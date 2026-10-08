@@ -62,6 +62,8 @@ const state = {
   sectors: [],
   jobs: [],
   employees: [],
+  manualEmployees: [],
+  manualWorkLogs: [],
   workLogs: [],
   rawLogs: [],
   incomeSources: [],
@@ -83,6 +85,8 @@ function clearUserState() {
   state.sectors = [];
   state.jobs = [];
   state.employees = [];
+  state.manualEmployees = [];
+  state.manualWorkLogs = [];
   state.workLogs = [];
   state.rawLogs = [];
   state.incomeSources = [];
@@ -640,6 +644,7 @@ async function loadAllData() {
   await fetchWorkplaces();
   await fetchUserProfiles();
   await fetchPendingRequests();
+  await fetchManualEmployees();
   const approvedReqs = await fetchApprovedRequests();
   const sources = await fetchIncomeSources();
   const logs = await fetchWorkLogs();
@@ -767,22 +772,93 @@ async function fetchIncomeSources() {
   return [];
 }
 
-async function fetchWorkLogs() {
-  if (!supabaseClient) return [];
+function getStoredManualEmployees() {
   try {
-    const { data: logs, error } = await supabaseClient
-      .from("work_logs")
-      .select("*")
-      .order("date", { ascending: false });
-
-    if (!error && Array.isArray(logs)) {
-      state.workLogs = logs;
-      return logs;
-    }
+    return JSON.parse(localStorage.getItem(getUserStorageKey("manual_employees")) || "[]");
   } catch (e) {
-    console.log("Info: work_logs sync", e);
+    return [];
   }
-  return [];
+}
+
+function saveStoredManualEmployees(list) {
+  try {
+    localStorage.setItem(getUserStorageKey("manual_employees"), JSON.stringify(list));
+  } catch (e) {}
+}
+
+function getStoredManualWorkLogs() {
+  try {
+    return JSON.parse(localStorage.getItem(getUserStorageKey("manual_work_logs")) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveStoredManualWorkLogs(list) {
+  try {
+    localStorage.setItem(getUserStorageKey("manual_work_logs"), JSON.stringify(list));
+  } catch (e) {}
+}
+
+async function fetchManualEmployees() {
+  let dbManualEmps = [];
+  if (supabaseClient && state.currentUser) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("employer_manual_employees")
+        .select("*")
+        .eq("employer_id", state.currentUser.id);
+      if (!error && Array.isArray(data)) {
+        dbManualEmps = data;
+      }
+    } catch (e) {
+      console.log("Info: employer_manual_employees table sync", e);
+    }
+  }
+
+  const localEmps = getStoredManualEmployees();
+  const dbIds = new Set(dbManualEmps.map((e) => e.id));
+  const merged = [...dbManualEmps];
+  localEmps.forEach((le) => {
+    if (!dbIds.has(le.id)) {
+      merged.push(le);
+    }
+  });
+
+  state.manualEmployees = merged;
+  saveStoredManualEmployees(merged);
+  return merged;
+}
+
+async function fetchWorkLogs() {
+  let dbLogs = [];
+  if (supabaseClient) {
+    try {
+      const { data: logs, error } = await supabaseClient
+        .from("work_logs")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (!error && Array.isArray(logs)) {
+        dbLogs = logs;
+      }
+    } catch (e) {
+      console.log("Info: work_logs sync", e);
+    }
+  }
+
+  // Merge with local manual work logs
+  const localLogs = getStoredManualWorkLogs();
+  const dbLogIds = new Set(dbLogs.map((l) => l.id));
+  const merged = [...dbLogs];
+  localLogs.forEach((ml) => {
+    if (!dbLogIds.has(ml.id)) {
+      merged.push(ml);
+    }
+  });
+
+  state.workLogs = merged;
+  return merged;
 }
 
 async function fetchScheduleShifts() {
@@ -1520,10 +1596,68 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     }
   });
 
+  // 2.5 Map employer-created manual employees into empMap
+  (state.manualEmployees || []).forEach((mEmp) => {
+    const userId = mEmp.id;
+    if (!userId) return;
+
+    const matchedSector = state.sectors.find((s) => s.id === mEmp.workplace_id) || state.sectors[0];
+    if (!matchedSector) return;
+
+    const payType = mEmp.pay_type || "hourly";
+    const isFixed = payType === "fixed" || payType === "recurring";
+    const isProject = payType === "project";
+    const netSalary = isFixed || isProject ? (Number(mEmp.net_salary) || 0) : 0;
+    const srcRate = isFixed ? 0 : (Number(mEmp.hourly_rate) || 0);
+    const mDateStr = mEmp.created_at || "";
+    const mMonthKey = mDateStr ? mDateStr.slice(0, 7) : activeMonth().key;
+
+    if (!empMap.has(userId)) {
+      empMap.set(userId, {
+        id: userId,
+        name: mEmp.name || "Zaposleni",
+        email: mEmp.email || "",
+        phone: mEmp.phone || "",
+        status: mEmp.status || "Zaposlen",
+        isManual: true,
+        isDisconnected: false,
+        joinedMonth: mMonthKey,
+        sectors: {},
+        hours: {},
+        travelExpenses: {},
+        earnings: {},
+        paid: {},
+      });
+    }
+
+    const emp = empMap.get(userId);
+    if (!emp.sectors[matchedSector.id]) {
+      emp.sectors[matchedSector.id] = {
+        sectorId: matchedSector.id,
+        sectorName: matchedSector.name,
+        sectorCode: matchedSector.code,
+        color: matchedSector.color || "#56829d",
+        type: payType,
+        rate: srcRate,
+        isFixed: isFixed,
+        isProject: isProject,
+        netSalary: netSalary,
+        jobName: mEmp.job_title || matchedSector.name,
+        isDisconnected: false,
+        joinedMonth: mMonthKey,
+        hours: {},
+        travelExpenses: {},
+        earnings: {},
+        paid: {},
+      };
+    }
+  });
+
   // 3. Process work_logs: Strictly preserve all work logs belonging to this company's sectors
   state.rawLogs = [];
   logs.forEach((log) => {
-    const userId = log.user_id;
+    const userId = log.user_id || log.manual_employee_id;
+    if (!userId) return;
 
     // Find the exact sector for this work log
     let matchedSectorInfo = null;
@@ -1664,6 +1798,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       note: log.note || "",
       isPaid: log.is_paid !== false,
       isFixed: isFixed,
+      isManual: Boolean(log.is_manual || log.manual_employee_id),
       payType: matchedSectorInfo.type || "hourly",
       rate: isFixed ? 0 : fixedRate,
     });
@@ -2979,10 +3114,17 @@ function renderEmployeeDetail(employeeId) {
        </div>`
     : "";
 
+  const manualBadgeHTML = employee.isManual
+    ? `<span class="chip" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700; font-size: 11px; padding: 4px 10px;">👤 Ročno ustvarjen profil</span>
+       <button type="button" class="ghost-button" onclick="openCreateEmployeeModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff;">✏️ Uredi profil</button>
+       <button type="button" class="ghost-button" onclick="handleDeleteManualEmployee('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fecaca; color: #ef4444; background: #fff;">🗑️ Izbriši profil</button>`
+    : "";
+
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusBadgeHTML}
       ${isDisconnected ? "" : workTypeDropdownHTML}
+      ${manualBadgeHTML}
       ${sectorBadgesHTML}
       ${disconnectedBannerHTML}
     `;
@@ -3321,11 +3463,11 @@ function renderEmployeeDetail(employeeId) {
 
   if (dailyLogsTable) {
     if (empMonthLogs.length === 0) {
-      dailyLogsTable.innerHTML = `<tr><td colspan="9" class="empty-cell">V tem mesecu (${monthLabel}) še ni zabeleženih delovnih ur za tega zaposlenega</td></tr>`;
+      dailyLogsTable.innerHTML = `<tr><td colspan="10" class="empty-cell">V tem mesecu (${monthLabel}) še ni zabeleženih delovnih ur za tega zaposlenega</td></tr>`;
     } else if (displayLogs.length === 0) {
       const selectedSecObj = state.sectors.find((s) => s.id === selectedSector) || Object.values(employee.sectors || {}).find((s) => s.sectorId === selectedSector);
       const selectedSecName = selectedSecObj?.name || selectedSecObj?.sectorName || "izbrani sektor";
-      dailyLogsTable.innerHTML = `<tr><td colspan="9" class="empty-cell">Za sektor »${selectedSecName}« v mesecu ${monthLabel} ni zabeleženih delovnih ur</td></tr>`;
+      dailyLogsTable.innerHTML = `<tr><td colspan="10" class="empty-cell">Za sektor »${selectedSecName}« v mesecu ${monthLabel} ni zabeleženih delovnih ur</td></tr>`;
     } else {
       const sortedLogs = [...displayLogs].sort((a, b) => b.date.localeCompare(a.date));
       dailyLogsTable.innerHTML = sortedLogs
@@ -3357,6 +3499,9 @@ function renderEmployeeDetail(employeeId) {
           if (otHours > 0) {
             badges.push(`<span class="chip" style="background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Presežek mesečne delovne norme (${workNorm.requiredHours} h)">+${number.format(otHours)} h nadure</span>`);
           }
+          if (log.isManual) {
+            badges.push(`<span class="chip" style="background: #e0f2fe; color: #0369a1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;" title="Ročni vnos delodajalca">Ročni vnos</span>`);
+          }
 
           const badgesHTML = badges.length > 0 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">${badges.join("")}</div>` : "";
 
@@ -3379,6 +3524,11 @@ function renderEmployeeDetail(employeeId) {
               <td><strong style="color: var(--primary-dark);">${log.isFixed ? (log.travelExpenses > 0 ? currency.format(log.travelExpenses) : `<span style="color: var(--muted); font-size: 11px;">(v fiksni plači)</span>`) : currency.format(log.earnings)}</strong></td>
               <td>${log.note ? `<em>${log.note}</em>` : `<span style="color: var(--muted);">-</span>`}</td>
               <td>${paidControl}</td>
+              <td style="text-align: center;">
+                <button type="button" class="ghost-button" onclick="handleDeleteWorkLog('${log.id}', '${employee.id}')" style="padding: 4px 7px; font-size: 11px; color: #ef4444; border-color: #fecaca; background: #fff;" title="Izbriši ta vnos delovnih ur">
+                  🗑️
+                </button>
+              </td>
             </tr>
           `;
         })
@@ -8666,6 +8816,488 @@ $("#purgeEmployeeHistoryBtn")?.addEventListener("click", () => {
     handlePurgeEmployeeHistory(state.selectedEmployeeId);
   }
 });
+
+// ==========================================================================
+// Manual Employee Profile & Manual Work Log Functions (Employer Direct Entry)
+// ==========================================================================
+
+window.openCreateEmployeeModal = function (employeeId = null) {
+  const modal = $("#employeeModal");
+  if (!modal) return;
+
+  const titleEl = $("#employeeModalTitle");
+  const idInput = $("#employeeModalId");
+  const nameInput = $("#employeeModalName");
+  const emailInput = $("#employeeModalEmail");
+  const phoneInput = $("#employeeModalPhone");
+  const sectorSelect = $("#employeeModalSector");
+  const jobTitleInput = $("#employeeModalJobTitle");
+  const rateInput = $("#employeeModalRate");
+  const statusSelect = $("#employeeModalStatus");
+  const notesInput = $("#employeeModalNotes");
+  const saveBtn = $("#saveEmployeeBtn");
+
+  // Populate sectors
+  if (sectorSelect) {
+    if (state.sectors.length === 0) {
+      sectorSelect.innerHTML = `<option value="">Ni sektorjev - najprej ustvarite sektor</option>`;
+    } else {
+      sectorSelect.innerHTML = state.sectors
+        .map((s) => `<option value="${s.id}">${s.name} (${s.code})</option>`)
+        .join("");
+    }
+  }
+
+  const existing = employeeId ? (state.manualEmployees || []).find((e) => e.id === employeeId) : null;
+
+  if (existing) {
+    if (titleEl) titleEl.textContent = "Uredi profil zaposlenega";
+    if (saveBtn) saveBtn.textContent = "Shrani spremembe";
+    if (idInput) idInput.value = existing.id;
+    if (nameInput) nameInput.value = existing.name || "";
+    if (emailInput) emailInput.value = existing.email || "";
+    if (phoneInput) phoneInput.value = existing.phone || "";
+    if (sectorSelect) sectorSelect.value = existing.workplace_id || (state.sectors[0]?.id || "");
+    if (jobTitleInput) jobTitleInput.value = existing.job_title || "";
+    if (rateInput) rateInput.value = existing.pay_type === "fixed" ? (existing.net_salary || 0) : (existing.hourly_rate || 10);
+    if (statusSelect) statusSelect.value = existing.status || "Zaposlen";
+    if (notesInput) notesInput.value = existing.notes || "";
+
+    const payType = existing.pay_type || "hourly";
+    const radio = $(`input[name="employeePayType"][value="${payType}"]`);
+    if (radio) radio.checked = true;
+  } else {
+    if (titleEl) titleEl.textContent = "Nov profil zaposlenega";
+    if (saveBtn) saveBtn.textContent = "Ustvari profil zaposlenega";
+    if (idInput) idInput.value = "";
+    if (nameInput) nameInput.value = "";
+    if (emailInput) emailInput.value = "";
+    if (phoneInput) phoneInput.value = "";
+    if (sectorSelect && state.sectors.length > 0) sectorSelect.value = state.sectors[0].id;
+    if (jobTitleInput) jobTitleInput.value = "";
+    if (rateInput) rateInput.value = "10.00";
+    if (statusSelect) statusSelect.value = "Zaposlen";
+    if (notesInput) notesInput.value = "";
+
+    const radio = $(`input[name="employeePayType"][value="hourly"]`);
+    if (radio) radio.checked = true;
+  }
+
+  updateEmployeePayTypeUI();
+  modal.showModal();
+};
+
+window.closeEmployeeModal = function () {
+  const modal = $("#employeeModal");
+  if (modal) modal.close();
+};
+
+window.updateEmployeePayTypeUI = function () {
+  const selectedPayType = $(`input[name="employeePayType"]:checked`)?.value || "hourly";
+  const rateLabel = $("#employeeModalRateLabel");
+  const optHourly = $("#optPayHourly");
+  const optFixed = $("#optPayFixed");
+  const optProject = $("#optPayProject");
+
+  if (optHourly) optHourly.classList.toggle("active", selectedPayType === "hourly");
+  if (optFixed) optFixed.classList.toggle("active", selectedPayType === "fixed");
+  if (optProject) optProject.classList.toggle("active", selectedPayType === "project");
+
+  if (rateLabel) {
+    if (selectedPayType === "fixed") {
+      rateLabel.innerHTML = `Fiksna mesečna plača (€/mesec) <span class="required">*</span>`;
+    } else if (selectedPayType === "project") {
+      rateLabel.innerHTML = `Plačilo po projektu (€) <span class="required">*</span>`;
+    } else {
+      rateLabel.innerHTML = `Urna postavka (€/h) <span class="required">*</span>`;
+    }
+  }
+};
+
+window.handleSaveEmployee = async function (event) {
+  if (event) event.preventDefault();
+
+  const idVal = $("#employeeModalId")?.value.trim();
+  const nameVal = $("#employeeModalName")?.value.trim();
+  const emailVal = $("#employeeModalEmail")?.value.trim() || null;
+  const phoneVal = $("#employeeModalPhone")?.value.trim() || null;
+  const sectorVal = $("#employeeModalSector")?.value;
+  const jobTitleVal = $("#employeeModalJobTitle")?.value.trim() || "";
+  const payType = $(`input[name="employeePayType"]:checked`)?.value || "hourly";
+  const rateNum = parseFloat($("#employeeModalRate")?.value) || 0;
+  const statusVal = $("#employeeModalStatus")?.value || "Zaposlen";
+  const notesVal = $("#employeeModalNotes")?.value.trim() || "";
+
+  if (!nameVal) {
+    alert("Prosimo, vnesite ime in priimek zaposlenega.");
+    return;
+  }
+  if (!sectorVal) {
+    alert("Prosimo, izberite sektor za zaposlenega.");
+    return;
+  }
+
+  const isFixed = payType === "fixed";
+  const isProject = payType === "project";
+  const hourlyRate = isFixed ? 0 : rateNum;
+  const netSalary = isFixed || isProject ? rateNum : 0;
+  const empId = idVal || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "emp_" + Date.now() + "_" + Math.floor(Math.random() * 10000));
+
+  const empRecord = {
+    id: empId,
+    employer_id: state.currentUser?.id || "local",
+    name: nameVal,
+    email: emailVal,
+    phone: phoneVal,
+    workplace_id: sectorVal,
+    job_title: jobTitleVal,
+    pay_type: payType,
+    hourly_rate: hourlyRate,
+    net_salary: netSalary,
+    status: statusVal,
+    notes: notesVal,
+    created_at: idVal ? (state.manualEmployees.find(e => e.id === idVal)?.created_at || new Date().toISOString()) : new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const stored = getStoredManualEmployees();
+  const exIdx = stored.findIndex((e) => e.id === empId);
+  if (exIdx >= 0) {
+    stored[exIdx] = empRecord;
+  } else {
+    stored.unshift(empRecord);
+  }
+  saveStoredManualEmployees(stored);
+  state.manualEmployees = stored;
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      await supabaseClient.from("employer_manual_employees").upsert([empRecord]);
+    } catch (err) {
+      console.warn("Supabase manual employee upsert:", err);
+    }
+  }
+
+  // Refresh data and view
+  const approvedReqs = state.approvedRequests || [];
+  const sources = state.incomeSources || [];
+  const logs = state.workLogs || [];
+  syncEmployeesAndLogs(approvedReqs, sources, logs);
+  renderAll();
+
+  closeEmployeeModal();
+  showToast(idVal ? "Profil zaposlenega uspešno posodobljen!" : "Profil zaposlenega uspešno ustvarjen!", "success");
+
+  if (!idVal) {
+    openEmployeeDetail(empId);
+  }
+};
+
+window.handleDeleteManualEmployee = async function (employeeId) {
+  const emp = (state.manualEmployees || []).find((e) => e.id === employeeId) || state.employees.find((e) => e.id === employeeId);
+  const empName = emp ? emp.name : "tega zaposlenega";
+
+  showCustomConfirm({
+    title: "Izbris profila zaposlenega",
+    message: `Ali ste prepričani, da želite dokončno izbrisati ročno ustvarjeni profil zaposlenega »${empName}« in vse njegove vnose?`,
+    confirmText: "Izbriši profil",
+    isDanger: true,
+    onConfirm: async () => {
+      // Remove from manual employees
+      let stored = getStoredManualEmployees();
+      stored = stored.filter((e) => e.id !== employeeId);
+      saveStoredManualEmployees(stored);
+      state.manualEmployees = stored;
+
+      // Remove from manual work logs
+      let storedLogs = getStoredManualWorkLogs();
+      storedLogs = storedLogs.filter((l) => l.manual_employee_id !== employeeId && l.user_id !== employeeId);
+      saveStoredManualWorkLogs(storedLogs);
+
+      if (supabaseClient && state.currentUser) {
+        try {
+          await supabaseClient.from("employer_manual_employees").delete().eq("id", employeeId);
+          await supabaseClient.from("work_logs").delete().eq("manual_employee_id", employeeId);
+        } catch (err) {
+          console.warn("Supabase manual employee deletion error:", err);
+        }
+      }
+
+      window.closeEmployeeDetail();
+      const approvedReqs = state.approvedRequests || [];
+      const sources = state.incomeSources || [];
+      const logs = await fetchWorkLogs();
+      syncEmployeesAndLogs(approvedReqs, sources, logs);
+      renderAll();
+      showToast(`Profil zaposlenega »${empName}« je bil izbrisan.`, "success");
+    }
+  });
+};
+
+window.openManualWorkLogModal = function (preselectedEmployeeId = null, logId = null) {
+  const modal = $("#manualWorkLogModal");
+  if (!modal) return;
+
+  const titleEl = $("#manualWorkLogModalTitle");
+  const saveBtn = $("#saveManualLogBtn");
+  const editIdInput = $("#manualLogEditId");
+  const empSelect = $("#manualLogEmployeeSelect");
+  const sectorSelect = $("#manualLogSectorSelect");
+  const dateInput = $("#manualLogDate");
+  const startTimeInput = $("#manualLogStartTime");
+  const endTimeInput = $("#manualLogEndTime");
+  const hoursInput = $("#manualLogHours");
+  const rateInput = $("#manualLogHourlyRate");
+  const travelInput = $("#manualLogTravelExpenses");
+  const noteInput = $("#manualLogNote");
+  const isPaidInput = $("#manualLogIsPaid");
+
+  if (state.employees.length === 0) {
+    alert("V bazi nimate zaposlenih. Najprej dodajte zaposlenega z gumbom »+ Dodaj zaposlenega«.");
+    return;
+  }
+
+  // Populate employee select
+  if (empSelect) {
+    empSelect.innerHTML = state.employees
+      .map((e) => `<option value="${e.id}">${e.name}${e.isManual ? " (Ročni profil)" : ""}</option>`)
+      .join("");
+
+    if (preselectedEmployeeId && state.employees.some((e) => e.id === preselectedEmployeeId)) {
+      empSelect.value = preselectedEmployeeId;
+    } else if (state.selectedEmployeeId) {
+      empSelect.value = state.selectedEmployeeId;
+    }
+  }
+
+  onManualLogEmployeeChanged();
+
+  // Set date to today if empty
+  if (dateInput) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    dateInput.value = todayStr;
+  }
+
+  if (startTimeInput) startTimeInput.value = "";
+  if (endTimeInput) endTimeInput.value = "";
+  if (hoursInput) hoursInput.value = "8";
+  if (travelInput) travelInput.value = "0.00";
+  if (noteInput) noteInput.value = "";
+  if (isPaidInput) isPaidInput.checked = false;
+  if (editIdInput) editIdInput.value = "";
+
+  if (titleEl) titleEl.textContent = "Vnos delovnih ur";
+  if (saveBtn) saveBtn.textContent = "Shrani delovne ure";
+
+  calculateManualLogEarningsPreview();
+  modal.showModal();
+};
+
+window.closeManualWorkLogModal = function () {
+  const modal = $("#manualWorkLogModal");
+  if (modal) modal.close();
+};
+
+window.onManualLogEmployeeChanged = function () {
+  const empId = $("#manualLogEmployeeSelect")?.value;
+  const sectorSelect = $("#manualLogSectorSelect");
+  if (!sectorSelect) return;
+
+  const emp = state.employees.find((e) => e.id === empId);
+  const empSectors = emp ? Object.values(emp.sectors || {}) : [];
+
+  if (empSectors.length > 0) {
+    sectorSelect.innerHTML = empSectors
+      .map((s) => `<option value="${s.sectorId}">${s.sectorName} (${s.sectorCode})</option>`)
+      .join("");
+  } else if (state.sectors.length > 0) {
+    sectorSelect.innerHTML = state.sectors
+      .map((s) => `<option value="${s.id}">${s.name} (${s.code})</option>`)
+      .join("");
+  } else {
+    sectorSelect.innerHTML = `<option value="">Ni sektorjev</option>`;
+  }
+
+  onManualLogSectorChanged();
+};
+
+window.onManualLogSectorChanged = function () {
+  const empId = $("#manualLogEmployeeSelect")?.value;
+  const secId = $("#manualLogSectorSelect")?.value;
+  const rateInput = $("#manualLogHourlyRate");
+  if (!rateInput) return;
+
+  const emp = state.employees.find((e) => e.id === empId);
+  const sec = emp?.sectors?.[secId];
+  if (sec && sec.rate > 0) {
+    rateInput.value = sec.rate;
+  } else {
+    rateInput.value = "10.00";
+  }
+
+  calculateManualLogEarningsPreview();
+};
+
+window.recalcManualLogHoursFromTime = function () {
+  const start = $("#manualLogStartTime")?.value;
+  const end = $("#manualLogEndTime")?.value;
+  const hoursInput = $("#manualLogHours");
+
+  if (start && end && hoursInput) {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    let diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff < 0) diff += 24 * 60;
+    if (diff > 0) {
+      const calcHours = Math.round((diff / 60) * 100) / 100;
+      hoursInput.value = calcHours;
+      calculateManualLogEarningsPreview();
+    }
+  }
+};
+
+window.calculateManualLogEarningsPreview = function () {
+  const hours = parseFloat($("#manualLogHours")?.value) || 0;
+  const rate = parseFloat($("#manualLogHourlyRate")?.value) || 0;
+  const travel = parseFloat($("#manualLogTravelExpenses")?.value) || 0;
+
+  const workAmount = hours * rate;
+  const total = workAmount + travel;
+
+  const workAmountEl = $("#manualLogWorkAmountPreview");
+  const travelAmountEl = $("#manualLogTravelAmountPreview");
+  const totalEl = $("#manualLogTotalEarningsPreview");
+
+  if (workAmountEl) workAmountEl.textContent = currency.format(workAmount);
+  if (travelAmountEl) travelAmountEl.textContent = currency.format(travel);
+  if (totalEl) totalEl.textContent = currency.format(total);
+};
+
+window.handleSaveManualWorkLog = async function (event) {
+  if (event) event.preventDefault();
+
+  const editId = $("#manualLogEditId")?.value.trim();
+  const empId = $("#manualLogEmployeeSelect")?.value;
+  const sectorId = $("#manualLogSectorSelect")?.value;
+  const dateVal = $("#manualLogDate")?.value;
+  const startTimeVal = $("#manualLogStartTime")?.value || null;
+  const endTimeVal = $("#manualLogEndTime")?.value || null;
+  const hoursVal = parseFloat($("#manualLogHours")?.value) || 0;
+  const rateVal = parseFloat($("#manualLogHourlyRate")?.value) || 0;
+  const travelVal = parseFloat($("#manualLogTravelExpenses")?.value) || 0;
+  const noteVal = $("#manualLogNote")?.value.trim() || "";
+  const isPaidVal = $("#manualLogIsPaid")?.checked || false;
+
+  if (!empId) {
+    alert("Prosimo, izberite zaposlenega.");
+    return;
+  }
+  if (!sectorId) {
+    alert("Prosimo, izberite sektor.");
+    return;
+  }
+  if (!dateVal) {
+    alert("Prosimo, izberite datum dela.");
+    return;
+  }
+  if (hoursVal <= 0) {
+    alert("Število delovnih ur mora biti večje od 0.");
+    return;
+  }
+
+  const emp = state.employees.find((e) => e.id === empId);
+  const isRealUser = emp && !emp.isManual;
+  const logId = editId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "log_" + Date.now() + "_" + Math.floor(Math.random() * 10000));
+  const totalEarnings = (hoursVal * rateVal) + travelVal;
+
+  const logEntry = {
+    id: logId,
+    user_id: isRealUser ? emp.id : null,
+    manual_employee_id: emp.id,
+    employee_name: emp ? emp.name : "Zaposleni",
+    workplace_id: sectorId,
+    date: dateVal,
+    hours: hoursVal,
+    start_time: startTimeVal,
+    end_time: endTimeVal,
+    earnings: totalEarnings,
+    travel_expenses: travelVal,
+    hourly_rate: rateVal,
+    note: noteVal,
+    is_paid: isPaidVal,
+    is_manual: true,
+    created_at: new Date().toISOString(),
+  };
+
+  // 1. Save to local storage cache
+  const localLogs = getStoredManualWorkLogs();
+  const exIdx = localLogs.findIndex((l) => l.id === logId);
+  if (exIdx >= 0) {
+    localLogs[exIdx] = logEntry;
+  } else {
+    localLogs.unshift(logEntry);
+  }
+  saveStoredManualWorkLogs(localLogs);
+
+  // 2. Upsert to Supabase work_logs
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from("work_logs").upsert([logEntry]);
+    } catch (err) {
+      console.warn("Supabase work_logs manual entry upsert error:", err);
+    }
+  }
+
+  // 3. Re-sync and update UI
+  await fetchWorkLogs();
+  const approvedReqs = state.approvedRequests || [];
+  const sources = state.incomeSources || [];
+  syncEmployeesAndLogs(approvedReqs, sources, state.workLogs);
+  renderAll();
+
+  if (state.selectedEmployeeId) {
+    renderEmployeeDetail(state.selectedEmployeeId);
+  }
+
+  closeManualWorkLogModal();
+  showToast(`Vnos ur (${hoursVal} h) za zaposlenega »${emp ? emp.name : ''}« je uspešno shranjen!`, "success");
+};
+
+window.handleDeleteWorkLog = async function (logId, employeeId) {
+  showCustomConfirm({
+    title: "Izbris vnosa delovnih ur",
+    message: "Ali ste prepričani, da želite izbrisati ta vnos delovnih ur? Dejanja ni mogoče razveljaviti.",
+    confirmText: "Izbriši vnos",
+    isDanger: true,
+    onConfirm: async () => {
+      // Remove from local manual work logs
+      let localLogs = getStoredManualWorkLogs();
+      localLogs = localLogs.filter((l) => l.id !== logId);
+      saveStoredManualWorkLogs(localLogs);
+
+      // Remove from Supabase
+      if (supabaseClient) {
+        try {
+          await supabaseClient.from("work_logs").delete().eq("id", logId);
+        } catch (err) {
+          console.warn("Supabase delete work_log error:", err);
+        }
+      }
+
+      await fetchWorkLogs();
+      const approvedReqs = state.approvedRequests || [];
+      const sources = state.incomeSources || [];
+      syncEmployeesAndLogs(approvedReqs, sources, state.workLogs);
+      renderAll();
+
+      if (state.selectedEmployeeId) {
+        renderEmployeeDetail(state.selectedEmployeeId);
+      }
+
+      showToast("Vnos delovnih ur je bil uspešno izbrisan.", "success");
+    }
+  });
+};
 
 // Bootstrapping
 initSupabase();
