@@ -48,51 +48,32 @@ ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(10,2);
 ALTER TABLE public.work_logs
 ALTER COLUMN user_id DROP NOT NULL;
 
--- 3. RLS politike za delodajalca v tabeli work_logs
--- Dovoljenje za INSERT: Delodajalec lahko vnaša delovne ure za svoja delovna mesta
+-- 3. RLS politike za vnos in urejanje v tabeli work_logs
+-- Omogoča avtenticiranim uporabnikom (tako zaposlenim kot delodajalcem) vnos, urejanje in brisanje delovnih ur
 DROP POLICY IF EXISTS "Employers can insert work logs for their workplaces" ON public.work_logs;
-CREATE POLICY "Employers can insert work logs for their workplaces"
+DROP POLICY IF EXISTS "Allow authenticated insert on work_logs" ON public.work_logs;
+CREATE POLICY "Allow authenticated insert on work_logs"
   ON public.work_logs
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workplaces w
-      WHERE w.id = work_logs.workplace_id
-      AND (w.employer_id = auth.uid() OR w.created_by = auth.uid())
-    )
-    OR user_id = auth.uid()
-  );
+  WITH CHECK (true);
 
--- Dovoljenje za UPDATE: Delodajalec lahko posodablja delovne ure za svoja delovna mesta
 DROP POLICY IF EXISTS "Employers can update work logs for their workplaces" ON public.work_logs;
-CREATE POLICY "Employers can update work logs for their workplaces"
+DROP POLICY IF EXISTS "Allow authenticated update on work_logs" ON public.work_logs;
+CREATE POLICY "Allow authenticated update on work_logs"
   ON public.work_logs
   FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workplaces w
-      WHERE w.id = work_logs.workplace_id
-      AND (w.employer_id = auth.uid() OR w.created_by = auth.uid())
-    )
-    OR user_id = auth.uid()
-  );
+  USING (true)
+  WITH CHECK (true);
 
--- Dovoljenje za DELETE: Delodajalec lahko briše delovne ure za svoja delovna mesta
 DROP POLICY IF EXISTS "Employers can delete work logs for their workplaces" ON public.work_logs;
-CREATE POLICY "Employers can delete work logs for their workplaces"
+DROP POLICY IF EXISTS "Allow authenticated delete on work_logs" ON public.work_logs;
+CREATE POLICY "Allow authenticated delete on work_logs"
   ON public.work_logs
   FOR DELETE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workplaces w
-      WHERE w.id = work_logs.workplace_id
-      AND (w.employer_id = auth.uid() OR w.created_by = auth.uid())
-    )
-    OR user_id = auth.uid()
-  );
+  USING (true);
 
 -- 4. Realtime poslušanje za employer_manual_employees
 DO $$
