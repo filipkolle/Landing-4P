@@ -3149,13 +3149,13 @@ function renderEmployeeDetail(employeeId) {
             const totalAbHours = workDays * ab.hoursPerDay;
             const isInThisMonth = ab.startDate <= `${monthKey}-31` && ab.endDate >= `${monthKey}-01`;
             return `
-              <div class="absence-existing-card" style="${isInThisMonth ? 'border-color: #a7f3d0;' : ''}">
+              <div class="absence-existing-card" style="border-left: 3px solid #ef4444; ${isInThisMonth ? 'border-color: #fca5a5; background: #fef2f2;' : ''}">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <span style="font-size: 20px;">${icon}</span>
                   <div>
-                    <div style="font-weight: 700; color: var(--ink); font-size: 13.5px;">
+                    <div style="font-weight: 700; color: #b91c1c; font-size: 13.5px;">
                       ${typeLabel} (${ab.payRatePercent} %)
-                      ${isInThisMonth ? `<span class="chip" style="background: #ecfdf5; color: #047857; font-size: 9.5px; font-weight: 800; padding: 1px 6px; margin-left: 6px;">Ta mesec</span>` : ""}
+                      ${isInThisMonth ? `<span class="chip" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-size: 9.5px; font-weight: 800; padding: 1px 6px; margin-left: 6px;">Ta mesec</span>` : ""}
                     </div>
                     <div style="font-size: 11.5px; color: var(--muted); margin-top: 2px;">
                       ${ab.startDate} do ${ab.endDate} · <strong>${workDays} delovnih dni</strong> (${number.format(totalAbHours)} h pri ${ab.hoursPerDay}h/dan)
@@ -4726,9 +4726,9 @@ function renderScheduleMonthView(container, dateObj, shifts) {
             <div class="schedule-absence-chip ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
               <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
                 <span style="font-size: 10px;">${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
-                <span style="font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Odsoten: ${ab.userName}</span>
+                <span style="font-size: 10px; font-weight: 700; color: #b91c1c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Odsoten: ${ab.userName}</span>
               </div>
-              <span style="font-size: 9px; font-weight: 800; flex-shrink: 0; padding: 1px 4px; border-radius: 3px; background: ${ab.type === 'vacation' ? '#dcfce7; color: #15803d;' : (ab.type === 'sick_leave' ? '#fef3c7; color: #b45309;' : '#e2e8f0; color: #475569;')}">${getAbsenceTypeShortLabel(ab.type)}</span>
+              <span style="font-size: 9px; font-weight: 800; flex-shrink: 0; padding: 1px 4px; border-radius: 3px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;">${getAbsenceTypeShortLabel(ab.type)}</span>
             </div>
           `).join("")}
         </div>
@@ -4882,11 +4882,11 @@ function renderScheduleWeekView(container, days, shifts) {
           ${dayAbsences.map((ab) => `
             <div class="schedule-week-absence-card ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <span style="font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span style="font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b91c1c;">
                   <span>${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
                   <span>Odsoten: <strong>${ab.userName}</strong></span>
                 </span>
-                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; background: ${ab.type === 'vacation' ? '#dcfce7; color: #15803d;' : (ab.type === 'sick_leave' ? '#fef3c7; color: #b45309;' : '#f1f5f9; color: #475569;')}">
+                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;">
                   ${getAbsenceTypeLabel(ab.type)}
                 </span>
               </div>
@@ -5984,7 +5984,7 @@ window.calculateAbsencePreview = function () {
   if (hoursEl) hoursEl.textContent = `${number.format(totalHours)} h`;
   if (rateEl) {
     rateEl.textContent = `${payPercent} %`;
-    rateEl.style.color = selectedType === "vacation" ? "#16a34a" : (selectedType === "sick_leave" ? "#d97706" : "#64748b");
+    rateEl.style.color = "#b91c1c";
   }
   if (badgeEl) {
     badgeEl.className = `absence-badge-pill ${selectedType}`;
@@ -6023,11 +6023,11 @@ window.renderExistingAbsencesForEmployee = function (userId) {
       const workDays = countWorkingDaysBetween(ab.startDate, ab.endDate);
       const totalHours = workDays * ab.hoursPerDay;
       return `
-        <div class="absence-existing-card">
+        <div class="absence-existing-card" style="border-left: 3px solid #ef4444;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 16px;">${icon}</span>
             <div>
-              <div style="font-weight: 700; color: var(--ink);">
+              <div style="font-weight: 700; color: #b91c1c;">
                 ${typeLabel} (${ab.payRatePercent} %)
               </div>
               <div style="font-size: 11px; color: var(--muted); margin-top: 1px;">
