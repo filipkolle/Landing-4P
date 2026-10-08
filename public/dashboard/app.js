@@ -45,6 +45,7 @@ function getInitialView() {
 
 const state = {
   companyName: "Moje podjetje",
+  employerConnectCode: "",
   supabaseUrl: localStorage.getItem("4p_supabase_url") || SUPABASE_DEFAULT_URL,
   supabaseKey: localStorage.getItem("4p_supabase_key") || SUPABASE_DEFAULT_KEY,
   currentUser: null,
@@ -82,6 +83,7 @@ const state = {
 function clearUserState() {
   state.currentUser = null;
   state.companyName = "";
+  state.employerConnectCode = "";
   state.sectors = [];
   state.jobs = [];
   state.employees = [];
@@ -642,6 +644,7 @@ $("#settingsLogoutBtn")?.addEventListener("click", performLogout);
 async function loadAllData() {
   if (!state.currentUser) return;
   await fetchWorkplaces();
+  await syncEmployerConnectCode();
   await fetchUserProfiles();
   await fetchPendingRequests();
   await fetchManualEmployees();
@@ -1191,6 +1194,13 @@ function setupRealtimeListeners() {
       .channel("workplace_requests_realtime")
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "employer_connections" },
+        async () => {
+          if (state.currentUser) await loadAllData();
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "*", schema: "public", table: "workplace_requests" },
         async () => {
           if (state.currentUser) await loadAllData();
@@ -1278,30 +1288,73 @@ function setupRealtimeListeners() {
   }, 5000);
 }
 
-// 3. Fetch and Display Pending Requests (Scoped to Employer's Sectors)
+// 3. Fetch and Display Pending Requests (employer_connections + legacy workplace_requests)
 async function fetchPendingRequests() {
   if (!supabaseClient || !state.currentUser) return;
   try {
-    const { data, error } = await supabaseClient
-      .from("workplace_requests")
-      .select("*, workplaces(*)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+    let combined = [];
 
-    if (!error && Array.isArray(data)) {
-      const myWorkplaceIds = new Set(state.sectors.map((s) => s.id));
-      const myJoinCodes = new Set(state.sectors.map((s) => s.code));
+    // A) Nove povezave iz employer_connections (pending)
+    try {
+      const { data: conns, error: connErr } = await supabaseClient
+        .from("employer_connections")
+        .select("*")
+        .eq("employer_id", state.currentUser.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
 
-      state.pendingRequests = data.filter((req) => {
-        return (
-          myWorkplaceIds.has(req.workplace_id) ||
-          myJoinCodes.has(req.workplaces?.join_code)
-        );
-      });
-      renderPendingRequestsNotification();
+      if (!connErr && Array.isArray(conns)) {
+        conns.forEach((c) => {
+          combined.push({
+            id: c.id,
+            isConnection: true,
+            connection_id: c.id,
+            user_id: c.user_id,
+            user_name: c.user_name || state.userProfiles.get(c.user_id) || "Uporabnik",
+            company_name: c.company_name,
+            created_at: c.created_at,
+          });
+        });
+      }
+    } catch (errConns) {
+      console.warn("employer_connections fetch note:", errConns);
     }
+
+    // B) Stare / vzporedne zahteve iz workplace_requests
+    try {
+      const { data: wpReqs, error: wpErr } = await supabaseClient
+        .from("workplace_requests")
+        .select("*, workplaces(*)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!wpErr && Array.isArray(wpReqs)) {
+        const myWorkplaceIds = new Set(state.sectors.map((s) => s.id));
+        wpReqs.forEach((req) => {
+          if (myWorkplaceIds.has(req.workplace_id)) {
+            if (!combined.some((x) => x.user_id === req.user_id)) {
+              combined.push({
+                id: req.id,
+                isConnection: false,
+                workplace_request_id: req.id,
+                connection_id: req.connection_id,
+                user_id: req.user_id,
+                user_name: req.user_name || state.userProfiles.get(req.user_id) || "Uporabnik",
+                workplaces: req.workplaces,
+                created_at: req.created_at,
+              });
+            }
+          }
+        });
+      }
+    } catch (errWp) {
+      console.warn("workplace_requests fetch note:", errWp);
+    }
+
+    state.pendingRequests = combined;
+    renderPendingRequestsNotification();
   } catch (e) {
-    console.log("Info: workplace_requests sync", e);
+    console.log("Info: pending requests sync", e);
   }
 }
 
@@ -1372,42 +1425,20 @@ function renderPendingRequestsNotification() {
     .map((req) => {
       const liveProfileName = state.userProfiles.get(req.user_id);
       const userName = (liveProfileName && liveProfileName !== "Neznan uporabnik") ? liveProfileName : (req.user_name || "Uporabnik");
-      const workplaceName = req.workplaces?.name || req.workplace_name || "delovnim mestom";
-      const sectorNameText = req.workplaces?.sector_name ? ` (${req.workplaces.sector_name})` : "";
-
-      // Find matching income source for pay type details
-      const src = (state.incomeSources || []).find((s) => {
-        if (s.user_id !== req.user_id) return false;
-        if (req.workplace_id && (s.workplace_id === req.workplace_id || s.workplace_id === req.workplaces?.id)) return true;
-        if (req.workplaces?.join_code && s.join_code === req.workplaces.join_code) return true;
-        return false;
-      });
-
-      let payTypeInfoHTML = "";
-      if (src) {
-        const pInfo = getPayTypeInfo(src.type, src.type === "fixed", src.type === "project");
-        let amountText = "";
-        if (src.type === "fixed") {
-          amountText = Number(src.net_salary) > 0 ? ` (${currency.format(src.net_salary)} / mesec)` : "";
-        } else if (src.type === "project") {
-          amountText = Number(src.net_salary) > 0 ? ` (${currency.format(src.net_salary)})` : (Number(src.hourly_rate) > 0 ? ` (${currency.format(src.hourly_rate)}/h)` : "");
-        } else {
-          amountText = Number(src.hourly_rate) > 0 ? ` (${currency.format(src.hourly_rate)}/h)` : "";
-        }
-        payTypeInfoHTML = `<span class="pay-type-badge ${pInfo.badgeClass}" style="margin-left: 8px;">${pInfo.icon} ${pInfo.label}${amountText}</span>`;
-      }
+      const safeUserName = userName.replace(/'/g, "\\'");
+      const reqId = req.connection_id || req.id;
 
       return `
         <div class="request-banner" id="request-${req.id}">
           <div class="request-content-wrap">
             <div class="request-icon">🔔</div>
             <p class="request-text">
-              <strong>${userName}</strong> se želi povezati z delovnim mestom <strong>${workplaceName}${sectorNameText}</strong>${payTypeInfoHTML}
+              <strong>${userName}</strong> se želi povezati z vašim podjetjem <strong>${state.companyName || "Moje podjetje"}</strong>.
             </p>
           </div>
           <div class="request-actions">
-            <button class="btn-approve" onclick="handleRequestApproval('${req.id}', 'approved')" type="button">Odobri</button>
-            <button class="btn-deny" onclick="handleRequestApproval('${req.id}', 'denied')" type="button">Zavrni</button>
+            <button class="btn-approve" onclick="openApproveRequestModal('${reqId}', '${safeUserName}')" type="button">Odobri</button>
+            <button class="btn-deny" onclick="handleDenyRequest('${reqId}', ${Boolean(req.isConnection)})" type="button">Zavrni</button>
           </div>
         </div>
       `;
@@ -1415,25 +1446,271 @@ function renderPendingRequestsNotification() {
     .join("");
 }
 
+// Odpri modal za odobritev prošnje (izbira sektorjev)
+window.openApproveRequestModal = function (connectionOrRequestId, userName) {
+  const modal = $("#approveRequestModal");
+  if (!modal) return;
 
-// 4. Update request status (approved / denied)
-window.handleRequestApproval = async function (requestId, newStatus) {
-  if (!supabaseClient) return;
+  $("#approveRequestConnectionId").value = connectionOrRequestId;
+  const subtitle = $("#approveRequestSubtitle");
+  if (subtitle) subtitle.textContent = `Izberite sektorje za zaposlenega »${userName}«:`;
+
+  const list = $("#approveRequestSectorsList");
+  if (list) {
+    if (state.sectors.length === 0) {
+      list.innerHTML = `<p style="font-size: 13px; color: #ef4444; margin: 4px 0;">Trenutno nimate ustvarjenih sektorjev. Najprej dodajte sektor v Nastavitvah.</p>`;
+    } else {
+      list.innerHTML = state.sectors
+        .map(
+          (s) => `
+        <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;">
+          <input type="checkbox" name="approveSectorCheck" value="${s.id}" checked style="width: 17px; height: 17px; accent-color: var(--primary);" />
+          <span class="sector-color-dot" style="background-color: ${s.color || '#56829d'};"></span>
+          <strong style="font-size: 13.5px;">${s.name}</strong>
+        </label>
+      `
+        )
+        .join("");
+    }
+  }
+
+  modal.showModal();
+};
+
+window.closeApproveRequestModal = function () {
+  const modal = $("#approveRequestModal");
+  if (modal) modal.close();
+};
+
+window.handleConfirmApproveRequest = async function (event) {
+  event.preventDefault();
+  const connId = $("#approveRequestConnectionId").value;
+  const checkboxes = document.querySelectorAll('input[name="approveSectorCheck"]:checked');
+  const selectedSectorIds = Array.from(checkboxes).map((cb) => cb.value);
+
+  if (selectedSectorIds.length === 0) {
+    alert("Prosimo, izberite vsaj en sektor za zaposlenega.");
+    return;
+  }
+
+  const btn = $("#confirmApproveRequestBtn");
+  if (btn) btn.disabled = true;
+
   try {
-    const { error } = await supabaseClient
-      .from("workplace_requests")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq("id", requestId);
+    let success = false;
+    // 1. Poskusi prek nove RPC funkcije approve_connection_request
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient.rpc("approve_connection_request", {
+          p_connection_id: connId,
+          p_workplace_ids: selectedSectorIds,
+        });
+        if (!error) success = true;
+      } catch (eRPC) {
+        console.warn("approve_connection_request note:", eRPC);
+      }
+    }
+
+    // 2. Če ne gre (fallback za stare zahteve), posodobi workplace_requests
+    if (!success && supabaseClient) {
+      await supabaseClient
+        .from("workplace_requests")
+        .update({ status: "approved", updated_at: new Date().toISOString() })
+        .eq("id", connId);
+    }
+
+    closeApproveRequestModal();
+    showToast("Zaposleni je bil uspešno odobren in dodeljen v sektorje!", "success");
+    await loadAllData();
+  } catch (err) {
+    console.error("Napaka pri odobritvi prošnje:", err);
+    alert("Napaka pri odobritvi: " + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.handleDenyRequest = async function (connOrReqId, isConnection) {
+  showCustomConfirm({
+    title: "Zavrnitev prošnje",
+    message: "Ali ste prepričani, da želite zavrniti to prošnjo za pridružitev podjetju?",
+    confirmText: "Zavrni prošnjo",
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        if (isConnection && supabaseClient) {
+          await supabaseClient.rpc("reject_connection_request", { p_connection_id: connOrReqId });
+        } else if (supabaseClient) {
+          await supabaseClient
+            .from("workplace_requests")
+            .update({ status: "denied", updated_at: new Date().toISOString() })
+            .eq("id", connOrReqId);
+        }
+        showToast("Prošnja je bila zavrnjena.", "info");
+        await loadAllData();
+      } catch (err) {
+        console.error("Napaka pri zavrnitvi prošnje:", err);
+      }
+    },
+  });
+};
+
+// ==========================================================================
+// Povezava zaposlenega prek kode (5-mestne kode)
+// ==========================================================================
+
+window.copyCompanyConnectCode = function () {
+  const code = state.employerConnectCode;
+  if (!code) {
+    showToast("Koda podjetja še ni na voljo.", "warning");
+    return;
+  }
+  navigator.clipboard.writeText(code).then(() => {
+    showToast(`Koda vašega podjetja (${code}) je bila kopirana v odložišče!`, "success");
+  }).catch(() => {
+    showToast(`Koda vašega podjetja: ${code}`, "info");
+  });
+};
+
+async function syncEmployerConnectCode() {
+  if (!supabaseClient || !state.currentUser) return;
+  try {
+    let code = "";
+    // 1. Poskusi RPC get_my_employer_code
+    try {
+      const { data, error } = await supabaseClient.rpc("get_my_employer_code");
+      if (!error && data) code = data;
+    } catch (eRPC) {}
+
+    // 2. Če ne gre, poizvedi direktno v employer_profiles
+    if (!code) {
+      const { data: ep } = await supabaseClient
+        .from("employer_profiles")
+        .select("connect_code")
+        .eq("id", state.currentUser.id)
+        .maybeSingle();
+      if (ep?.connect_code) code = ep.connect_code;
+    }
+
+    if (code) {
+      state.employerConnectCode = code;
+    }
+
+    const headerBadge = $("#headerCompanyCode");
+    if (headerBadge) headerBadge.textContent = state.employerConnectCode || "-----";
+
+    const settingsBadge = $("#settingsCompanyConnectCode");
+    if (settingsBadge) settingsBadge.textContent = state.employerConnectCode || "-----";
+  } catch (e) {
+    console.warn("syncEmployerConnectCode note:", e);
+  }
+}
+
+window.openConnectEmployeeModal = function () {
+  const modal = $("#connectEmployeeModal");
+  if (!modal) return;
+
+  const codeInput = $("#connectEmployeeCode");
+  if (codeInput) codeInput.value = "";
+
+  const foundDiv = $("#connectEmployeeFoundName");
+  if (foundDiv) foundDiv.style.display = "none";
+
+  const notFoundDiv = $("#connectEmployeeNotFound");
+  if (notFoundDiv) notFoundDiv.style.display = "none";
+
+  const list = $("#connectEmployeeSectorsList");
+  if (list) {
+    if (state.sectors.length === 0) {
+      list.innerHTML = `<p style="font-size: 13px; color: #ef4444; margin: 4px 0;">Trenutno nimate ustvarjenih sektorjev. Najprej dodajte sektor v Nastavitvah.</p>`;
+    } else {
+      list.innerHTML = state.sectors
+        .map(
+          (s) => `
+        <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;">
+          <input type="checkbox" name="connectSectorCheck" value="${s.id}" checked style="width: 17px; height: 17px; accent-color: var(--primary);" />
+          <span class="sector-color-dot" style="background-color: ${s.color || '#56829d'};"></span>
+          <strong style="font-size: 13.5px;">${s.name}</strong>
+        </label>
+      `
+        )
+        .join("");
+    }
+  }
+
+  modal.showModal();
+};
+
+window.closeConnectEmployeeModal = function () {
+  const modal = $("#connectEmployeeModal");
+  if (modal) modal.close();
+};
+
+window.onConnectEmployeeCodeInput = async function (val) {
+  const clean = (val || "").trim().toUpperCase();
+  const foundDiv = $("#connectEmployeeFoundName");
+  const foundText = $("#connectEmployeeFoundNameText");
+  const notFoundDiv = $("#connectEmployeeNotFound");
+
+  if (foundDiv) foundDiv.style.display = "none";
+  if (notFoundDiv) notFoundDiv.style.display = "none";
+
+  if (clean.length === 5 && supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.rpc("lookup_employee_by_code", { p_code: clean });
+      if (!error && Array.isArray(data) && data.length > 0 && data[0].user_name) {
+        if (foundText) foundText.textContent = data[0].user_name;
+        if (foundDiv) foundDiv.style.display = "flex";
+      } else {
+        if (notFoundDiv) notFoundDiv.style.display = "block";
+      }
+    } catch (e) {
+      console.warn("lookup_employee_by_code note:", e);
+    }
+  }
+};
+
+window.handleSendEmployeeInvitation = async function (event) {
+  event.preventDefault();
+  const codeInput = $("#connectEmployeeCode");
+  const code = (codeInput ? codeInput.value : "").trim().toUpperCase();
+
+  if (code.length !== 5) {
+    alert("Prosimo, vnesite veljavno 5-mestno kodo zaposlenega.");
+    return;
+  }
+
+  const checkboxes = document.querySelectorAll('input[name="connectSectorCheck"]:checked');
+  const selectedSectorIds = Array.from(checkboxes).map((cb) => cb.value);
+
+  if (selectedSectorIds.length === 0) {
+    alert("Prosimo, izberite vsaj en sektor, v katerega uvrščate zaposlenega.");
+    return;
+  }
+
+  const btn = $("#sendEmployeeInviteBtn");
+  if (btn) btn.disabled = true;
+
+  try {
+    const { data, error } = await supabaseClient.rpc("invite_employee_by_code", {
+      p_code: code,
+      p_workplace_ids: selectedSectorIds,
+    });
 
     if (error) {
-      alert(`Napaka pri posodobitvi zahteve: ${error.message}`);
-    } else {
-      state.pendingRequests = state.pendingRequests.filter((r) => r.id !== requestId);
-      renderPendingRequestsNotification();
-      await loadAllData();
+      alert("Napaka pri pošiljanju povabila: " + error.message);
+      return;
     }
-  } catch (e) {
-    console.error("Error approving/denying request:", e);
+
+    const empName = (data && data[0] && data[0].user_name) ? data[0].user_name : "Zaposlenemu";
+    closeConnectEmployeeModal();
+    showToast(`Povabilo je bilo uspešno poslano (${empName})!`, "success");
+    await loadAllData();
+  } catch (err) {
+    console.error("invite_employee_by_code error:", err);
+    alert("Napaka pri pošiljanju povabila: " + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
   }
 };
 
@@ -3689,7 +3966,6 @@ function renderSettings() {
                   ${sector.notes ? `<p class="job-code-note">${sector.notes}</p>` : ""}
                 </div>
                 <div class="job-code-actions">
-                  <button class="copy-code" type="button" title="Kliknite za kopiranje kode" onclick="navigator.clipboard.writeText('${sector.code}')">${sector.code}</button>
                   <button class="delete-sector-btn" onclick="handleDeleteSector('${sector.id}', '${sector.name.replace(/'/g, "\\'")}', '${sector.code}')" type="button" title="Izbriši sektor">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="3 6 5 6 21 6"></polyline>
@@ -8044,11 +8320,12 @@ $("#sectorModalForm")?.addEventListener("submit", async (event) => {
     try {
       const { data, error } = await supabaseClient.from("workplaces").insert([
         {
+          employer_id: currentUserId,
           name: name,
           sector_name: name,
           sector_color: color,
           sector_notes: notesWithTag,
-          join_code: code,
+          join_code: null,
         },
       ]).select();
 
