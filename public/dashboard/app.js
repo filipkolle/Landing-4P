@@ -2213,6 +2213,9 @@ function showToast(message, type = "success") {
   }, 3500);
 }
 window.showToast = showToast;
+window.showNotification = showToast;
+const showNotification = showToast;
+
 
 function formatSectorCount(count) {
   if (count === 1) return "1 sektor";
@@ -5337,7 +5340,7 @@ function renderScheduleWeekView(container, days, shifts) {
         .map((s) => {
           const color = s.color || "#56829d";
           return `
-            <article class="schedule-week-shift-card" style="border: 1px solid ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')">
+            <article class="schedule-week-shift-card" style="border: 1px solid ${color};" onclick="event.stopPropagation(); openShiftModal('${s.id}')" title="Kliknite za urejanje izmene">
               <div class="schedule-week-shift-emp-stacked">
                 <div class="schedule-week-shift-emp">
                   <span class="avatar" style="width: 24px; height: 24px; font-size: 9.5px; flex-shrink: 0;">${initials(s.userName)}</span>
@@ -5427,7 +5430,7 @@ window.setShiftModalType = function (type) {
     if (titleEl) {
       titleEl.textContent = isEditing ? "Uredi odprto izmeno" : "Objavi odprto izmeno";
     }
-    if (saveBtn) saveBtn.textContent = "Objavi odprto izmeno";
+    if (saveBtn) saveBtn.textContent = isEditing ? "Shrani spremembe" : "Objavi odprto izmeno";
   } else {
     if (btnAssigned) {
       btnAssigned.style.background = "#fff";
@@ -5443,9 +5446,9 @@ window.setShiftModalType = function (type) {
     if (spotsGroup) spotsGroup.style.display = "none";
     if (empSelect) empSelect.setAttribute("required", "required");
     if (titleEl) {
-      titleEl.textContent = isEditing ? "Uredi izmeno na urniku" : "Dodaj zaposlenega na urnik";
+      titleEl.textContent = isEditing ? "Uredi izmeno" : "Dodaj zaposlenega na urnik";
     }
-    if (saveBtn) saveBtn.textContent = "Shrani na urnik";
+    if (saveBtn) saveBtn.textContent = isEditing ? "Shrani spremembe" : "Shrani na urnik";
   }
 
   if (typeof window.updateShiftRecurrenceCalculation === "function") {
@@ -5694,7 +5697,15 @@ window.populateModalShiftEmployees = function (selectedDate, currentSelectedId) 
   const empSelect = $("#modalShiftEmployee");
   if (!empSelect) return;
   const approvedUserIds = new Set((state.approvedRequests || []).map((r) => r.user_id));
-  const activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+  let activeEmployees = state.employees.filter((e) => approvedUserIds.has(e.id));
+  if (activeEmployees.length === 0 && state.employees.length > 0) {
+    activeEmployees = [...state.employees];
+  } else if (currentSelectedId && !activeEmployees.some((e) => e.id === currentSelectedId)) {
+    const curEmp = state.employees.find((e) => e.id === currentSelectedId);
+    if (curEmp) {
+      activeEmployees = [curEmp, ...activeEmployees];
+    }
+  }
 
   empSelect.innerHTML = `
     <option value="">Izberite zaposlenega...</option>
@@ -5731,38 +5742,56 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
   const signupsCount = $("#shiftSignupsCount");
   const deleteBtn = $("#deleteShiftBtn");
   const modeGroup = $("#shiftModeGroup");
+  const saveBtn = $("#saveShiftBtn");
+  const typeSelector = modal.querySelector(".shift-type-selector");
+
+  const existingShift = shiftId ? (state.scheduleShifts || []).find((s) => s.id === shiftId) : null;
+  const existingOpenShift = shiftId
+    ? (typeof getEnrichedOpenShifts === "function" ? getEnrichedOpenShifts().find((s) => s.id === shiftId) : null) ||
+      (state.openShifts || []).find((s) => s.id === shiftId)
+    : null;
+  const isEditingOpen = Boolean(isOpenShift || (existingOpenShift && !existingShift));
 
   // Determine initial date for employee absence check
-  const initialDate = shiftId ? (shift ? shift.date : (openShift ? openShift.date : defaultDate)) : (defaultDate || (dateInput ? dateInput.value : "") || formatLocalDate(new Date()));
-  const initialEmpId = (shiftId && shift) ? shift.userId : (state.employees.length > 0 ? state.employees[0].id : "");
+  const initialDate = shiftId
+    ? (existingShift ? existingShift.date : (existingOpenShift ? existingOpenShift.date : defaultDate))
+    : (defaultDate || (dateInput ? dateInput.value : "") || formatLocalDate(new Date()));
+  const initialEmpId = (shiftId && existingShift)
+    ? existingShift.userId
+    : (state.employees.length > 0 ? state.employees[0].id : "");
 
   window.populateModalShiftEmployees(initialDate, initialEmpId);
 
   // Populate Sector Select
-  secSelect.innerHTML = `
-    <option value="">Izberite sektor...</option>
-    ${state.sectors
-      .map((s) => `<option value="${s.id}">${s.name}</option>`)
-      .join("")}
-  `;
+  if (secSelect) {
+    secSelect.innerHTML = `
+      <option value="">Izberite sektor...</option>
+      ${state.sectors
+        .map((s) => `<option value="${s.id}">${s.name}</option>`)
+        .join("")}
+    `;
+  }
 
-  if (shiftId && isOpenShift) {
+  if (shiftId && isEditingOpen) {
     // Edit Open Shift Mode
-    const openShift = getEnrichedOpenShifts().find((s) => s.id === shiftId) || (state.openShifts || []).find((s) => s.id === shiftId);
+    const openShift = existingOpenShift || (typeof getEnrichedOpenShifts === "function" ? getEnrichedOpenShifts().find((s) => s.id === shiftId) : null) || (state.openShifts || []).find((s) => s.id === shiftId);
     if (!openShift) return;
 
     if (idInput) idInput.value = openShift.id;
     window.setShiftModalType("open");
+    if (typeSelector) typeSelector.style.display = "none";
+    if (titleEl) titleEl.textContent = "Uredi odprto izmeno";
+    if (saveBtn) saveBtn.textContent = "Shrani spremembe";
     if (modeGroup) modeGroup.style.display = "none";
     window.setShiftDateMode("single");
-    if (secSelect) secSelect.value = openShift.sectorId;
+    if (secSelect) secSelect.value = openShift.sectorId || openShift.workplaceId || "";
     if (dateInput) dateInput.value = openShift.date;
     if (startInput) startInput.value = openShift.startTime || "08:00";
     if (endInput) endInput.value = openShift.endTime || "16:00";
     if (spotsInput) spotsInput.value = openShift.requiredSpots || 1;
     const parsedOpenNote = parseShiftNoteAndTasks(openShift.note || "");
     if (noteInput) noteInput.value = parsedOpenNote.textNote;
-    window.currentShiftTasks = parsedOpenNote.tasks;
+    window.currentShiftTasks = parsedOpenNote.tasks || [];
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
 
     // Show signups
@@ -5783,11 +5812,14 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     }
   } else if (shiftId) {
     // Edit Assigned Shift Mode
-    const shift = (state.scheduleShifts || []).find((s) => s.id === shiftId);
+    const shift = existingShift || (state.scheduleShifts || []).find((s) => s.id === shiftId);
     if (!shift) return;
 
     if (idInput) idInput.value = shift.id;
     window.setShiftModalType("assigned");
+    if (typeSelector) typeSelector.style.display = "none";
+    if (titleEl) titleEl.textContent = "Uredi izmeno";
+    if (saveBtn) saveBtn.textContent = "Shrani spremembe";
     if (modeGroup) modeGroup.style.display = "none";
     window.setShiftDateMode("single");
     if (signupsGroup) signupsGroup.style.display = "none";
@@ -5798,12 +5830,15 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (endInput) endInput.value = shift.endTime || "16:00";
     const parsedShiftNote = parseShiftNoteAndTasks(shift.note || "");
     if (noteInput) noteInput.value = parsedShiftNote.textNote;
-    window.currentShiftTasks = parsedShiftNote.tasks;
+    window.currentShiftTasks = parsedShiftNote.tasks || [];
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
   } else {
     // Add Mode
     if (idInput) idInput.value = "";
+    if (typeSelector) typeSelector.style.display = "flex";
     window.setShiftModalType(isOpenShift ? "open" : "assigned");
+    if (titleEl) titleEl.textContent = isOpenShift ? "Nova odprta izmena" : "Dodaj zaposlenega na urnik";
+    if (saveBtn) saveBtn.textContent = isOpenShift ? "Objavi odprto izmeno" : "Shrani na urnik";
     if (signupsGroup) signupsGroup.style.display = "none";
     if (spotsInput) spotsInput.value = 1;
 
@@ -5867,6 +5902,8 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
 window.closeShiftModal = function () {
   const modal = $("#shiftModal");
   if (!modal) return;
+  const idInput = $("#modalShiftId");
+  if (idInput) idInput.value = "";
   if (typeof modal.close === "function") {
     modal.close();
   } else {

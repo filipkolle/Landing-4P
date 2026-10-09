@@ -162,8 +162,50 @@ CREATE TABLE IF NOT EXISTS public.employer_connections (
 CREATE INDEX IF NOT EXISTS idx_employer_connections_user ON public.employer_connections(user_id);
 CREATE INDEX IF NOT EXISTS idx_employer_connections_employer ON public.employer_connections(employer_id);
 
+DO $$
+BEGIN
+  -- Počistimo morebitne podvojene zapise pred dodajanjem unikatne omejitve
+  DELETE FROM public.employer_connections a
+  WHERE a.ctid <> (
+    SELECT max(b.ctid)
+    FROM public.employer_connections b
+    WHERE b.employer_id = a.employer_id
+      AND (b.user_id = a.user_id OR (b.user_id IS NULL AND a.user_id IS NULL))
+  );
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.employer_connections'::regclass
+      AND contype = 'u'
+      AND conname LIKE '%employer%user%'
+  ) THEN
+    BEGIN
+      ALTER TABLE public.employer_connections
+        ADD CONSTRAINT employer_connections_employer_id_user_id_key
+        UNIQUE (employer_id, user_id);
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END IF;
+END $$;
+
 ALTER TABLE public.workplace_requests ADD COLUMN IF NOT EXISTS connection_id UUID REFERENCES public.employer_connections(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_workplace_requests_connection ON public.workplace_requests(connection_id);
+
+-- Dovolimo 'invited' in 'disconnected' statuse na workplace_requests
+DO $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN (
+    SELECT conname FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+    WHERE nsp.nspname = 'public' AND rel.relname = 'workplace_requests'
+      AND con.contype = 'c' AND pg_get_constraintdef(con.oid) ILIKE '%status%'
+  ) LOOP
+    EXECUTE 'ALTER TABLE public.workplace_requests DROP CONSTRAINT ' || quote_ident(r.conname);
+  END LOOP;
+END $$;
 
 -- Viri dohodka v aplikaciji: sektorji se združujejo pod podjetje
 ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS connection_id UUID;
@@ -344,12 +386,22 @@ BEGIN
     RAISE EXCEPTION 'S tem podjetjem ste že povezani.';
   END IF;
 
-  INSERT INTO public.employer_connections (employer_id, user_id, status, initiated_by, company_name, user_name, consent_at, updated_at)
-  VALUES (v_employer, auth.uid(), 'pending', 'employee', v_company, public.resolve_user_display_name(auth.uid()), now(), now())
-  ON CONFLICT (employer_id, user_id) DO UPDATE
-    SET status = 'pending', initiated_by = 'employee', company_name = EXCLUDED.company_name,
-        user_name = EXCLUDED.user_name, consent_at = now(), responded_at = NULL, updated_at = now()
-  RETURNING id INTO v_id;
+  IF v_existing.id IS NOT NULL THEN
+    v_id := v_existing.id;
+    UPDATE public.employer_connections
+    SET status = 'pending',
+        initiated_by = 'employee',
+        company_name = v_company,
+        user_name = public.resolve_user_display_name(auth.uid()),
+        consent_at = now(),
+        responded_at = NULL,
+        updated_at = now()
+    WHERE id = v_id;
+  ELSE
+    INSERT INTO public.employer_connections (employer_id, user_id, status, initiated_by, company_name, user_name, consent_at, updated_at)
+    VALUES (v_employer, auth.uid(), 'pending', 'employee', v_company, public.resolve_user_display_name(auth.uid()), now(), now())
+    RETURNING id INTO v_id;
+  END IF;
 
   RETURN QUERY SELECT v_id, v_company, 'pending'::TEXT;
 END $$;
@@ -391,28 +443,45 @@ BEGIN
     v_id := v_conn.id;
     v_status := 'approved';
     v_row_status := 'approved';
-    UPDATE public.employer_connections SET company_name = v_company, user_name = v_name, updated_at = now() WHERE id = v_id;
-  ELSE
-    INSERT INTO public.employer_connections (employer_id, user_id, status, initiated_by, company_name, user_name, consent_at, responded_at, updated_at)
-    VALUES (auth.uid(), v_user, 'invited', 'employer', v_company, v_name, NULL, NULL, now())
-    ON CONFLICT (employer_id, user_id) DO UPDATE
-      SET status = 'invited', initiated_by = 'employer', company_name = EXCLUDED.company_name,
-          user_name = EXCLUDED.user_name, consent_at = NULL, responded_at = NULL, updated_at = now()
-    RETURNING id INTO v_id;
+    UPDATE public.employer_connections
+    SET company_name = v_company, user_name = v_name, updated_at = now()
+    WHERE id = v_id;
+  ELSIF v_conn.id IS NOT NULL THEN
+    -- Že obstaja v drugem stanju (invited, pending, rejected, disconnected): osvežimo v invited
+    v_id := v_conn.id;
     v_status := 'invited';
     v_row_status := 'invited';
+    UPDATE public.employer_connections
+    SET status = 'invited',
+        initiated_by = 'employer',
+        company_name = v_company,
+        user_name = v_name,
+        consent_at = NULL,
+        responded_at = NULL,
+        updated_at = now()
+    WHERE id = v_id;
+  ELSE
+    v_status := 'invited';
+    v_row_status := 'invited';
+    INSERT INTO public.employer_connections (employer_id, user_id, status, initiated_by, company_name, user_name, consent_at, responded_at, updated_at)
+    VALUES (auth.uid(), v_user, 'invited', 'employer', v_company, v_name, NULL, NULL, now())
+    RETURNING id INTO v_id;
   END IF;
 
   FOREACH v_wp IN ARRAY p_workplace_ids LOOP
-    INSERT INTO public.workplace_requests (workplace_id, user_id, user_name, status, connection_id, is_active, disconnected_at, updated_at)
-    VALUES (v_wp, v_user, v_name, v_row_status, v_id, v_row_status = 'approved', NULL, now())
-    ON CONFLICT (workplace_id, user_id) DO UPDATE
-      SET status = CASE WHEN public.workplace_requests.status = 'approved' THEN 'approved' ELSE EXCLUDED.status END,
+    IF EXISTS (SELECT 1 FROM public.workplace_requests WHERE workplace_id = v_wp AND user_id = v_user) THEN
+      UPDATE public.workplace_requests
+      SET status = CASE WHEN public.workplace_requests.status = 'approved' THEN 'approved' ELSE v_row_status END,
           connection_id = v_id,
-          user_name = EXCLUDED.user_name,
-          is_active = (CASE WHEN public.workplace_requests.status = 'approved' THEN 'approved' ELSE EXCLUDED.status END) = 'approved',
+          user_name = v_name,
+          is_active = (CASE WHEN public.workplace_requests.status = 'approved' THEN 'approved' ELSE v_row_status END) = 'approved',
           disconnected_at = NULL,
-          updated_at = now();
+          updated_at = now()
+      WHERE workplace_id = v_wp AND user_id = v_user;
+    ELSE
+      INSERT INTO public.workplace_requests (workplace_id, user_id, user_name, status, connection_id, is_active, disconnected_at, updated_at)
+      VALUES (v_wp, v_user, v_name, v_row_status, v_id, v_row_status = 'approved', NULL, now());
+    END IF;
   END LOOP;
 
   RETURN QUERY SELECT v_id, v_name, v_status;
@@ -469,10 +538,14 @@ BEGIN
     WHERE id = p_connection_id;
 
   FOREACH v_wp IN ARRAY p_workplace_ids LOOP
-    INSERT INTO public.workplace_requests (workplace_id, user_id, user_name, status, connection_id, is_active, disconnected_at, updated_at)
-    VALUES (v_wp, v_conn.user_id, v_conn.user_name, 'approved', p_connection_id, true, NULL, now())
-    ON CONFLICT (workplace_id, user_id) DO UPDATE
-      SET status = 'approved', connection_id = p_connection_id, is_active = true, disconnected_at = NULL, updated_at = now();
+    IF EXISTS (SELECT 1 FROM public.workplace_requests WHERE workplace_id = v_wp AND user_id = v_conn.user_id) THEN
+      UPDATE public.workplace_requests
+      SET status = 'approved', connection_id = p_connection_id, is_active = true, disconnected_at = NULL, updated_at = now()
+      WHERE workplace_id = v_wp AND user_id = v_conn.user_id;
+    ELSE
+      INSERT INTO public.workplace_requests (workplace_id, user_id, user_name, status, connection_id, is_active, disconnected_at, updated_at)
+      VALUES (v_wp, v_conn.user_id, v_conn.user_name, 'approved', p_connection_id, true, NULL, now());
+    END IF;
   END LOOP;
 
   RETURN 'approved';
