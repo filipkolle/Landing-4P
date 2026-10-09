@@ -1905,15 +1905,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
 
     // Check connection status: active or disconnected
     const isReqDisconnected = req.status === "disconnected" || Boolean(req.disconnected_at);
-    const userSources = sources.filter((s) => s.user_id === userId);
-    let hasActiveConnection = !isReqDisconnected;
-    if (hasActiveConnection && userSources.length > 0) {
-      hasActiveConnection = userSources.some(
-        (s) =>
-          (s.workplace_id && (s.workplace_id === matchedSector.id || s.workplace_id === req.workplace_id)) ||
-          (s.join_code && (s.join_code === matchedSector.code || s.join_code === wp.join_code))
-      );
-    }
+    let hasActiveConnection = !isReqDisconnected && (req.status === "approved" || req.is_active === true || req.status === "invited");
 
     const liveName = state.userProfiles.get(userId);
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
