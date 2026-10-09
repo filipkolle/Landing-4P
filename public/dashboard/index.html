@@ -442,10 +442,9 @@
         <section class="view" id="employeesView">
           <!-- Seznam vseh zaposlenih -->
           <div id="employeesListContainer">
-            <div class="action-row">
+            <div class="action-row" style="align-items: center;">
               <div>
-                <h2>Baza zaposlenih</h2>
-                <p>Podatki, ki jih delodajalec vidi za povezane vire dohodka. Kliknite na zaposlenega za podroben pregled po sektorjih.</p>
+                <h2 style="margin: 0;">Baza zaposlenih</h2>
               </div>
               <div class="filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
@@ -454,7 +453,7 @@
                   <span>🔗</span> Poveži s kodo
                 </button>
                 <button type="button" class="primary-button" id="openNewEmployeeModalBtn" onclick="openCreateEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px; white-space: nowrap;">
-                  <span>+</span> Ročni profil
+                  <span>+</span> Ustvari profil
                 </button>
               </div>
             </div>
@@ -569,11 +568,14 @@
 
             <!-- Razčlenitev po sektorjih -->
             <section class="panel" style="margin-bottom: 20px;">
-              <div class="panel-header">
+              <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                 <div>
-                  <h2>Razčlenitev ur in zaslužka po sektorjih</h2>
-                  <p>Natančen pregled ur, urne postavke in skupnega zaslužka za vsak sektor delavca</p>
+                  <h2 style="margin: 0;">Razčlenitev ur in zaslužka po sektorjih</h2>
+                  <p style="margin: 3px 0 0; font-size: 13px; color: var(--muted);">Natančen pregled ur, urne postavke in skupnega zaslužka za vsak sektor delavca</p>
                 </div>
+                <button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal(state.selectedEmployeeId)" style="padding: 7px 14px; font-size: 12.5px; font-weight: 700; border: 1px solid var(--line); background: #ffffff; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;" title="Dodaj ali odstrani sektorje za tega zaposlenega">
+                  <span>⚙️</span> Upravljaj sektorje
+                </button>
               </div>
               <div id="empSectorCardsContainer" class="emp-sector-cards-grid"></div>
             </section>
@@ -1926,6 +1928,42 @@
           <div class="modal-actions" style="padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px;">
             <button type="button" class="ghost-button" onclick="closeConnectEmployeeModal()">Prekliči</button>
             <button type="submit" class="primary-button" id="sendEmployeeInviteBtn" style="font-weight: 700;">Pošlji povabilo</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Modal za upravljanje sektorjev zaposlenega -->
+    <dialog id="manageEmployeeSectorsModal" class="modal" style="max-width: 480px; width: 100%;">
+      <div class="modal-box" style="padding: 0; overflow: hidden;">
+        <form method="dialog" id="manageEmployeeSectorsForm" onsubmit="event.preventDefault(); handleSaveEmployeeSectors(event);">
+          <input type="hidden" id="manageEmpSectorsEmployeeId" value="" />
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 22px;">⚙️</span>
+              <div>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);" id="manageEmpSectorsTitle">Uredi sektorje zaposlenega</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: var(--muted);">Dodelite ali odstranite sektorje zaposlenemu</p>
+              </div>
+            </div>
+            <button type="button" class="ghost-button close-btn" onclick="closeManageEmployeeSectorsModal()" title="Zapri">✕</button>
+          </div>
+
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px; padding: 20px 24px;">
+            <div class="form-group">
+              <label>Dodeljeni sektorji <span class="required">*</span></label>
+              <p style="margin: 0 0 8px; font-size: 12px; color: var(--muted);">Označite sektorje, v katerih deluje ta zaposleni:</p>
+              <div id="manageEmpSectorsList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);"></div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--muted); line-height: 1.45;">
+              💡 <strong>Opomba:</strong> Posodobitev sektorjev bo takoj omogočila ali onemogočila vnos ur in dodelitev izmen v izbranih sektorjih za tega zaposlenega.
+            </div>
+          </div>
+
+          <div class="modal-actions" style="padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="ghost-button" onclick="closeManageEmployeeSectorsModal()">Prekliči</button>
+            <button type="submit" class="primary-button" id="saveEmpSectorsBtn" style="font-weight: 700;">Shrani spremembe</button>
           </div>
         </form>
       </div>

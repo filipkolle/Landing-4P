@@ -1720,6 +1720,157 @@ window.handleSendEmployeeInvitation = async function (event) {
   }
 };
 
+// ==========================================================================
+// Upravljanje dodeljenih sektorjev zaposlenega (dodajanje/odstranjevanje sektorjev)
+// ==========================================================================
+
+window.openManageEmployeeSectorsModal = function (employeeId) {
+  const emp = state.employees.find((e) => e.id === employeeId);
+  if (!emp) return;
+
+  const modal = $("#manageEmployeeSectorsModal");
+  if (!modal) return;
+
+  const empIdInput = $("#manageEmpSectorsEmployeeId");
+  if (empIdInput) empIdInput.value = emp.id;
+
+  const titleEl = $("#manageEmpSectorsTitle");
+  if (titleEl) titleEl.textContent = `Sektorji zaposlenega: ${emp.name}`;
+
+  const currentSectorIds = new Set(Object.keys(emp.sectors || {}));
+
+  const list = $("#manageEmpSectorsList");
+  if (list) {
+    if (state.sectors.length === 0) {
+      list.innerHTML = `<p style="font-size: 13px; color: #ef4444; margin: 4px 0;">Trenutno nimate ustvarjenih sektorjev. Najprej dodajte sektor v Nastavitvah.</p>`;
+    } else {
+      list.innerHTML = state.sectors
+        .map((s) => {
+          const isChecked = currentSectorIds.has(s.id);
+          return `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" name="empSectorCheck" value="${s.id}" ${isChecked ? "checked" : ""} style="width: 17px; height: 17px; accent-color: var(--primary);" />
+              <span class="sector-color-dot" style="background-color: ${s.color || '#56829d'};"></span>
+              <strong style="font-size: 13.5px; flex: 1;">${s.name}</strong>
+              ${isChecked ? '<span style="font-size: 11px; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px;">Dodeljeno</span>' : ''}
+            </label>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  modal.showModal();
+};
+
+window.closeManageEmployeeSectorsModal = function () {
+  const modal = $("#manageEmployeeSectorsModal");
+  if (modal) modal.close();
+};
+
+window.handleSaveEmployeeSectors = async function (event) {
+  event.preventDefault();
+  const empIdInput = $("#manageEmpSectorsEmployeeId");
+  const employeeId = empIdInput ? empIdInput.value : "";
+  const emp = state.employees.find((e) => e.id === employeeId);
+  if (!emp) return;
+
+  const checkboxes = document.querySelectorAll('input[name="empSectorCheck"]:checked');
+  const selectedSectorIds = Array.from(checkboxes).map((cb) => cb.value);
+
+  if (selectedSectorIds.length === 0) {
+    alert("Zaposleni mora biti dodeljen v vsaj en sektor. Če želite zaposlenega popolnoma odstraniti, uporabite 'Odpusti zaposlenega'.");
+    return;
+  }
+
+  const btn = $("#saveEmpSectorsBtn");
+  if (btn) btn.disabled = true;
+
+  try {
+    const currentSectorIds = new Set(Object.keys(emp.sectors || {}));
+    const newSectorIdsSet = new Set(selectedSectorIds);
+
+    // 1. Če gre za ročno ustvarjen profil
+    if (emp.isManual) {
+      const manualEmp = state.manualEmployees.find((m) => m.id === employeeId);
+      if (manualEmp) {
+        manualEmp.sectorIds = selectedSectorIds;
+        saveManualEmployeesLocal();
+      }
+    }
+
+    // 2. Če gre za povezanega Supabase uporabnika
+    if (supabaseClient && !emp.isManual) {
+      const conn = (state.approvedRequests || []).find((r) => r.user_id === employeeId);
+      const connId = conn ? conn.connection_id : null;
+
+      // Sektorji, ki jih moramo dodati ali znova aktivirati
+      for (const secId of selectedSectorIds) {
+        const { data: existing } = await supabaseClient
+          .from("workplace_requests")
+          .select("id")
+          .eq("user_id", employeeId)
+          .eq("workplace_id", secId)
+          .maybeSingle();
+
+        if (existing) {
+          await supabaseClient
+            .from("workplace_requests")
+            .update({
+              status: "approved",
+              is_active: true,
+              connection_id: connId || undefined,
+              disconnected_at: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existing.id);
+        } else {
+          await supabaseClient
+            .from("workplace_requests")
+            .insert({
+              workplace_id: secId,
+              user_id: employeeId,
+              user_name: emp.name,
+              status: "approved",
+              connection_id: connId || null,
+              is_active: true,
+              disconnected_at: null,
+              updated_at: new Date().toISOString()
+            });
+        }
+      }
+
+      // Sektorji, ki so bili odverjeni (onemogočeni)
+      for (const oldSecId of currentSectorIds) {
+        if (!newSectorIdsSet.has(oldSecId)) {
+          await supabaseClient
+            .from("workplace_requests")
+            .update({
+              status: "disconnected",
+              is_active: false,
+              disconnected_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq("user_id", employeeId)
+            .eq("workplace_id", oldSecId);
+        }
+      }
+    }
+
+    closeManageEmployeeSectorsModal();
+    showToast(`Sektorji zaposlenega (${emp.name}) so bili uspešno posodobljeni!`, "success");
+    await loadAllData();
+    if (state.selectedEmployeeId === employeeId) {
+      renderEmployeeDetail(employeeId);
+    }
+  } catch (err) {
+    console.error("handleSaveEmployeeSectors error:", err);
+    alert("Napaka pri posodabljanju sektorjev: " + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
 // 5. Strictly synchronize ONLY approved users and their workplace-specific work logs
 function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   const empMap = new Map();
@@ -3406,12 +3557,17 @@ function renderEmployeeDetail(employeeId) {
        <button type="button" class="ghost-button" onclick="handleDeleteManualEmployee('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fecaca; color: #ef4444; background: #fff;">🗑️ Izbriši profil</button>`
     : "";
 
+  const editSectorsBtnHTML = !isDisconnected
+    ? `<button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 4px;" title="Dodaj ali odstrani sektorje za tega zaposlenega">⚙️ Uredi sektorje</button>`
+    : "";
+
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusBadgeHTML}
       ${isDisconnected ? "" : workTypeDropdownHTML}
       ${manualBadgeHTML}
       ${sectorBadgesHTML}
+      ${editSectorsBtnHTML}
       ${disconnectedBannerHTML}
     `;
   }
