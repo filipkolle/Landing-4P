@@ -109,6 +109,7 @@ function clearUserState() {
 
   if ($("#sidebarCompany")) $("#sidebarCompany").textContent = "";
   if ($("#sidebarUserEmail")) $("#sidebarUserEmail").textContent = "";
+  if ($("#sidebarCompanyCode")) $("#sidebarCompanyCode").textContent = "-----";
 
   if (realtimeChannel && supabaseClient) {
     try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
@@ -411,6 +412,7 @@ async function handleAuthState(session, companyNameOverride = null) {
 
     if ($("#sidebarCompany")) $("#sidebarCompany").textContent = state.companyName;
     if ($("#sidebarUserEmail")) $("#sidebarUserEmail").textContent = session.user.email;
+    if ($("#sidebarCompanyCode") && state.employerConnectCode) $("#sidebarCompanyCode").textContent = state.employerConnectCode;
 
     await syncEmployerProfile(session.user, state.companyName);
 
@@ -1598,6 +1600,9 @@ async function syncEmployerConnectCode() {
 
     const headerBadge = $("#headerCompanyCode");
     if (headerBadge) headerBadge.textContent = state.employerConnectCode || "-----";
+
+    const sidebarBadge = $("#sidebarCompanyCode");
+    if (sidebarBadge) sidebarBadge.textContent = state.employerConnectCode || "-----";
 
     const settingsBadge = $("#settingsCompanyConnectCode");
     if (settingsBadge) settingsBadge.textContent = state.employerConnectCode || "-----";
@@ -3938,6 +3943,7 @@ function renderSettings() {
     emailInput.value = state.currentUser?.email || "";
   }
   if ($("#sidebarCompany")) $("#sidebarCompany").textContent = state.companyName || "Moje podjetje";
+  if ($("#sidebarCompanyCode") && state.employerConnectCode) $("#sidebarCompanyCode").textContent = state.employerConnectCode;
 
   const schedModeSelect = $("#settingOverviewScheduleMode");
   if (schedModeSelect && document.activeElement !== schedModeSelect) {

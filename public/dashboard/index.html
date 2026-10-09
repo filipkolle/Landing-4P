@@ -196,6 +196,15 @@
           <h2 id="sidebarCompany">-</h2>
           <p class="company-user-email" id="sidebarUserEmail">-</p>
           <p id="sidebarStats">0 sektorjev · 0 zaposlenih</p>
+          <div class="sidebar-company-code-badge" id="sidebarCompanyCodeBadge">
+            <div class="sidebar-code-info">
+              <span class="sidebar-code-label">Koda podjetja:</span>
+              <strong id="sidebarCompanyCode" class="sidebar-code-val">-----</strong>
+            </div>
+            <button type="button" class="sidebar-copy-code-btn" onclick="copyCompanyConnectCode()" title="Kopiraj kodo vašega podjetja">
+              <span>📋</span> Kopiraj
+            </button>
+          </div>
           <button type="button" class="logout-btn" id="logoutBtn">
             <span style="display: inline-flex; align-items: center; justify-content: center;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -439,11 +448,6 @@
                 <p>Podatki, ki jih delodajalec vidi za povezane vire dohodka. Kliknite na zaposlenega za podroben pregled po sektorjih.</p>
               </div>
               <div class="filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <div class="company-code-header-badge" style="display: inline-flex; align-items: center; gap: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 7px 12px; font-size: 13px;">
-                  <span style="color: var(--muted); font-size: 12px; font-weight: 600;">Koda podjetja:</span>
-                  <strong id="headerCompanyCode" style="letter-spacing: 1.5px; font-family: monospace; font-size: 14px; color: var(--primary-dark);">-----</strong>
-                  <button type="button" class="ghost-button" onclick="copyCompanyConnectCode()" style="padding: 2px 7px; font-size: 11px; font-weight: 700; border-radius: 4px; border: 1px solid #bfdbfe; background: #fff;" title="Kopiraj kodo vašega podjetja">📋 Kopiraj</button>
-                </div>
                 <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
                 <select id="sectorFilter" aria-label="Filtriraj po sektorju"></select>
                 <button type="button" class="ghost-button" id="openConnectEmployeeBtn" onclick="openConnectEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; white-space: nowrap; background: #fff;">
