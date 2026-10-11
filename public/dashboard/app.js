@@ -3450,11 +3450,125 @@ function renderEmployeeSectorsList(employeeSectors, showCode = false) {
   `;
 }
 
+function getEmployeePaymentSetupStatus(employee) {
+  if (!employee) {
+    return {
+      allConfigured: false,
+      configuredCount: 0,
+      totalCount: 0,
+      missingSectors: [],
+      configuredSectors: [],
+      hasSectors: false,
+    };
+  }
+
+  const sectors = Object.values(employee.sectors || {});
+  if (sectors.length === 0) {
+    return {
+      allConfigured: false,
+      configuredCount: 0,
+      totalCount: 0,
+      missingSectors: [],
+      configuredSectors: [],
+      hasSectors: false,
+    };
+  }
+
+  const configuredSectors = [];
+  const missingSectors = [];
+
+  sectors.forEach((sec) => {
+    const isConfigured = Boolean(
+      sec.hasConfiguredPayment ||
+      Number(sec.rate) > 0 ||
+      sec.isFixed ||
+      sec.isProject ||
+      Number(sec.netSalary) > 0 ||
+      (Array.isArray(state.incomeSources) && state.incomeSources.some((src) =>
+        src.user_id === employee.id && (
+          src.workplace_id === sec.sectorId ||
+          src.workplaceId === sec.sectorId ||
+          (sec.sectorCode && src.join_code === sec.sectorCode)
+        )
+      )) ||
+      (Array.isArray(state.approvedRequests) && state.approvedRequests.some((r) =>
+        r.user_id === employee.id && r.workplace_id === sec.sectorId && (
+          Boolean(r.salary_type) || Number(r.hourly_rate) > 0 || (Array.isArray(r.rate_history) && r.rate_history.length > 0)
+        )
+      ))
+    );
+
+    if (isConfigured) {
+      configuredSectors.push(sec);
+    } else {
+      missingSectors.push(sec);
+    }
+  });
+
+  return {
+    allConfigured: missingSectors.length === 0 && configuredSectors.length > 0,
+    configuredCount: configuredSectors.length,
+    totalCount: sectors.length,
+    missingSectors,
+    configuredSectors,
+    hasSectors: true,
+  };
+}
+
+function renderPaymentStatusIndicator(employee) {
+  const status = getEmployeePaymentSetupStatus(employee);
+  const safe = (s) => (typeof escapeHtml === "function" ? escapeHtml(s) : String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])));
+
+  if (status.allConfigured) {
+    const configuredNames = status.configuredSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
+    return `
+      <span class="pay-setup-indicator is-configured" onclick="event.stopPropagation();" title="Način izplačila določen za vse sektorje" aria-label="Način izplačila določen" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; flex-shrink: 0; cursor: help; vertical-align: middle;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="pay-tooltip-box">
+          <div class="pay-tooltip-title text-success">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Način izplačila določen
+          </div>
+          <div class="pay-tooltip-desc">
+            Delavec je v aplikaciji določil način izplačila za vse sektorje (${status.configuredCount}/${status.totalCount})${configuredNames ? `: <b>${safe(configuredNames)}</b>` : ""}.
+          </div>
+        </div>
+      </span>
+    `;
+  }
+
+  const missingNames = status.missingSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
+  const desc = status.hasSectors
+    ? `Delavec v aplikaciji še ni določil načina izplačila za vse dodeljene sektorje (${status.configuredCount}/${status.totalCount}).<br><span style="color: #fca5a5; font-weight: 600;">Manjka za sektorje:</span> ${safe(missingNames)}.`
+    : `Delavec še nima dodeljenih sektorjev ali še ni določil načina izplačila.`;
+
+  return `
+    <span class="pay-setup-indicator is-missing" onclick="event.stopPropagation();" title="Način izplačila še ni določen za vse sektorje" aria-label="Način izplačila ni nastavljen" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #fee2e2; color: #dc2626; border: 1.5px solid #fca5a5; flex-shrink: 0; cursor: help; vertical-align: middle;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+        <line x1="12" y1="5" x2="12" y2="13"></line>
+        <circle cx="12" cy="18" r="1.5" fill="currentColor"></circle>
+      </svg>
+      <div class="pay-tooltip-box">
+        <div class="pay-tooltip-title text-danger">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Način izplačila ni nastavljen
+        </div>
+        <div class="pay-tooltip-desc">
+          ${desc}
+        </div>
+      </div>
+    </span>
+  `;
+}
+
 function employeeRow(employee) {
   const month = employeeMonth(employee);
   const employeeSectors = Object.values(employee.sectors || {});
   const initialsText = initials(employee.name);
   const travelDisplay = month.travelExpenses > 0 ? currency.format(month.travelExpenses) : `<span style="color: var(--muted);">-</span>`;
+  const payIndicatorHTML = renderPaymentStatusIndicator(employee);
 
   let statusBadge = "";
   if (employeeSectors.length > 0) {
@@ -3475,8 +3589,9 @@ function employeeRow(employee) {
       <td>
         <div class="employee-cell">
           <span class="avatar">${initialsText}</span>
-          <div>
+          <div style="display: flex; align-items: center; gap: 6px;">
             <strong>${employee.name}</strong>
+            ${payIndicatorHTML}
           </div>
         </div>
       </td>
@@ -3643,119 +3758,6 @@ function renderSectors() {
   if (state.selectedSectorId && $("#sectorDetailContainer") && !$("#sectorDetailContainer").hidden) {
     renderSectorDetail(state.selectedSectorId);
   }
-}
-
-function getEmployeePaymentSetupStatus(employee) {
-  if (!employee) {
-    return {
-      allConfigured: false,
-      configuredCount: 0,
-      totalCount: 0,
-      missingSectors: [],
-      configuredSectors: [],
-      hasSectors: false,
-    };
-  }
-
-  const sectors = Object.values(employee.sectors || {});
-  if (sectors.length === 0) {
-    return {
-      allConfigured: false,
-      configuredCount: 0,
-      totalCount: 0,
-      missingSectors: [],
-      configuredSectors: [],
-      hasSectors: false,
-    };
-  }
-
-  const configuredSectors = [];
-  const missingSectors = [];
-
-  sectors.forEach((sec) => {
-    const isConfigured = Boolean(
-      sec.hasConfiguredPayment ||
-      Number(sec.rate) > 0 ||
-      sec.isFixed ||
-      sec.isProject ||
-      Number(sec.netSalary) > 0 ||
-      (Array.isArray(state.incomeSources) && state.incomeSources.some((src) =>
-        src.user_id === employee.id && (
-          src.workplace_id === sec.sectorId ||
-          src.workplaceId === sec.sectorId ||
-          (sec.sectorCode && src.join_code === sec.sectorCode)
-        )
-      )) ||
-      (Array.isArray(state.approvedRequests) && state.approvedRequests.some((r) =>
-        r.user_id === employee.id && r.workplace_id === sec.sectorId && (
-          Boolean(r.salary_type) || Number(r.hourly_rate) > 0 || (Array.isArray(r.rate_history) && r.rate_history.length > 0)
-        )
-      ))
-    );
-
-    if (isConfigured) {
-      configuredSectors.push(sec);
-    } else {
-      missingSectors.push(sec);
-    }
-  });
-
-  return {
-    allConfigured: missingSectors.length === 0 && configuredSectors.length > 0,
-    configuredCount: configuredSectors.length,
-    totalCount: sectors.length,
-    missingSectors,
-    configuredSectors,
-    hasSectors: true,
-  };
-}
-
-function renderPaymentStatusIndicator(employee) {
-  const status = getEmployeePaymentSetupStatus(employee);
-  const safe = (s) => (typeof escapeHtml === "function" ? escapeHtml(s) : String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])));
-
-  if (status.allConfigured) {
-    const configuredNames = status.configuredSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
-    return `
-      <span class="pay-setup-indicator is-configured" onclick="event.stopPropagation();" title="" aria-label="Način izplačila določen">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        <div class="pay-tooltip-box">
-          <div class="pay-tooltip-title text-success">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Način izplačila določen
-          </div>
-          <div class="pay-tooltip-desc">
-            Delavec je v aplikaciji določil način izplačila za vse sektorje (${status.configuredCount}/${status.totalCount})${configuredNames ? `: <b>${safe(configuredNames)}</b>` : ""}.
-          </div>
-        </div>
-      </span>
-    `;
-  }
-
-  const missingNames = status.missingSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
-  const desc = status.hasSectors
-    ? `Delavec v aplikaciji še ni določil načina izplačila za vse dodeljene sektorje (${status.configuredCount}/${status.totalCount}).<br><span style="color: #fca5a5; font-weight: 600;">Manjka za sektorje:</span> ${safe(missingNames)}.`
-    : `Delavec še nima dodeljenih sektorjev ali še ni določil načina izplačila.`;
-
-  return `
-    <span class="pay-setup-indicator is-missing" onclick="event.stopPropagation();" title="" aria-label="Način izplačila ni nastavljen">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="13"></line>
-        <circle cx="12" cy="18" r="1.5" fill="currentColor"></circle>
-      </svg>
-      <div class="pay-tooltip-box">
-        <div class="pay-tooltip-title text-danger">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          Način izplačila ni nastavljen
-        </div>
-        <div class="pay-tooltip-desc">
-          ${desc}
-        </div>
-      </div>
-    </span>
-  `;
 }
 
 function renderEmployees() {
@@ -5363,12 +5365,17 @@ function renderSectorEmployeeRow(employee, sectorId, monthKey) {
     </label>
   `;
 
+  const payIndicatorHTML = renderPaymentStatusIndicator(employee);
+
   return `
     <tr class="clickable-employee-row" onclick="openEmployeeDetail('${employee.id}', '${sectorId}', true)">
       <td>
         <div class="person">
           <span class="avatar">${initials(employee.name)}</span>
-          <strong>${employee.name}</strong>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <strong>${employee.name}</strong>
+            ${payIndicatorHTML}
+          </div>
         </div>
       </td>
       <td>
