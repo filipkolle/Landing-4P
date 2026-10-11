@@ -795,7 +795,7 @@ async function fetchApprovedRequests() {
           pendingInvites.push(req);
         } else if ((isConnApproved || !conn) && (req.status === "approved" || req.is_active === true)) {
           approved.push(req);
-        } else if (req.status === "disconnected") {
+        } else if (req.status === "disconnected" || req.status === "resigned" || req.status === "dismissed") {
           approved.push(req);
         }
       });
@@ -1485,14 +1485,44 @@ function renderPendingRequestsNotification() {
   const container = $("#requestsNotificationArea");
   if (!container) return;
 
-  if (state.pendingRequests.length === 0) {
+  const resignationNotices = (state.employees || []).filter(
+    (e) => e.isResigned && !localStorage.getItem(`dismissed_resignation_notice_${e.id}`)
+  );
+
+  if (state.pendingRequests.length === 0 && resignationNotices.length === 0) {
     container.hidden = true;
     container.innerHTML = "";
     return;
   }
 
   container.hidden = false;
-  container.innerHTML = state.pendingRequests
+
+  const resignationBannersHTML = resignationNotices
+    .map((emp) => {
+      const safeName = (emp.name || "Zaposleni").replace(/'/g, "\\'");
+      return `
+        <div class="request-banner" id="resignation-${emp.id}" style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 5px solid #e11d48;">
+          <div class="request-content-wrap" style="align-items: flex-start;">
+            <div class="request-icon" style="font-size: 22px;">⚠️</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <p class="request-text" style="color: #9f1239; font-weight: 700; font-size: 14px; margin: 0;">
+                Zaposleni <strong>${emp.name}</strong> je podal odpoved v aplikaciji 4P.
+              </p>
+              <p style="margin: 0; font-size: 12.5px; color: #881337; line-height: 1.45;">
+                <strong>Kaj to pomeni v logiki dashboarda:</strong> Vsi pretekli podatki, delovne ure in evidence ostajajo trajno ohranjeni v vaši evidenci za obračun in zgodovino. Zaposleni je bil umaknjen iz aktivnih sektorjev in ne more več oddajati novih delovnih ur za vaše podjetje.
+              </p>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn-approve" onclick="openEmployeeDetail('${emp.id}')" type="button" style="background: #e11d48; border-color: #be123c; font-size: 12px; padding: 6px 12px;">Poglej profil</button>
+            <button class="btn-deny" onclick="dismissResignationNotice('${emp.id}')" type="button" style="font-size: 12px; padding: 6px 12px;">Zapri</button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const requestBannersHTML = state.pendingRequests
     .map((req) => {
       const liveProfileName = state.userProfiles.get(req.user_id);
       const userName = (liveProfileName && liveProfileName !== "Neznan uporabnik") ? liveProfileName : (req.user_name || "Uporabnik");
@@ -1515,7 +1545,16 @@ function renderPendingRequestsNotification() {
       `;
     })
     .join("");
+
+  container.innerHTML = resignationBannersHTML + requestBannersHTML;
 }
+
+window.dismissResignationNotice = function (empId) {
+  try {
+    localStorage.setItem(`dismissed_resignation_notice_${empId}`, "true");
+  } catch (e) {}
+  renderPendingRequestsNotification();
+};
 
 // Odpri modal za odobritev prošnje (izbira sektorjev)
 window.openApproveRequestModal = function (connectionOrRequestId, userName) {
@@ -2103,13 +2142,15 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     );
 
     if (!matchedSector) return;
-    if (req.status !== "approved" && req.status !== "disconnected") return;
+    if (req.status !== "approved" && req.status !== "disconnected" && req.status !== "resigned" && req.status !== "dismissed") return;
 
     const conn = state.connectionsByUserId?.get(userId);
     const isConnInvited = conn && conn.status === "invited";
 
-    // Check connection status: active or disconnected
-    const isReqDisconnected = req.status === "disconnected" || Boolean(req.disconnected_at);
+    // Check connection status: active, resigned, dismissed or disconnected
+    const isResigned = req.status === "resigned" || req.termination_type === "resignation" || req.terminated_by === "employee";
+    const isDismissed = req.status === "dismissed" || req.termination_type === "dismissal" || req.terminated_by === "employer";
+    const isReqDisconnected = req.status === "disconnected" || isResigned || isDismissed || Boolean(req.disconnected_at);
     let hasActiveConnection = !isReqDisconnected && (req.status === "approved" || req.is_active === true) && !isConnInvited;
 
     const liveName = state.userProfiles.get(userId);
@@ -2118,6 +2159,10 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     let userStatus = "Zaposlen";
     if (isConnInvited || req.status === "invited") {
       userStatus = "Čaka na odobritev zaposlenega";
+    } else if (isResigned) {
+      userStatus = "Delavec je dal odpoved";
+    } else if (isDismissed) {
+      userStatus = "Zaposleni odpuščen";
     } else if (!hasActiveConnection) {
       userStatus = "Prekinjena povezava";
     } else if (state.employeeCustomStatuses?.[userId]) {
@@ -2133,6 +2178,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         name: userName,
         status: userStatus,
         isDisconnected: !hasActiveConnection && !isConnInvited,
+        isResigned: isResigned,
+        isDismissed: isDismissed,
         isInvited: Boolean(isConnInvited || req.status === "invited"),
         joinedMonth: reqMonthKey,
         sectors: {},
@@ -2153,15 +2200,28 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       if (reqMonthKey && (!emp.joinedMonth || reqMonthKey < emp.joinedMonth)) {
         emp.joinedMonth = reqMonthKey;
       }
+      if (isResigned) {
+        emp.isResigned = true;
+      }
+      if (isDismissed) {
+        emp.isDismissed = true;
+      }
       // Status resolution across multiple requests/sectors
       if (isConnInvited || req.status === "invited") {
         emp.isDisconnected = false;
         emp.isInvited = true;
         emp.status = "Čaka na odobritev zaposlenega";
-      } else if (req.status === "approved") {
+      } else if (req.status === "approved" || req.is_active === true) {
         emp.isDisconnected = false;
         emp.status = state.employeeCustomStatuses?.[userId] || "Zaposlen";
+      } else if (emp.isResigned) {
+        emp.status = "Delavec je dal odpoved";
+      } else if (emp.isDismissed) {
+        emp.status = "Zaposleni odpuščen";
+      } else if (!hasActiveConnection) {
+        emp.status = "Prekinjena povezava";
       }
+    }
       const reqSalaryType = req.salary_type || null;
       const reqHourlyRate = Number(req.hourly_rate) || 0;
       const reqRateHistory = req.rate_history || [];
@@ -3818,10 +3878,20 @@ function renderEmployees() {
         const amberBg = "#fef3c7";
         const amberBorder = "#fde68a";
 
+        const isResigned = Boolean(employee.isResigned);
+        const isDismissed = Boolean(employee.isDismissed);
+
         const statusBg = isInvited ? amberBg : (isDisconnected ? redBg : 'var(--primary-light)');
         const statusColor = isInvited ? amberColor : (isDisconnected ? redColor : 'var(--primary-dark)');
         const statusBorder = isInvited ? amberBorder : (isDisconnected ? redBorder : 'transparent');
-        const statusText = isInvited ? 'Čaka na odobritev zaposlenega' : (isDisconnected ? 'Prekinjena povezava' : status);
+        let statusText = isInvited ? 'Čaka na odobritev zaposlenega' : status;
+        if (isResigned) {
+          statusText = 'Delavec je dal odpoved';
+        } else if (isDismissed) {
+          statusText = 'Zaposleni odpuščen';
+        } else if (isDisconnected) {
+          statusText = 'Prekinjena povezava';
+        }
 
         return `
           <tr class="clickable-employee-row ${isDisconnected ? 'is-disconnected-row' : ''} ${isInvited ? 'is-invited-row' : ''}" onclick="openEmployeeDetail('${employee.id}')" style="${isDisconnected ? 'background: #fff8f8; border-left: 4px solid #ef4444;' : (isInvited ? 'background: #fffdf5; border-left: 4px solid #f59e0b;' : '')}">
@@ -3833,7 +3903,7 @@ function renderEmployees() {
                     <strong style="${isDisconnected ? 'color: #dc2626;' : (isInvited ? 'color: #92400e;' : '')}">${employee.name}</strong>
                     ${payIndicatorHTML}
                   </div>
-                  ${isDisconnected ? `<span style="display: block; font-size: 11px; color: #ef4444; font-weight: 600;">Prekinjena povezava</span>` : ''}
+                  ${isResigned ? `<span style="display: block; font-size: 11px; color: #dc2626; font-weight: 700;">Delavec je dal odpoved</span>` : (isDismissed ? `<span style="display: block; font-size: 11px; color: #b91c1c; font-weight: 700;">Zaposleni odpuščen</span>` : (isDisconnected ? `<span style="display: block; font-size: 11px; color: #ef4444; font-weight: 600;">Prekinjena povezava</span>` : ''))}
                   ${isInvited ? `<span style="display: block; font-size: 11px; color: #d97706; font-weight: 600;">Čaka na odobritev zaposlenega</span>` : ''}
                 </div>
                 <span class="chip" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${statusText}</span>
@@ -3848,7 +3918,7 @@ function renderEmployees() {
                 <div class="emp-progress-cell" style="display: flex; flex-direction: column; gap: 4px; max-width: 220px;">
                   <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
                     <span style="font-weight: 700; color: ${isDisconnected ? redColor : (isZeroEarnings ? 'var(--muted)' : (isFull ? '#10b981' : (paidPercent > 0 ? 'var(--primary-dark)' : 'var(--muted)')))};">
-                      ${isDisconnected ? 'Prekinjena povezava' : (isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`)}
+                      ${isResigned ? 'Delavec je dal odpoved' : (isDismissed ? 'Odpuščen' : (isDisconnected ? 'Prekinjena povezava' : (isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`)))}
                     </span>
                     <span style="font-size: 11px; color: ${isDisconnected ? redColor : 'var(--muted)'}; font-weight: 600;">
                       ${currency.format(paidEarnings)} / ${currency.format(totalEarnings)}
@@ -4103,22 +4173,66 @@ function renderEmployeeDetail(employeeId) {
   `;
 
   const isInvited = Boolean(employee.isInvited) || employee.status === "Čaka na odobritev zaposlenega" || employee.status === "Čaka na potrditev delavca";
+  const isResigned = Boolean(employee.isResigned);
+  const isDismissed = Boolean(employee.isDismissed);
   const amberColor = "#d97706";
   const amberBg = "#fef3c7";
   const amberBorder = "#fde68a";
 
   const statusBadgeHTML = isInvited
     ? `<span class="chip" style="background: ${amberBg}; color: ${amberColor}; border: 1px solid ${amberBorder}; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Čaka na odobritev zaposlenega</span>`
-    : (isDisconnected
-      ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
-      : statusDropdownHTML);
+    : (isResigned
+      ? `<span class="chip" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Delavec je dal odpoved</span>`
+      : (isDismissed
+        ? `<span class="chip" style="background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Zaposleni odpuščen</span>`
+        : (isDisconnected
+          ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
+          : statusDropdownHTML)));
 
-  const disconnectedBannerHTML = isDisconnected
-    ? `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
+  let disconnectedBannerHTML = "";
+  if (isResigned) {
+    disconnectedBannerHTML = `
+      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 14px 16px; color: #9f1239; font-size: 13px; line-height: 1.5; width: 100%; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; margin-bottom: 6px;">
+          <span>⚠️</span>
+          <span>Delavec je podal odpoved</span>
+        </div>
+        <p style="margin: 0 0 8px 0;">Zaposleni <strong>${escapeHtml(employee.name)}</strong> je v svoji mobilni aplikaciji 4P podal odpoved in zaključil sodelovanje.</p>
+        <div style="background: rgba(255,255,255,0.75); border-radius: 8px; padding: 10px 12px; border: 1px solid #fbcfe8;">
+          <strong style="color: #881337;">Kaj to pomeni v logiki dashboarda:</strong>
+          <ul style="margin: 4px 0 0 18px; padding: 0;">
+            <li>Vsi pretekli vnosi ur, evidence in izračuni ostanejo <strong>trajno arhivirani</strong> v vaši bazi za pretekle obračune in zgodovinski pregled podjetja.</li>
+            <li>Delavec je bil samodejno odstranjen iz vaših aktivnih sektorjev in <strong>ne more več oddajati novih ur</strong> za vaše podjetje.</li>
+            <li>Morebitne prihodnje načrtovane izmene v urniku so bile samodejno preklicane.</li>
+          </ul>
+        </div>
+      </div>
+    `;
+  } else if (isDismissed) {
+    disconnectedBannerHTML = `
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 14px 16px; color: #991b1b; font-size: 13px; line-height: 1.5; width: 100%; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; margin-bottom: 6px;">
+          <span>🚫</span>
+          <span>Zaposleni je bil odpuščen</span>
+        </div>
+        <p style="margin: 0 0 8px 0;">Sodelovanje s tem zaposlenim je bilo prekinjeno v dashboardu podjetja.</p>
+        <div style="background: rgba(255,255,255,0.75); border-radius: 8px; padding: 10px 12px; border: 1px solid #fca5a5;">
+          <strong style="color: #7f1d1d;">Kaj to pomeni v logiki dashboarda:</strong>
+          <ul style="margin: 4px 0 0 18px; padding: 0;">
+            <li>Vsi pretekli podatki, delovne ure in evidence ostajajo <strong>trajno shranjeni</strong> v vaši evidenci za obračune in arhiv.</li>
+            <li>Zaposleni je odstranjen iz vaših sektorjev in <strong>ne more več oddajati delovnih ur</strong> za vaša delovna mesta.</li>
+          </ul>
+        </div>
+      </div>
+    `;
+  } else if (isDisconnected) {
+    disconnectedBannerHTML = `
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
         <span>Povezava s tem zaposlenim je prekinjena. Vsi podatki spodaj so arhivirani zgodovinski zapisi.</span>
-       </div>`
-    : "";
+      </div>
+    `;
+  }
 
   const invitedBannerHTML = isInvited
     ? `<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
@@ -5114,11 +5228,11 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
   }
 
   try {
-    // 1. Posodobi v workplace_requests kot 'disconnected' (NE brišemo, da se trajno ohranijo pretekli podatki za delodajalca)
+    // 1. Posodobi v workplace_requests kot 'dismissed' (odpuščen s strani delodajalca)
     const { error: reqErr } = await supabaseClient
       .from("workplace_requests")
       .update({
-        status: "disconnected",
+        status: "dismissed",
         is_active: false,
         disconnected_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -5127,10 +5241,10 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
       .in("workplace_id", targetSectorIds);
 
     if (reqErr) {
-      console.warn("Posodobitev zahteve v 'disconnected' ni uspela, posodabljam status v 'denied':", reqErr);
+      console.warn("Posodobitev zahteve v 'dismissed' ni uspela, posodabljam status v 'disconnected':", reqErr);
       await supabaseClient
         .from("workplace_requests")
-        .update({ status: "denied", updated_at: new Date().toISOString() })
+        .update({ status: "disconnected", updated_at: new Date().toISOString() })
         .eq("user_id", employeeId)
         .in("workplace_id", targetSectorIds);
     }
@@ -5163,7 +5277,7 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
       console.warn("Napaka pri brisanju dodeljenih bodočih izmen:", shiftErr);
     }
 
-    alert(`Zaposleni "${empName}" je bil uspešno odpuščen in povezava prekinjena. Vsi pretekli podatki in delovne ure so trajno shranjeni.`);
+    alert(`Zaposleni "${empName}" je bil uspešno odpuščen. Vsi pretekli podatki in delovne ure so trajno shranjeni v evidenci.`);
 
     // 3. Ponovno naloži podatke
     await loadAllData();
