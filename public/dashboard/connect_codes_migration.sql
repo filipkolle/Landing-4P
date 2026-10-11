@@ -382,8 +382,27 @@ BEGIN
 
   SELECT * INTO v_existing FROM public.employer_connections c WHERE c.employer_id = v_employer AND c.user_id = auth.uid();
 
+  -- Če v bazi piše 'approved', preverimo, ali ima zaposleni dejansko še kakšen aktiven sektor pri tem delodajalcu
   IF v_existing.id IS NOT NULL AND v_existing.status = 'approved' THEN
-    RAISE EXCEPTION 'S tem podjetjem ste že povezani.';
+    IF EXISTS (
+      SELECT 1 FROM public.workplace_requests wr
+      JOIN public.workplaces w ON w.id = wr.workplace_id
+      WHERE wr.user_id = auth.uid()
+        AND w.employer_id = v_employer
+        AND wr.status = 'approved'
+        AND COALESCE(wr.is_active, true) = true
+    ) THEN
+      RAISE EXCEPTION 'S tem podjetjem ste že povezani.';
+    END IF;
+  END IF;
+
+  -- Če prošnja že čaka na odobritev s strani delodajalca
+  IF v_existing.id IS NOT NULL AND v_existing.status = 'pending' AND v_existing.initiated_by = 'employee' THEN
+    UPDATE public.employer_connections
+    SET updated_at = now()
+    WHERE id = v_existing.id;
+    RETURN QUERY SELECT v_existing.id, v_company, 'pending'::TEXT;
+    RETURN;
   END IF;
 
   IF v_existing.id IS NOT NULL THEN

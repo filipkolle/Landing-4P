@@ -69,6 +69,9 @@ const state = {
   rawLogs: [],
   incomeSources: [],
   approvedRequests: [],
+  pendingInvitations: [],
+  employerConnections: [],
+  connectionsByUserId: new Map(),
   userProfiles: new Map(),
   pendingRequests: [],
   customStatuses: ["Zaposlen", "Študent", "Pogodbenik", "Poskusno delo"],
@@ -93,6 +96,9 @@ function clearUserState() {
   state.rawLogs = [];
   state.incomeSources = [];
   state.approvedRequests = [];
+  state.pendingInvitations = [];
+  state.employerConnections = [];
+  state.connectionsByUserId = new Map();
   state.pendingRequests = [];
   state.scheduleShifts = null;
   state.openShifts = [];
@@ -648,6 +654,7 @@ async function loadAllData() {
   await fetchWorkplaces();
   await syncEmployerConnectCode();
   await fetchUserProfiles();
+  await fetchEmployerConnections();
   await fetchPendingRequests();
   await fetchManualEmployees();
   const approvedReqs = await fetchApprovedRequests();
@@ -719,6 +726,26 @@ async function fetchWorkplaces() {
   }
 }
 
+async function fetchEmployerConnections() {
+  if (!supabaseClient || !state.currentUser) return [];
+  try {
+    const { data, error } = await supabaseClient
+      .from("employer_connections")
+      .select("*")
+      .eq("employer_id", state.currentUser.id)
+      .order("updated_at", { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      state.employerConnections = data;
+      state.connectionsByUserId = new Map(data.map((c) => [c.user_id, c]));
+      return data;
+    }
+  } catch (e) {
+    console.warn("fetchEmployerConnections note:", e);
+  }
+  return [];
+}
+
 async function fetchUserProfiles() {
   if (!supabaseClient) return;
   try {
@@ -746,16 +773,51 @@ async function fetchApprovedRequests() {
       const myWorkplaceIds = new Set(state.sectors.map((s) => s.id));
       const myJoinCodes = new Set(state.sectors.map((s) => s.code));
 
-      const filtered = data.filter((req) => {
-        // Include both actively approved and historically connected/disconnected requests
-        if (req.status !== "approved" && req.status !== "disconnected") return false;
-        return (
+      const approved = [];
+      const pendingInvites = [];
+
+      data.forEach((req) => {
+        const belongsToMe =
           myWorkplaceIds.has(req.workplace_id) ||
-          myJoinCodes.has(req.workplaces?.join_code)
-        );
+          myJoinCodes.has(req.workplaces?.join_code);
+        if (!belongsToMe) return;
+
+        const conn = state.connectionsByUserId?.get(req.user_id);
+        const isConnInvited = conn && conn.status === "invited";
+        const isConnPending = conn && conn.status === "pending";
+        const isConnApproved = conn && conn.status === "approved";
+
+        // ČE JE POVEZAVA V STANJU 'invited' ALI JE ZAHTEVA 'invited',
+        // UPORABNIK NIKOLI IN NIKAKOR NE SME BITI V 'approved'!
+        if (isConnInvited || req.status === "invited") {
+          pendingInvites.push({ ...req, status: "invited", is_active: false });
+        } else if (isConnPending || req.status === "pending") {
+          pendingInvites.push(req);
+        } else if ((isConnApproved || !conn) && (req.status === "approved" || req.is_active === true)) {
+          approved.push(req);
+        } else if (req.status === "disconnected") {
+          approved.push(req);
+        }
       });
-      state.approvedRequests = filtered;
-      return filtered;
+
+      // Če obstaja v employer_connections povabilo (invited), ki morda še nima zapisov v workplace_requests,
+      // ga prav tako dodaj v pendingInvites
+      (state.employerConnections || []).forEach((c) => {
+        if (c.status === "invited" && !pendingInvites.some((p) => p.user_id === c.user_id)) {
+          pendingInvites.push({
+            id: c.id,
+            connection_id: c.id,
+            user_id: c.user_id,
+            user_name: c.user_name,
+            status: "invited",
+            created_at: c.created_at,
+          });
+        }
+      });
+
+      state.approvedRequests = approved;
+      state.pendingInvitations = pendingInvites;
+      return approved;
     }
   } catch (e) {
     console.log("Info: approved requests sync", e);
@@ -1210,6 +1272,13 @@ function setupRealtimeListeners() {
       )
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "income_sources" },
+        async () => {
+          if (state.currentUser) await loadAllData();
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "*", schema: "public", table: "work_logs" },
         async () => {
           if (state.currentUser) await loadAllData();
@@ -1496,29 +1565,107 @@ window.handleConfirmApproveRequest = async function (event) {
   }
 
   const btn = $("#confirmApproveRequestBtn");
-  if (btn) btn.disabled = true;
+  const originalText = btn ? btn.textContent : "Potrdi";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Odobravanje...";
+  }
 
   try {
     let success = false;
-    // 1. Poskusi prek nove RPC funkcije approve_connection_request
+    let rpcErrorMsg = null;
+
+    // 1. Poskusi prek RPC funkcije approve_connection_request
     if (supabaseClient) {
       try {
         const { error } = await supabaseClient.rpc("approve_connection_request", {
           p_connection_id: connId,
           p_workplace_ids: selectedSectorIds,
         });
-        if (!error) success = true;
+        if (!error) {
+          success = true;
+        } else {
+          rpcErrorMsg = error.message;
+          console.warn("approve_connection_request rpc error, attempting direct fallback:", error);
+        }
       } catch (eRPC) {
-        console.warn("approve_connection_request note:", eRPC);
+        rpcErrorMsg = eRPC.message || String(eRPC);
+        console.warn("approve_connection_request exception, attempting direct fallback:", eRPC);
       }
     }
 
-    // 2. Če ne gre (fallback za stare zahteve), posodobi workplace_requests
+    // 2. Če RPC ni uspel, izvedi zanesljiv neposreden fallback
     if (!success && supabaseClient) {
-      await supabaseClient
-        .from("workplace_requests")
-        .update({ status: "approved", updated_at: new Date().toISOString() })
-        .eq("id", connId);
+      const { data: connRow } = await supabaseClient
+        .from("employer_connections")
+        .select("id, user_id, user_name")
+        .eq("id", connId)
+        .maybeSingle();
+
+      if (connRow) {
+        // Posodobi employer_connections na approved
+        const { error: updConnErr } = await supabaseClient
+          .from("employer_connections")
+          .update({
+            status: "approved",
+            responded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", connId);
+
+        if (updConnErr) {
+          throw new Error("Napaka pri posodobitvi povezave: " + updConnErr.message);
+        }
+
+        // Posodobi ali vstavi sektorje v workplace_requests
+        for (const secId of selectedSectorIds) {
+          const { data: existingWp } = await supabaseClient
+            .from("workplace_requests")
+            .select("id")
+            .eq("workplace_id", secId)
+            .eq("user_id", connRow.user_id)
+            .maybeSingle();
+
+          if (existingWp) {
+            await supabaseClient
+              .from("workplace_requests")
+              .update({
+                status: "approved",
+                connection_id: connId,
+                user_name: connRow.user_name || "Zaposleni",
+                is_active: true,
+                disconnected_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingWp.id);
+          } else {
+            await supabaseClient.from("workplace_requests").insert({
+              workplace_id: secId,
+              user_id: connRow.user_id,
+              user_name: connRow.user_name || "Zaposleni",
+              status: "approved",
+              connection_id: connId,
+              is_active: true,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
+        success = true;
+      } else {
+        // Stare zahteve neposredno v workplace_requests
+        const { error: legacyErr } = await supabaseClient
+          .from("workplace_requests")
+          .update({ status: "approved", is_active: true, updated_at: new Date().toISOString() })
+          .eq("id", connId);
+        if (legacyErr) {
+          throw new Error(rpcErrorMsg || legacyErr.message);
+        }
+        success = true;
+      }
+    }
+
+    if (!success) {
+      throw new Error(rpcErrorMsg || "Odobritev prošnje ni uspela.");
     }
 
     closeApproveRequestModal();
@@ -1528,7 +1675,10 @@ window.handleConfirmApproveRequest = async function (event) {
     console.error("Napaka pri odobritvi prošnje:", err);
     alert("Napaka pri odobritvi: " + (err.message || err));
   } finally {
-    if (btn) btn.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   }
 };
 
@@ -1541,7 +1691,13 @@ window.handleDenyRequest = async function (connOrReqId, isConnection) {
     onConfirm: async () => {
       try {
         if (isConnection && supabaseClient) {
-          await supabaseClient.rpc("reject_connection_request", { p_connection_id: connOrReqId });
+          const { error: rpcErr } = await supabaseClient.rpc("reject_connection_request", { p_connection_id: connOrReqId });
+          if (rpcErr) {
+            await supabaseClient
+              .from("employer_connections")
+              .update({ status: "rejected", responded_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+              .eq("id", connOrReqId);
+          }
         } else if (supabaseClient) {
           await supabaseClient
             .from("workplace_requests")
@@ -1709,8 +1865,53 @@ window.handleSendEmployeeInvitation = async function (event) {
     }
 
     const empName = (data && data[0] && data[0].user_name) ? data[0].user_name : "Zaposlenemu";
+    const connId = data && data[0] && data[0].connection_id;
+    const targetUserId = data && data[0] && data[0].user_id;
+
+    if (connId) {
+      await supabaseClient
+        .from("employer_connections")
+        .update({
+          status: "invited",
+          initiated_by: "employer",
+          consent_at: null,
+          responded_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", connId);
+    }
+
+    if (targetUserId) {
+      for (const secId of selectedSectorIds) {
+        await supabaseClient
+          .from("workplace_requests")
+          .update({
+            status: "invited",
+            connection_id: connId || null,
+            is_active: false,
+            disconnected_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", targetUserId)
+          .eq("workplace_id", secId);
+      }
+    } else if (connId) {
+      for (const secId of selectedSectorIds) {
+        await supabaseClient
+          .from("workplace_requests")
+          .update({
+            status: "invited",
+            is_active: false,
+            disconnected_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("connection_id", connId)
+          .eq("workplace_id", secId);
+      }
+    }
+
     closeConnectEmployeeModal();
-    showToast(`Povabilo je bilo uspešno poslano (${empName})!`, "success");
+    showToast(`Povabilo je bilo uspešno poslano (${empName})! Čaka se na odobritev zaposlenega.`, "success");
     await loadAllData();
   } catch (err) {
     console.error("invite_employee_by_code error:", err);
@@ -1902,14 +2103,26 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     );
 
     if (!matchedSector) return;
+    if (req.status !== "approved" && req.status !== "disconnected") return;
+
+    const conn = state.connectionsByUserId?.get(userId);
+    const isConnInvited = conn && conn.status === "invited";
 
     // Check connection status: active or disconnected
     const isReqDisconnected = req.status === "disconnected" || Boolean(req.disconnected_at);
-    let hasActiveConnection = !isReqDisconnected && (req.status === "approved" || req.is_active === true || req.status === "invited");
+    let hasActiveConnection = !isReqDisconnected && (req.status === "approved" || req.is_active === true) && !isConnInvited;
 
     const liveName = state.userProfiles.get(userId);
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
-    const userStatus = !hasActiveConnection ? "Prekinjena povezava" : (state.employeeCustomStatuses?.[userId] || "Zaposlen");
+
+    let userStatus = "Zaposlen";
+    if (isConnInvited || req.status === "invited") {
+      userStatus = "Čaka na odobritev zaposlenega";
+    } else if (!hasActiveConnection) {
+      userStatus = "Prekinjena povezava";
+    } else if (state.employeeCustomStatuses?.[userId]) {
+      userStatus = state.employeeCustomStatuses[userId];
+    }
 
     const reqDateStr = req.created_at || req.joined_at || req.updated_at || "";
     const reqMonthKey = reqDateStr ? reqDateStr.slice(0, 7) : null;
@@ -1919,7 +2132,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         id: userId,
         name: userName,
         status: userStatus,
-        isDisconnected: !hasActiveConnection,
+        isDisconnected: !hasActiveConnection && !isConnInvited,
+        isInvited: Boolean(isConnInvited || req.status === "invited"),
         joinedMonth: reqMonthKey,
         sectors: {},
         hours: {},
@@ -1939,27 +2153,53 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       if (reqMonthKey && (!emp.joinedMonth || reqMonthKey < emp.joinedMonth)) {
         emp.joinedMonth = reqMonthKey;
       }
+      // Status resolution across multiple requests/sectors
+      if (isConnInvited || req.status === "invited") {
+        emp.isDisconnected = false;
+        emp.isInvited = true;
+        emp.status = "Čaka na odobritev zaposlenega";
+      } else if (req.status === "approved") {
+        emp.isDisconnected = false;
+        emp.status = state.employeeCustomStatuses?.[userId] || "Zaposlen";
+      }
+      const reqSalaryType = req.salary_type || null;
+      const reqHourlyRate = Number(req.hourly_rate) || 0;
+      const reqRateHistory = req.rate_history || [];
+      const hasReqPaymentConfig = Boolean(reqSalaryType || reqHourlyRate > 0 || (Array.isArray(reqRateHistory) && reqRateHistory.length > 0));
+
       if (!emp.sectors[matchedSector.id]) {
         emp.sectors[matchedSector.id] = {
           sectorId: matchedSector.id,
           sectorName: matchedSector.name,
           sectorCode: matchedSector.code,
           color: matchedSector.color || "#56829d",
-          type: "hourly",
-          rate: 0,
-          isFixed: false,
-          isProject: false,
+          type: reqSalaryType || "hourly",
+          rate: reqHourlyRate,
+          isFixed: reqSalaryType === "fixed",
+          isProject: reqSalaryType === "project",
           netSalary: 0,
           jobName: wp.name || matchedSector.name,
           isDisconnected: !hasActiveConnection,
           joinedMonth: reqMonthKey,
+          hasConfiguredPayment: hasReqPaymentConfig,
           hours: {},
           travelExpenses: {},
           earnings: {},
           paid: {},
         };
-      } else if (reqMonthKey) {
-        if (!emp.sectors[matchedSector.id].joinedMonth || reqMonthKey < emp.sectors[matchedSector.id].joinedMonth) {
+      } else {
+        if (hasReqPaymentConfig) {
+          emp.sectors[matchedSector.id].hasConfiguredPayment = true;
+          if (reqSalaryType) {
+            emp.sectors[matchedSector.id].type = reqSalaryType;
+            emp.sectors[matchedSector.id].isFixed = reqSalaryType === "fixed";
+            emp.sectors[matchedSector.id].isProject = reqSalaryType === "project";
+          }
+          if (reqHourlyRate > 0) {
+            emp.sectors[matchedSector.id].rate = reqHourlyRate;
+          }
+        }
+        if (reqMonthKey && (!emp.sectors[matchedSector.id].joinedMonth || reqMonthKey < emp.sectors[matchedSector.id].joinedMonth)) {
           emp.sectors[matchedSector.id].joinedMonth = reqMonthKey;
         }
       }
@@ -1992,6 +2232,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         emp.sectors[matchedSector.id].isFixed = isFixed;
         emp.sectors[matchedSector.id].isProject = isProject;
         emp.sectors[matchedSector.id].netSalary = netSalary;
+        emp.sectors[matchedSector.id].hasConfiguredPayment = true;
         if (src.name) {
           emp.sectors[matchedSector.id].jobName = src.name;
         }
@@ -2077,6 +2318,78 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         paid: {},
       };
     }
+  });
+
+  // 2.8 Map employer invitations (status = 'invited') into empMap
+  const pendingByUserId = new Map();
+  (state.pendingInvitations || []).forEach((req) => {
+    if (req.status === "invited") {
+      if (!pendingByUserId.has(req.user_id)) {
+        pendingByUserId.set(req.user_id, []);
+      }
+      pendingByUserId.get(req.user_id).push(req);
+    }
+  });
+
+  pendingByUserId.forEach((reqs, userId) => {
+    const conn = state.connectionsByUserId?.get(userId);
+    const firstReq = reqs[0];
+    const liveName = state.userProfiles.get(userId);
+    const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (firstReq.user_name || conn?.user_name || "Povabljeni zaposleni");
+
+    let emp = empMap.get(userId);
+    if (!emp) {
+      emp = {
+        id: userId,
+        name: userName,
+        status: "Čaka na odobritev zaposlenega",
+        isInvited: true,
+        isDisconnected: false,
+        joinedMonth: null,
+        sectors: {},
+        hours: {},
+        travelExpenses: {},
+        earnings: {},
+        paid: {},
+      };
+      empMap.set(userId, emp);
+    } else {
+      emp.status = "Čaka na odobritev zaposlenega";
+      emp.isInvited = true;
+      emp.isDisconnected = false;
+    }
+
+    reqs.forEach((r) => {
+      const wp = r.workplaces || state.jobs.find((j) => j.id === r.workplace_id) || {};
+      const matchedSector = state.sectors.find(
+        (s) =>
+          s.id === r.workplace_id ||
+          (wp.join_code && s.code === wp.join_code) ||
+          s.name === wp.sector_name ||
+          s.id === wp.sectorId
+      );
+      if (matchedSector && !emp.sectors[matchedSector.id]) {
+        emp.sectors[matchedSector.id] = {
+          sectorId: matchedSector.id,
+          sectorName: matchedSector.name,
+          sectorCode: matchedSector.code,
+          color: matchedSector.color || "#56829d",
+          type: "hourly",
+          rate: 0,
+          isFixed: false,
+          isProject: false,
+          netSalary: 0,
+          jobName: matchedSector.name,
+          isDisconnected: false,
+          isInvited: true,
+          joinedMonth: null,
+          hours: {},
+          travelExpenses: {},
+          earnings: {},
+          paid: {},
+        };
+      }
+    });
   });
 
   // 3. Process work_logs: Strictly preserve all work logs belonging to this company's sectors
@@ -2313,6 +2626,15 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         }
       }
     });
+  });
+
+  empMap.forEach((emp) => {
+    const conn = state.connectionsByUserId?.get(emp.id);
+    if (conn && conn.status === "invited") {
+      emp.status = "Čaka na odobritev zaposlenega";
+      emp.isInvited = true;
+      emp.isDisconnected = false;
+    }
   });
 
   state.employees = Array.from(empMap.values()).filter(
@@ -3323,7 +3645,121 @@ function renderSectors() {
   }
 }
 
+function getEmployeePaymentSetupStatus(employee) {
+  if (!employee) {
+    return {
+      allConfigured: false,
+      configuredCount: 0,
+      totalCount: 0,
+      missingSectors: [],
+      configuredSectors: [],
+      hasSectors: false,
+    };
+  }
+
+  const sectors = Object.values(employee.sectors || {});
+  if (sectors.length === 0) {
+    return {
+      allConfigured: false,
+      configuredCount: 0,
+      totalCount: 0,
+      missingSectors: [],
+      configuredSectors: [],
+      hasSectors: false,
+    };
+  }
+
+  const configuredSectors = [];
+  const missingSectors = [];
+
+  sectors.forEach((sec) => {
+    const isConfigured = Boolean(
+      sec.hasConfiguredPayment ||
+      Number(sec.rate) > 0 ||
+      sec.isFixed ||
+      sec.isProject ||
+      Number(sec.netSalary) > 0 ||
+      (Array.isArray(state.incomeSources) && state.incomeSources.some((src) =>
+        src.user_id === employee.id && (
+          src.workplace_id === sec.sectorId ||
+          src.workplaceId === sec.sectorId ||
+          (sec.sectorCode && src.join_code === sec.sectorCode)
+        )
+      )) ||
+      (Array.isArray(state.approvedRequests) && state.approvedRequests.some((r) =>
+        r.user_id === employee.id && r.workplace_id === sec.sectorId && (
+          Boolean(r.salary_type) || Number(r.hourly_rate) > 0 || (Array.isArray(r.rate_history) && r.rate_history.length > 0)
+        )
+      ))
+    );
+
+    if (isConfigured) {
+      configuredSectors.push(sec);
+    } else {
+      missingSectors.push(sec);
+    }
+  });
+
+  return {
+    allConfigured: missingSectors.length === 0 && configuredSectors.length > 0,
+    configuredCount: configuredSectors.length,
+    totalCount: sectors.length,
+    missingSectors,
+    configuredSectors,
+    hasSectors: true,
+  };
+}
+
+function renderPaymentStatusIndicator(employee) {
+  const status = getEmployeePaymentSetupStatus(employee);
+  const safe = (s) => (typeof escapeHtml === "function" ? escapeHtml(s) : String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])));
+
+  if (status.allConfigured) {
+    const configuredNames = status.configuredSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
+    return `
+      <span class="pay-setup-indicator is-configured" onclick="event.stopPropagation();" title="" aria-label="Način izplačila določen">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="pay-tooltip-box">
+          <div class="pay-tooltip-title text-success">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Način izplačila določen
+          </div>
+          <div class="pay-tooltip-desc">
+            Delavec je v aplikaciji določil način izplačila za vse sektorje (${status.configuredCount}/${status.totalCount})${configuredNames ? `: <b>${safe(configuredNames)}</b>` : ""}.
+          </div>
+        </div>
+      </span>
+    `;
+  }
+
+  const missingNames = status.missingSectors.map((s) => s.sectorName || s.name || "Sektor").join(", ");
+  const desc = status.hasSectors
+    ? `Delavec v aplikaciji še ni določil načina izplačila za vse dodeljene sektorje (${status.configuredCount}/${status.totalCount}).<br><span style="color: #fca5a5; font-weight: 600;">Manjka za sektorje:</span> ${safe(missingNames)}.`
+    : `Delavec še nima dodeljenih sektorjev ali še ni določil načina izplačila.`;
+
+  return `
+    <span class="pay-setup-indicator is-missing" onclick="event.stopPropagation();" title="" aria-label="Način izplačila ni nastavljen">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="13"></line>
+        <circle cx="12" cy="18" r="1.5" fill="currentColor"></circle>
+      </svg>
+      <div class="pay-tooltip-box">
+        <div class="pay-tooltip-title text-danger">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Način izplačila ni nastavljen
+        </div>
+        <div class="pay-tooltip-desc">
+          ${desc}
+        </div>
+      </div>
+    </span>
+  `;
+}
+
 function renderEmployees() {
+  renderPendingInvitations();
   const search = $("#employeeSearch")?.value.toLowerCase() ?? "";
   const sectorFilterVal = $("#sectorFilter")?.value ?? "all";
   const filtered = state.employees.filter((employee) => {
@@ -3342,6 +3778,7 @@ function renderEmployees() {
         const employeeSectors = Object.values(employee.sectors || {});
         const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
         const status = employee.status || "Zaposlen";
+        const payIndicatorHTML = renderPaymentStatusIndicator(employee);
 
         // Calculate payment progress for this employee in active month
         const empMonthLogs = state.rawLogs.filter((l) => l.userId === employee.id && l.date.startsWith(monthKey));
@@ -3370,36 +3807,56 @@ function renderEmployees() {
         const isZeroEarnings = totalEarnings === 0 && totalHours === 0;
 
         const isDisconnected = Boolean(employee.isDisconnected);
+        const isInvited = Boolean(employee.isInvited) || employee.status === "Čaka na odobritev zaposlenega" || employee.status === "Čaka na potrditev delavca";
         const redColor = "#dc2626";
         const redBg = "#fef2f2";
         const redBorder = "#fca5a5";
 
+        const amberColor = "#d97706";
+        const amberBg = "#fef3c7";
+        const amberBorder = "#fde68a";
+
+        const statusBg = isInvited ? amberBg : (isDisconnected ? redBg : 'var(--primary-light)');
+        const statusColor = isInvited ? amberColor : (isDisconnected ? redColor : 'var(--primary-dark)');
+        const statusBorder = isInvited ? amberBorder : (isDisconnected ? redBorder : 'transparent');
+        const statusText = isInvited ? 'Čaka na odobritev zaposlenega' : (isDisconnected ? 'Prekinjena povezava' : status);
+
         return `
-          <tr class="clickable-employee-row ${isDisconnected ? 'is-disconnected-row' : ''}" onclick="openEmployeeDetail('${employee.id}')" style="${isDisconnected ? 'background: #fff8f8; border-left: 4px solid #ef4444;' : ''}">
+          <tr class="clickable-employee-row ${isDisconnected ? 'is-disconnected-row' : ''} ${isInvited ? 'is-invited-row' : ''}" onclick="openEmployeeDetail('${employee.id}')" style="${isDisconnected ? 'background: #fff8f8; border-left: 4px solid #ef4444;' : (isInvited ? 'background: #fffdf5; border-left: 4px solid #f59e0b;' : '')}">
             <td>
               <div class="person">
-                <span class="avatar" style="${isDisconnected ? 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;' : ''}">${initials(employee.name)}</span>
+                <span class="avatar" style="${isInvited ? 'background: #fef3c7; color: #d97706; border: 1px solid #fde68a;' : (isDisconnected ? 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;' : '')}">${initials(employee.name)}</span>
                 <div>
-                  <strong style="${isDisconnected ? 'color: #dc2626;' : ''}">${employee.name}</strong>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <strong style="${isDisconnected ? 'color: #dc2626;' : (isInvited ? 'color: #92400e;' : '')}">${employee.name}</strong>
+                    ${payIndicatorHTML}
+                  </div>
                   ${isDisconnected ? `<span style="display: block; font-size: 11px; color: #ef4444; font-weight: 600;">Prekinjena povezava</span>` : ''}
+                  ${isInvited ? `<span style="display: block; font-size: 11px; color: #d97706; font-weight: 600;">Čaka na odobritev zaposlenega</span>` : ''}
                 </div>
-                <span class="chip" style="background: ${isDisconnected ? redBg : 'var(--primary-light)'}; color: ${isDisconnected ? redColor : 'var(--primary-dark)'}; border: 1px solid ${isDisconnected ? redBorder : 'transparent'}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${isDisconnected ? 'Prekinjena povezava' : status}</span>
+                <span class="chip" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder}; font-weight: 700; font-size: 11px; padding: 3px 9px; margin-left: 6px;">● ${statusText}</span>
               </div>
             </td>
             <td style="min-width: 220px; vertical-align: middle;">
-              <div class="emp-progress-cell" style="display: flex; flex-direction: column; gap: 4px; max-width: 220px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
-                  <span style="font-weight: 700; color: ${isDisconnected ? redColor : (isZeroEarnings ? 'var(--muted)' : (isFull ? '#10b981' : (paidPercent > 0 ? 'var(--primary-dark)' : 'var(--muted)')))};">
-                    ${isDisconnected ? 'Prekinjena povezava' : (isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`)}
-                  </span>
-                  <span style="font-size: 11px; color: ${isDisconnected ? redColor : 'var(--muted)'}; font-weight: 600;">
-                    ${currency.format(paidEarnings)} / ${currency.format(totalEarnings)}
-                  </span>
+              ${isInvited ? `
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: ${amberColor};">
+                  <span>⏳</span> Čaka na odobritev zaposlenega
                 </div>
-                <div class="progress" style="margin-top: 0; height: 6px; background: ${isDisconnected ? '#fee2e2' : '#e2e8f0'};" title="${isZeroEarnings ? 'Brez zabeleženih ur v tem mesecu' : `${paidPercent}% izplačano (${currency.format(paidEarnings)} od ${currency.format(totalEarnings)})`}">
-                  <span style="width: ${paidPercent}%; background-color: ${isDisconnected ? '#ef4444' : (isZeroEarnings ? 'var(--line)' : (isFull ? '#10b981' : 'var(--primary)'))};"></span>
+              ` : `
+                <div class="emp-progress-cell" style="display: flex; flex-direction: column; gap: 4px; max-width: 220px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                    <span style="font-weight: 700; color: ${isDisconnected ? redColor : (isZeroEarnings ? 'var(--muted)' : (isFull ? '#10b981' : (paidPercent > 0 ? 'var(--primary-dark)' : 'var(--muted)')))};">
+                      ${isDisconnected ? 'Prekinjena povezava' : (isZeroEarnings ? 'Ni zabeleženih ur' : `${paidPercent}% izplačano`)}
+                    </span>
+                    <span style="font-size: 11px; color: ${isDisconnected ? redColor : 'var(--muted)'}; font-weight: 600;">
+                      ${currency.format(paidEarnings)} / ${currency.format(totalEarnings)}
+                    </span>
+                  </div>
+                  <div class="progress" style="margin-top: 0; height: 6px; background: ${isDisconnected ? '#fee2e2' : '#e2e8f0'};" title="${isZeroEarnings ? 'Brez zabeleženih ur v tem mesecu' : `${paidPercent}% izplačano (${currency.format(paidEarnings)} od ${currency.format(totalEarnings)})`}">
+                    <span style="width: ${paidPercent}%; background-color: ${isDisconnected ? '#ef4444' : (isZeroEarnings ? 'var(--line)' : (isFull ? '#10b981' : 'var(--primary)'))};"></span>
+                  </div>
                 </div>
-              </div>
+              `}
             </td>
             <td style="text-align: right; padding-right: 24px; vertical-align: middle;">
               <div style="display: inline-flex; align-items: center; gap: 10px;">
@@ -3424,6 +3881,113 @@ function renderEmployees() {
     renderEmployeeDetail(targetEmployeeId);
   }
 }
+
+function renderPendingInvitations() {
+  const pendingSection = $("#pendingInvitationsSection");
+  if (!pendingSection) return;
+
+  const pendingList = state.pendingInvitations || [];
+  if (pendingList.length === 0) {
+    pendingSection.innerHTML = "";
+    pendingSection.hidden = true;
+    return;
+  }
+
+  // Group by user_id
+  const groupedByUser = new Map();
+  pendingList.forEach((req) => {
+    const uid = req.user_id;
+    if (!groupedByUser.has(uid)) {
+      groupedByUser.set(uid, {
+        userId: uid,
+        userName: state.userProfiles.get(uid) || req.user_name || "Uporabnik",
+        sectors: [],
+        createdAt: req.created_at,
+        requestIds: []
+      });
+    }
+    const item = groupedByUser.get(uid);
+    item.requestIds.push(req.id);
+    const wp = state.sectors.find((s) => s.id === req.workplace_id);
+    if (wp && !item.sectors.some((s) => s.id === wp.id)) {
+      item.sectors.push(wp);
+    }
+  });
+
+  const cardsHTML = Array.from(groupedByUser.values()).map((inv) => {
+    const sectorChips = inv.sectors.map((s) => `
+      <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: ${s.color || '#56829d'}18; color: ${s.color || '#56829d'}; border: 1px solid ${s.color || '#56829d'}33;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: ${s.color || '#56829d'};"></span>
+        ${s.name}
+      </span>
+    `).join("");
+
+    return `
+      <div style="background: #ffffff; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="avatar" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a; width: 38px; height: 38px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">${initials(inv.userName)}</span>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong style="font-size: 14px; color: var(--ink);">${inv.userName}</strong>
+              <span style="display: inline-flex; align-items: center; gap: 4px; background: #fef3c7; color: #d97706; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 6px;">
+                ⏳ Čaka na odobritev zaposlenega
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+              <span style="font-size: 12px; color: var(--muted);">Dodeljeni sektorji:</span>
+              ${sectorChips || '<span style="font-size: 12px; color: var(--muted);">/</span>'}
+            </div>
+          </div>
+        </div>
+        <div>
+          <button type="button" class="btn-danger-outline" onclick="handleCancelInvitation('${inv.userId}')" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; color: #dc2626; border: 1px solid #fca5a5; background: #fff8f8; cursor: pointer;" title="Prekliči poslano povabilo temu delavcu">
+            <span>✕</span> Prekliči povabilo
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  pendingSection.innerHTML = `
+    <div style="background: #fffdf5; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">✉️</span>
+          <strong style="font-size: 14px; color: #92400e;">Poslana povabila (${groupedByUser.size})</strong>
+        </div>
+        <span style="font-size: 12px; color: #b45309;">Zaposleni mora povabilo sprejeti v svoji aplikaciji 4P in nastaviti sektorje.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${cardsHTML}
+      </div>
+    </div>
+  `;
+  pendingSection.hidden = false;
+}
+
+window.handleCancelInvitation = async function(userId) {
+  if (!confirm("Ali res želite preklicati to povabilo zaposlenemu?")) return;
+  try {
+    if (supabaseClient) {
+      await supabaseClient
+        .from("workplace_requests")
+        .delete()
+        .eq("user_id", userId)
+        .eq("status", "invited");
+
+      await supabaseClient
+        .from("employer_connections")
+        .delete()
+        .eq("user_id", userId)
+        .eq("status", "invited");
+    }
+    showToast("Povabilo je bilo uspešno preklicano.", "info");
+    await loadAllData();
+  } catch (err) {
+    console.error("Cancel invitation error:", err);
+    alert("Napaka pri preklicu povabila: " + (err.message || err));
+  }
+};
 
 // ==========================================================================
 // Employee Detail View Management
@@ -3494,7 +4058,11 @@ function renderEmployeeDetail(employeeId) {
     }
   }
   if (nameEl) {
-    nameEl.textContent = employee.name;
+    const detailPayIndicator = renderPaymentStatusIndicator(employee);
+    nameEl.innerHTML = `${escapeHtml(employee.name)} ${detailPayIndicator}`;
+    nameEl.style.display = "inline-flex";
+    nameEl.style.alignItems = "center";
+    nameEl.style.gap = "8px";
     nameEl.style.color = isDisconnected ? redColor : "var(--ink)";
   }
   if ($("#empDetailMonthPill")) $("#empDetailMonthPill").textContent = monthLabel;
@@ -3532,14 +4100,28 @@ function renderEmployeeDetail(employeeId) {
     </div>
   `;
 
-  const statusBadgeHTML = isDisconnected
-    ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
-    : statusDropdownHTML;
+  const isInvited = Boolean(employee.isInvited) || employee.status === "Čaka na odobritev zaposlenega" || employee.status === "Čaka na potrditev delavca";
+  const amberColor = "#d97706";
+  const amberBg = "#fef3c7";
+  const amberBorder = "#fde68a";
+
+  const statusBadgeHTML = isInvited
+    ? `<span class="chip" style="background: ${amberBg}; color: ${amberColor}; border: 1px solid ${amberBorder}; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Čaka na odobritev zaposlenega</span>`
+    : (isDisconnected
+      ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
+      : statusDropdownHTML);
 
   const disconnectedBannerHTML = isDisconnected
     ? `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
         <span>Povezava s tem zaposlenim je prekinjena. Vsi podatki spodaj so arhivirani zgodovinski zapisi.</span>
+       </div>`
+    : "";
+
+  const invitedBannerHTML = isInvited
+    ? `<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
+        <span style="font-size: 16px;">⏳</span>
+        <span>Povabilo je bilo uspešno poslano. Čaka se, da zaposleni v svoji mobilni aplikaciji 4P potrdi povabilo in si nastavi sektorje ter postavko ali plačo.</span>
        </div>`
     : "";
 
@@ -3561,6 +4143,7 @@ function renderEmployeeDetail(employeeId) {
       ${sectorBadgesHTML}
       ${editSectorsBtnHTML}
       ${disconnectedBannerHTML}
+      ${invitedBannerHTML}
     `;
   }
 
@@ -4550,7 +5133,22 @@ window.handleDismissEmployee = async function (employeeId, specificSectorId = nu
         .in("workplace_id", targetSectorIds);
     }
 
-    // 2. Izbriši le PRIHODNJE dodeljene izmene v urniku tega sektorja / delodajalca (pretekle ostanejo za evidenco)
+    // 2. Posodobi povezavo v employer_connections na 'disconnected', če je odpuščen iz vseh sektorjev ali celotnega podjetja
+    const remainingActiveSectors = (emp && emp.assignedSectors ? emp.assignedSectors : []).filter(
+      (s) => !targetSectorIds.includes(s.sectorId)
+    );
+    if (!specificSectorId || remainingActiveSectors.length === 0) {
+      await supabaseClient
+        .from("employer_connections")
+        .update({
+          status: "disconnected",
+          updated_at: new Date().toISOString()
+        })
+        .eq("employer_id", state.currentUser.id)
+        .eq("user_id", employeeId);
+    }
+
+    // 3. Izbriši le PRIHODNJE dodeljene izmene v urniku tega sektorja / delodajalca (pretekle ostanejo za evidenco)
     const todayIso = formatLocalDate(new Date());
     const { error: shiftErr } = await supabaseClient
       .from("schedule_shifts")
@@ -4626,6 +5224,13 @@ window.handlePurgeEmployeeHistory = async function (employeeId) {
           .delete()
           .eq("user_id", employeeId);
       }
+
+      // 4. Izbriši povezavo podjetja v employer_connections
+      await supabaseClient
+        .from("employer_connections")
+        .delete()
+        .eq("employer_id", state.currentUser.id)
+        .eq("user_id", employeeId);
     }
 
     // 4. Lokalno čiščenje
