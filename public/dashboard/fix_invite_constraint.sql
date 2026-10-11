@@ -454,5 +454,38 @@ BEGIN
   END IF;
 END $$;
 
+-- 14. Zagotovitev vseh stolpcev in RLS politik za income_sources (povezava sektorjev med zaposlenim in delodajalcem)
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS connection_id UUID;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS employer_name TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS company_name TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS sector_name TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS workplace_id UUID;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS workplace_status TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS join_code TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS employment_type TEXT;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS standard_hours INTEGER;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS first_payment_date DATE;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS net_salary NUMERIC(12, 2);
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(12, 2);
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS rate_history JSONB DEFAULT '[]'::jsonb;
 
-
+-- Dovoljenje delodajalcu za branje virov dohodka zaposlenih, ki so povezani z njegovim podjetjem ali sektorjem
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'income_sources' AND policyname = 'inc_sources_employer_select'
+  ) THEN
+    CREATE POLICY "inc_sources_employer_select" ON public.income_sources
+      FOR SELECT TO authenticated
+      USING (
+        user_id = auth.uid()
+        OR connection_id IN (
+          SELECT id FROM public.employer_connections WHERE employer_id = auth.uid()
+        )
+        OR workplace_id IN (
+          SELECT id FROM public.workplaces WHERE employer_id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
