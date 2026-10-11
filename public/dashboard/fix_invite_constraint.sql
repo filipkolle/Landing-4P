@@ -469,6 +469,8 @@ ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS first_payment_date DA
 ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS net_salary NUMERIC(12, 2);
 ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(12, 2);
 ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS rate_history JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS is_resigned BOOLEAN DEFAULT false;
+ALTER TABLE public.income_sources ADD COLUMN IF NOT EXISTS resigned_at TIMESTAMPTZ;
 
 -- Dovoljenje delodajalcu za branje virov dohodka zaposlenih, ki so povezani z njegovim podjetjem ali sektorjem
 DO $$
