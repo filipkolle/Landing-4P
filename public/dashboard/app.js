@@ -2401,26 +2401,9 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (firstReq.user_name || conn?.user_name || "Povabljeni zaposleni");
 
     let emp = empMap.get(userId);
-    if (!emp) {
-      emp = {
-        id: userId,
-        name: userName,
-        status: "Čaka na odobritev zaposlenega",
-        isInvited: true,
-        isDisconnected: false,
-        joinedMonth: null,
-        sectors: {},
-        hours: {},
-        travelExpenses: {},
-        earnings: {},
-        paid: {},
-      };
-      empMap.set(userId, emp);
-    } else {
-      emp.status = "Čaka na odobritev zaposlenega";
-      emp.isInvited = true;
-      emp.isDisconnected = false;
-    }
+    // Poslana povabila (status = 'invited') sodijo izključno v kartico "Poslana povabila" na vrhu
+    // in se NE uvrščajo v bazo zaposlenih, dokler delavec povabila ne sprejme v svoji aplikaciji 4P!
+    if (!emp) return;
 
     reqs.forEach((r) => {
       const wp = r.workplaces || state.jobs.find((j) => j.id === r.workplace_id) || {};
@@ -2701,7 +2684,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   });
 
   state.employees = Array.from(empMap.values()).filter(
-    (emp) => Object.keys(emp.sectors).length > 0
+    (emp) => Object.keys(emp.sectors).length > 0 && !emp.isInvited && emp.status !== "Čaka na odobritev zaposlenega"
   );
 }
 
@@ -3828,6 +3811,9 @@ function renderEmployees() {
   const search = $("#employeeSearch")?.value.toLowerCase() ?? "";
   const sectorFilterVal = $("#sectorFilter")?.value ?? "all";
   const filtered = state.employees.filter((employee) => {
+    if (employee.isInvited || employee.status === "Čaka na odobritev zaposlenega" || employee.status === "Čaka na potrditev delavca") {
+      return false;
+    }
     const matchesSearch = employee.name.toLowerCase().includes(search);
     const matchesSector = sectorFilterVal === "all" || Boolean(employee.sectors?.[sectorFilterVal]);
     return matchesSearch && matchesSector;
