@@ -11,12 +11,11 @@
 ALTER TABLE public.schedule_shifts 
 ADD COLUMN IF NOT EXISTS employee_name TEXT;
 
--- Zapolni obstoječa imena iz profilov in zahtev
+-- Zapolni obstoječa imena iz profilov in zahtev (user_profiles ima stolpec 'name')
 UPDATE public.schedule_shifts s
 SET employee_name = COALESCE(
     s.employee_name,
     p.name,
-    p.full_name,
     wr.user_name,
     'Zaposleni'
 )
@@ -61,7 +60,6 @@ UPDATE public.work_logs l
 SET employee_name = COALESCE(
     l.employee_name,
     p.name,
-    p.full_name,
     'Zaposleni'
 )
 FROM public.work_logs l2
@@ -91,7 +89,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
     IF (NEW.employee_name IS NULL OR TRIM(NEW.employee_name) = '') AND NEW.user_id IS NOT NULL THEN
-        SELECT COALESCE(name, full_name) INTO NEW.employee_name
+        SELECT name INTO NEW.employee_name
         FROM public.user_profiles
         WHERE id = NEW.user_id;
 
@@ -107,6 +105,12 @@ BEGIN
             FROM public.employer_connections
             WHERE user_id = NEW.user_id AND user_name IS NOT NULL
             LIMIT 1;
+        END IF;
+
+        IF NEW.employee_name IS NULL OR TRIM(NEW.employee_name) = '' THEN
+            SELECT COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name') INTO NEW.employee_name
+            FROM auth.users
+            WHERE id = NEW.user_id;
         END IF;
 
         IF NEW.employee_name IS NULL OR TRIM(NEW.employee_name) = '' THEN
@@ -149,15 +153,28 @@ BEGIN
     END IF;
 
     -- 1. Shrani ime uporabnika, preden se njegov profil izbriše
-    SELECT COALESCE(name, full_name, 'Nekdanji zaposleni') INTO v_user_name
+    SELECT name INTO v_user_name
     FROM public.user_profiles
     WHERE id = v_user_id;
 
     IF v_user_name IS NULL OR TRIM(v_user_name) = '' THEN
-        SELECT COALESCE(user_name, 'Nekdanji zaposleni') INTO v_user_name
+        SELECT user_name INTO v_user_name
         FROM public.employer_connections
         WHERE user_id = v_user_id AND user_name IS NOT NULL
         LIMIT 1;
+    END IF;
+
+    IF v_user_name IS NULL OR TRIM(v_user_name) = '' THEN
+        SELECT user_name INTO v_user_name
+        FROM public.workplace_requests
+        WHERE user_id = v_user_id AND user_name IS NOT NULL
+        LIMIT 1;
+    END IF;
+
+    IF v_user_name IS NULL OR TRIM(v_user_name) = '' THEN
+        SELECT COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name') INTO v_user_name
+        FROM auth.users
+        WHERE id = v_user_id;
     END IF;
 
     IF v_user_name IS NULL OR TRIM(v_user_name) = '' THEN
