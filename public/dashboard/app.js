@@ -944,10 +944,10 @@ async function fetchScheduleShifts() {
       state.scheduleShifts = data.map((d) => {
         const sec = state.sectors.find((s) => s.id === d.workplace_id);
         const emp = state.employees.find((e) => e.id === d.user_id);
-        const empName = emp ? emp.name : (state.userProfiles.get(d.user_id) || "Zaposleni");
+        const empName = emp ? emp.name : (d.employee_name || d.user_name || (d.user_id ? state.userProfiles.get(d.user_id) : null) || "Zaposleni");
         return {
           id: d.id,
-          userId: d.user_id,
+          userId: d.user_id || `archived-${d.id}`,
           userName: empName,
           sectorId: d.workplace_id,
           sectorName: sec?.name || "Delovno mesto",
@@ -2466,7 +2466,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   // 3. Process work_logs: Strictly preserve all work logs belonging to this company's sectors
   state.rawLogs = [];
   logs.forEach((log) => {
-    const userId = log.user_id || log.manual_employee_id;
+    const userId = log.user_id || log.manual_employee_id || (log.employee_name ? `archived-name-${encodeURIComponent(log.employee_name.trim())}` : null);
     if (!userId) return;
 
     // Find the exact sector for this work log
@@ -9837,11 +9837,14 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
           note,
         };
         state.scheduleShifts.push(rec);
+        const shiftEmp = state.employees.find((e) => e.id === userId);
+        const shiftEmpName = shiftEmp ? shiftEmp.name : (state.userProfiles?.get(userId) || "");
         newScheduleShifts.push({
           id: shiftId,
           employer_id: state.currentUser?.id,
           workplace_id: sectorId,
           user_id: userId,
+          employee_name: shiftEmpName,
           date: d,
           start_time: startTime,
           end_time: endTime,
@@ -9986,11 +9989,14 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
 
   if (supabaseClient && state.currentUser) {
     try {
+      const shiftEmp = state.employees.find((e) => e.id === userId);
+      const shiftEmpName = shiftEmp ? shiftEmp.name : (state.userProfiles?.get(userId) || "");
       await supabaseClient.from("schedule_shifts").upsert({
         id: shiftId,
         employer_id: state.currentUser.id,
         workplace_id: sectorId,
         user_id: userId,
+        employee_name: shiftEmpName,
         date: date,
         start_time: startTime,
         end_time: endTime,
