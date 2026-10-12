@@ -137,6 +137,9 @@ EXECUTE FUNCTION public.set_employee_name_on_insert();
 -- 6. Posodobi RPC funkcijo delete_user_account() za varno brisanje računa:
 -- Prekine povezavo, pobriše samo BODOČE izmene, ohrani vse PRETEKLE podatke do danes za delodajalca,
 -- ter izbriše zasebne finance uporabnika skladno z GDPR.
+DROP FUNCTION IF EXISTS public.delete_user_account();
+DROP FUNCTION IF EXISTS public.delete_user_account(UUID);
+
 CREATE OR REPLACE FUNCTION public.delete_user_account()
 RETURNS jsonb
 LANGUAGE plpgsql
