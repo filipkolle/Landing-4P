@@ -1854,16 +1854,41 @@ window.onConnectEmployeeCodeInput = async function (val) {
   const foundDiv = $("#connectEmployeeFoundName");
   const foundText = $("#connectEmployeeFoundNameText");
   const notFoundDiv = $("#connectEmployeeNotFound");
+  const alreadyConnectedDiv = $("#connectEmployeeAlreadyConnected");
+  const sendBtn = $("#sendEmployeeInviteBtn");
 
   if (foundDiv) foundDiv.style.display = "none";
   if (notFoundDiv) notFoundDiv.style.display = "none";
+  if (alreadyConnectedDiv) alreadyConnectedDiv.style.display = "none";
+  if (sendBtn) sendBtn.disabled = false;
 
   if (clean.length === 5 && supabaseClient) {
     try {
       const { data, error } = await supabaseClient.rpc("lookup_employee_by_code", { p_code: clean });
       if (!error && Array.isArray(data) && data.length > 0 && data[0].user_name) {
-        if (foundText) foundText.textContent = data[0].user_name;
-        if (foundDiv) foundDiv.style.display = "flex";
+        const item = data[0];
+        const userName = item.user_name;
+        
+        // Preveri: ali je ta zaposleni že povezan z našim podjetjem ali že čaka na odobritev?
+        const isAlreadyApproved = Boolean(item.is_already_connected || item.connection_status === 'approved' || state.employees.some(e => e.name?.trim().toLowerCase() === userName.trim().toLowerCase()));
+        const isAlreadyInvited = Boolean(item.connection_status === 'invited' || (state.pendingInvitations || []).some(inv => (state.userProfiles.get(inv.user_id) || inv.user_name || '').trim().toLowerCase() === userName.trim().toLowerCase()));
+
+        if (isAlreadyApproved) {
+          if (alreadyConnectedDiv) {
+            alreadyConnectedDiv.innerHTML = `⚠️ Zaposleni <strong>${userName}</strong> je že povezan z vašim podjetjem. Ponovno pošiljanje povabila ni mogoče.`;
+            alreadyConnectedDiv.style.display = "block";
+          }
+          if (sendBtn) sendBtn.disabled = true;
+        } else if (isAlreadyInvited) {
+          if (alreadyConnectedDiv) {
+            alreadyConnectedDiv.innerHTML = `⏳ Zaposlenemu <strong>${userName}</strong> ste že poslali povabilo, ki zgoraj čaka na njegovo potrditev.`;
+            alreadyConnectedDiv.style.display = "block";
+          }
+          if (sendBtn) sendBtn.disabled = true;
+        } else {
+          if (foundText) foundText.textContent = userName;
+          if (foundDiv) foundDiv.style.display = "flex";
+        }
       } else {
         if (notFoundDiv) notFoundDiv.style.display = "block";
       }
@@ -1902,7 +1927,7 @@ window.handleSendEmployeeInvitation = async function (event) {
     });
 
     if (error) {
-      alert("Napaka pri pošiljanju povabila: " + error.message);
+      alert(error.message);
       return;
     }
 
