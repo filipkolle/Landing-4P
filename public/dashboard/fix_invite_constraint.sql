@@ -62,6 +62,7 @@ DROP FUNCTION IF EXISTS public.invite_employee_by_code(TEXT, UUID[]);
 CREATE OR REPLACE FUNCTION public.invite_employee_by_code(p_code TEXT, p_workplace_ids UUID[])
 RETURNS TABLE (connection_id UUID, user_id UUID, user_name TEXT, status TEXT)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+#variable_conflict use_column
 DECLARE
   v_user UUID;
   v_name TEXT;
@@ -95,7 +96,7 @@ BEGIN
     v_id := v_conn.id;
     v_status := 'invited';
     v_row_status := 'invited';
-    UPDATE public.employer_connections
+    UPDATE public.employer_connections ec
     SET status = 'invited',
         initiated_by = 'employer',
         company_name = v_company,
@@ -103,7 +104,7 @@ BEGIN
         consent_at = NULL,
         responded_at = NULL,
         updated_at = now()
-    WHERE id = v_id;
+    WHERE ec.id = v_id;
   ELSE
     -- Povezava še ne obstaja: nov zapis v stanju 'invited'
     v_status := 'invited';
@@ -114,22 +115,22 @@ BEGIN
   END IF;
 
   -- 1. Odstranimo obstoječe sektorje tega podjetja za tega uporabnika, ki NISO med izbranimi
-  DELETE FROM public.workplace_requests
-  WHERE user_id = v_user
-    AND workplace_id IN (SELECT id FROM public.workplaces WHERE employer_id = auth.uid())
-    AND NOT (workplace_id = ANY(p_workplace_ids));
+  DELETE FROM public.workplace_requests wr
+  WHERE wr.user_id = v_user
+    AND wr.workplace_id IN (SELECT wp.id FROM public.workplaces wp WHERE wp.employer_id = auth.uid())
+    AND NOT (wr.workplace_id = ANY(p_workplace_ids));
 
   -- 2. Posodobimo ali dodamo sektorje v workplace_requests kot 'invited' in is_active = false
   FOREACH v_wp IN ARRAY p_workplace_ids LOOP
-    IF EXISTS (SELECT 1 FROM public.workplace_requests WHERE workplace_id = v_wp AND user_id = v_user) THEN
-      UPDATE public.workplace_requests
+    IF EXISTS (SELECT 1 FROM public.workplace_requests wr WHERE wr.workplace_id = v_wp AND wr.user_id = v_user) THEN
+      UPDATE public.workplace_requests wr
       SET status = 'invited',
           connection_id = v_id,
           user_name = v_name,
           is_active = false,
           disconnected_at = NULL,
           updated_at = now()
-      WHERE workplace_id = v_wp AND user_id = v_user;
+      WHERE wr.workplace_id = v_wp AND wr.user_id = v_user;
     ELSE
       INSERT INTO public.workplace_requests (workplace_id, user_id, user_name, status, connection_id, is_active, disconnected_at, updated_at)
       VALUES (v_wp, v_user, v_name, 'invited', v_id, false, NULL, now());
