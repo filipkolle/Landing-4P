@@ -420,24 +420,27 @@ async function handleAuthState(session, companyNameOverride = null) {
     if ($("#sidebarUserEmail")) $("#sidebarUserEmail").textContent = session.user.email;
     if ($("#sidebarCompanyCode") && state.employerConnectCode) $("#sidebarCompanyCode").textContent = state.employerConnectCode;
 
-    await syncEmployerProfile(session.user, state.companyName);
+    try {
+      await syncEmployerProfile(session.user, state.companyName);
+      setupRealtimeListeners();
+      await loadAllData();
 
-    setupRealtimeListeners();
-    await loadAllData();
+      if (session?.provider_token) {
+        localStorage.setItem(getUserStorageKey("google_cal_access_token"), session.provider_token);
+        await fetchAndSyncGoogleCalendarEvents(session.provider_token);
+      }
+      updateExternalCalStatusUI();
 
-    if (session?.provider_token) {
-      localStorage.setItem(getUserStorageKey("google_cal_access_token"), session.provider_token);
-      await fetchAndSyncGoogleCalendarEvents(session.provider_token);
+      if (sessionStorage.getItem("4p_sync_google_cal_on_load") === "true") {
+        sessionStorage.removeItem("4p_sync_google_cal_on_load");
+        switchView("schedule");
+      }
+    } catch (err) {
+      console.error("Napaka pri nalaganju podatkov delodajalca:", err);
+    } finally {
+      // Odstrani loading zaslon z gladkim fadeout prehodom
+      hideLoadingScreen();
     }
-    updateExternalCalStatusUI();
-
-    if (sessionStorage.getItem("4p_sync_google_cal_on_load") === "true") {
-      sessionStorage.removeItem("4p_sync_google_cal_on_load");
-      switchView("schedule");
-    }
-
-    // Odstrani loading zaslon z gladkim fadeout prehodom
-    hideLoadingScreen();
   } else {
     clearUserState();
     if (authScreen) {
@@ -2221,7 +2224,7 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       } else if (!hasActiveConnection) {
         emp.status = "Prekinjena povezava";
       }
-    }
+
       const reqSalaryType = req.salary_type || null;
       const reqHourlyRate = Number(req.hourly_rate) || 0;
       const reqRateHistory = req.rate_history || [];

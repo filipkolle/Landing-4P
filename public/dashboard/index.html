@@ -39,6 +39,18 @@
         </div>
       </div>
     </div>
+    <script>
+      setTimeout(function() {
+        var loader = document.getElementById("appLoadingScreen");
+        if (loader && !loader.hidden && loader.style.display !== "none") {
+          loader.classList.add("fade-out");
+          setTimeout(function() {
+            loader.hidden = true;
+            loader.style.display = "none";
+          }, 450);
+        }
+      }, 3500);
+    </script>
 
     <!-- 1. Professional Company Auth Screen -->
     <div id="authScreen" class="auth-screen">
@@ -2030,6 +2042,6 @@
       </div>
     </dialog>
 
-    <script src="app.js?v=106"></script>
+    <script src="app.js?v=107"></script>
   </body>
 </html>
