@@ -507,10 +507,13 @@
             <!-- Glavna kartica zaposlenega z metriko -->
             <section class="panel employee-profile-panel" style="margin-bottom: 20px;">
               <div class="emp-profile-header" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-                <div class="emp-profile-info">
+                <div class="emp-profile-info" style="display: flex; align-items: center; gap: 14px;">
                   <span class="avatar emp-profile-avatar" id="empDetailAvatar">--</span>
-                  <div>
-                    <h2 id="empDetailName" style="margin: 0 0 4px; font-size: 22px;">-</h2>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                      <h2 id="empDetailName" style="margin: 0; font-size: 22px;">-</h2>
+                      <div id="empDetailSectorBadges" style="display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+                    </div>
                     <div id="empDetailBadges" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
                   </div>
                 </div>
@@ -1957,7 +1960,7 @@
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 22px;">⚙️</span>
               <div>
-                <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);" id="manageEmpSectorsTitle">Uredi sektorje zaposlenega</h2>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--ink);" id="manageEmpSectorsTitle">Dodeli sektorje zaposlenemu</h2>
                 <p style="margin: 2px 0 0; font-size: 12px; color: var(--muted);">Dodelite ali odstranite sektorje zaposlenemu</p>
               </div>
             </div>

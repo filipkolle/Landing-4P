@@ -1992,6 +1992,16 @@ window.handleSendEmployeeInvitation = async function (event) {
 // Upravljanje dodeljenih sektorjev zaposlenega (dodajanje/odstranjevanje sektorjev)
 // ==========================================================================
 
+function getEmployeeAssignedSectors(employee) {
+  if (!employee || !employee.sectors) return [];
+  if (employee.isManual) {
+    const manualEmp = (state.manualEmployees || []).find((m) => m.id === employee.id);
+    const assignedIds = new Set(manualEmp?.sectorIds || (manualEmp?.workplace_id ? [manualEmp.workplace_id] : []));
+    return Object.values(employee.sectors).filter((s) => assignedIds.has(s.sectorId) && !s.isDisconnected);
+  }
+  return Object.values(employee.sectors).filter((s) => s.isAssigned === true && !s.isDisconnected);
+}
+
 window.openManageEmployeeSectorsModal = function (employeeId) {
   const emp = state.employees.find((e) => e.id === employeeId);
   if (!emp) return;
@@ -2003,9 +2013,10 @@ window.openManageEmployeeSectorsModal = function (employeeId) {
   if (empIdInput) empIdInput.value = emp.id;
 
   const titleEl = $("#manageEmpSectorsTitle");
-  if (titleEl) titleEl.textContent = `Sektorji zaposlenega: ${emp.name}`;
+  if (titleEl) titleEl.textContent = `Dodeli sektor: ${emp.name}`;
 
-  const currentSectorIds = new Set(Object.keys(emp.sectors || {}));
+  const assignedSectors = getEmployeeAssignedSectors(emp);
+  const currentSectorIds = new Set(assignedSectors.map((s) => s.sectorId));
 
   const list = $("#manageEmpSectorsList");
   if (list) {
@@ -2055,7 +2066,6 @@ window.handleSaveEmployeeSectors = async function (event) {
   if (btn) btn.disabled = true;
 
   try {
-    const currentSectorIds = new Set(Object.keys(emp.sectors || {}));
     const newSectorIdsSet = new Set(selectedSectorIds);
 
     // 1. Če gre za ročno ustvarjen profil
@@ -2063,70 +2073,90 @@ window.handleSaveEmployeeSectors = async function (event) {
       const manualEmp = state.manualEmployees.find((m) => m.id === employeeId);
       if (manualEmp) {
         manualEmp.sectorIds = selectedSectorIds;
+        manualEmp.workplace_id = selectedSectorIds[0];
         saveManualEmployeesLocal();
       }
     }
 
     // 2. Če gre za povezanega Supabase uporabnika
     if (supabaseClient && !emp.isManual) {
-      const conn = (state.approvedRequests || []).find((r) => r.user_id === employeeId);
-      const connId = conn ? conn.connection_id : null;
+      const conn = (state.approvedRequests || []).find((r) => r.user_id === employeeId) ||
+                   (state.connectionsByUserId ? state.connectionsByUserId.get(employeeId) : null);
+      const connId = conn ? (conn.connection_id || conn.id) : null;
 
-      // Sektorji, ki jih moramo dodati ali znova aktivirati
-      for (const secId of selectedSectorIds) {
+      const allCompanySectors = state.sectors || [];
+
+      for (const sector of allCompanySectors) {
+        const secId = sector.id;
+        const isSelected = newSectorIdsSet.has(secId);
+
         const { data: existing } = await supabaseClient
           .from("workplace_requests")
-          .select("id")
+          .select("id, status, is_active")
           .eq("user_id", employeeId)
           .eq("workplace_id", secId)
           .maybeSingle();
 
-        if (existing) {
-          await supabaseClient
-            .from("workplace_requests")
-            .update({
-              status: "approved",
-              is_active: true,
-              connection_id: connId || undefined,
-              disconnected_at: null,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", existing.id);
+        if (isSelected) {
+          // SEKTOR JE DODELJEN (aktiven)
+          if (existing) {
+            await supabaseClient
+              .from("workplace_requests")
+              .update({
+                status: "approved",
+                is_active: true,
+                connection_id: connId || undefined,
+                disconnected_at: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existing.id);
+          } else {
+            await supabaseClient
+              .from("workplace_requests")
+              .insert({
+                workplace_id: secId,
+                user_id: employeeId,
+                user_name: emp.name,
+                status: "approved",
+                connection_id: connId || null,
+                is_active: true,
+                disconnected_at: null,
+                updated_at: new Date().toISOString()
+              });
+          }
         } else {
-          await supabaseClient
-            .from("workplace_requests")
-            .insert({
-              workplace_id: secId,
-              user_id: employeeId,
-              user_name: emp.name,
-              status: "approved",
-              connection_id: connId || null,
-              is_active: true,
-              disconnected_at: null,
-              updated_at: new Date().toISOString()
-            });
-        }
-      }
+          // SEKTOR JE ODSTRANJEN (onemogočen)
+          if (existing && (existing.status !== "disconnected" || existing.is_active !== false)) {
+            await supabaseClient
+              .from("workplace_requests")
+              .update({
+                status: "disconnected",
+                is_active: false,
+                disconnected_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existing.id);
+          }
 
-      // Sektorji, ki so bili odverjeni (onemogočeni)
-      for (const oldSecId of currentSectorIds) {
-        if (!newSectorIdsSet.has(oldSecId)) {
-          await supabaseClient
-            .from("workplace_requests")
-            .update({
-              status: "disconnected",
-              is_active: false,
-              disconnected_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq("user_id", employeeId)
-            .eq("workplace_id", oldSecId);
+          // Prav tako posodobimo income_sources za delavca
+          try {
+            await supabaseClient
+              .from("income_sources")
+              .update({
+                is_active: false,
+                workplace_status: "disconnected"
+              })
+              .eq("user_id", employeeId)
+              .eq("workplace_id", secId);
+          } catch (e) {
+            console.warn("Could not sync income_sources from dashboard:", e);
+          }
         }
       }
     }
 
     closeManageEmployeeSectorsModal();
-    showToast(`Sektorji zaposlenega (${emp.name}) so bili uspešno posodobljeni!`, "success");
+    showToast(`Dodeljeni sektorji za ${emp.name} so bili uspešno shranjeni!`, "success");
     await loadAllData();
     if (state.selectedEmployeeId === employeeId) {
       renderEmployeeDetail(employeeId);
@@ -2155,7 +2185,23 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
   });
 
   // 1. Process approved and historical requests
+  // Razvrstimo ali zberemo zadnje stanje zahteve za vsak sektor posameznega uporabnika
+  const latestReqMap = new Map();
   approvedReqs.forEach((req) => {
+    const key = `${req.user_id}_${req.workplace_id}`;
+    const cur = latestReqMap.get(key);
+    if (!cur) {
+      latestReqMap.set(key, req);
+    } else {
+      const curTime = new Date(cur.updated_at || cur.created_at || 0).getTime();
+      const newTime = new Date(req.updated_at || req.created_at || 0).getTime();
+      if (newTime > curTime) {
+        latestReqMap.set(key, req);
+      }
+    }
+  });
+
+  latestReqMap.forEach((req) => {
     const userId = req.user_id;
     if (!userId) return;
 
@@ -2178,24 +2224,11 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
     // Check connection status: active, resigned, dismissed or disconnected
     const isResigned = req.status === "resigned" || req.termination_type === "resignation" || req.terminated_by === "employee";
     const isDismissed = req.status === "dismissed" || req.termination_type === "dismissal" || req.terminated_by === "employer";
-    const isReqDisconnected = req.status === "disconnected" || isResigned || isDismissed || Boolean(req.disconnected_at);
-    let hasActiveConnection = !isReqDisconnected && (req.status === "approved" || req.is_active === true) && !isConnInvited;
+    const isReqDisconnected = req.status === "disconnected" || isResigned || isDismissed || Boolean(req.disconnected_at) || req.is_active === false;
+    const isSectorActive = (req.status === "approved" || req.is_active === true) && !isReqDisconnected && !isConnInvited;
 
     const liveName = state.userProfiles.get(userId);
     const userName = (liveName && liveName !== "Neznan uporabnik") ? liveName : (req.user_name || "Zaposleni");
-
-    let userStatus = "Zaposlen";
-    if (isConnInvited || req.status === "invited") {
-      userStatus = "Čaka na odobritev zaposlenega";
-    } else if (isResigned) {
-      userStatus = "Delavec je dal odpoved";
-    } else if (isDismissed) {
-      userStatus = "Zaposleni odpuščen";
-    } else if (!hasActiveConnection) {
-      userStatus = "Prekinjena povezava";
-    } else if (state.employeeCustomStatuses?.[userId]) {
-      userStatus = state.employeeCustomStatuses[userId];
-    }
 
     const reqDateStr = req.created_at || req.joined_at || req.updated_at || "";
     const reqMonthKey = reqDateStr ? reqDateStr.slice(0, 7) : null;
@@ -2204,8 +2237,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       empMap.set(userId, {
         id: userId,
         name: userName,
-        status: userStatus,
-        isDisconnected: !hasActiveConnection && !isConnInvited,
+        status: isConnInvited ? "Čaka na odobritev zaposlenega" : (isResigned ? "Delavec je dal odpoved" : (isDismissed ? "Zaposleni odpuščen" : (isSectorActive ? (state.employeeCustomStatuses?.[userId] || "Zaposlen") : "Prekinjena povezava"))),
+        isDisconnected: !isSectorActive && !isConnInvited,
         isResigned: isResigned,
         isDismissed: isDismissed,
         isInvited: Boolean(isConnInvited || req.status === "invited"),
@@ -2234,20 +2267,10 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
       if (isDismissed) {
         emp.isDismissed = true;
       }
-      // Status resolution across multiple requests/sectors
-      if (isConnInvited || req.status === "invited") {
-        emp.isDisconnected = false;
-        emp.isInvited = true;
-        emp.status = "Čaka na odobritev zaposlenega";
-      } else if (req.status === "approved" || req.is_active === true) {
+
+      if (isSectorActive) {
         emp.isDisconnected = false;
         emp.status = state.employeeCustomStatuses?.[userId] || "Zaposlen";
-      } else if (emp.isResigned) {
-        emp.status = "Delavec je dal odpoved";
-      } else if (emp.isDismissed) {
-        emp.status = "Zaposleni odpuščen";
-      } else if (!hasActiveConnection) {
-        emp.status = "Prekinjena povezava";
       }
 
       const reqSalaryType = req.salary_type || null;
@@ -2267,7 +2290,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
           isProject: reqSalaryType === "project",
           netSalary: 0,
           jobName: wp.name || matchedSector.name,
-          isDisconnected: !hasActiveConnection,
+          isAssigned: isSectorActive,
+          isDisconnected: !isSectorActive,
           joinedMonth: reqMonthKey,
           hasConfiguredPayment: hasReqPaymentConfig,
           hours: {},
@@ -2276,6 +2300,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
           paid: {},
         };
       } else {
+        emp.sectors[matchedSector.id].isAssigned = isSectorActive;
+        emp.sectors[matchedSector.id].isDisconnected = !isSectorActive;
         if (hasReqPaymentConfig) {
           emp.sectors[matchedSector.id].hasConfiguredPayment = true;
           if (reqSalaryType) {
@@ -2290,6 +2316,26 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         if (reqMonthKey && (!emp.sectors[matchedSector.id].joinedMonth || reqMonthKey < emp.sectors[matchedSector.id].joinedMonth)) {
           emp.sectors[matchedSector.id].joinedMonth = reqMonthKey;
         }
+      }
+    }
+  });
+
+  // Določi emp.isDisconnected in status glede na aktivne sektorje
+  empMap.forEach((emp) => {
+    const hasAnyActiveSector = Object.values(emp.sectors).some((s) => s.isAssigned && !s.isDisconnected);
+    if (hasAnyActiveSector) {
+      emp.isDisconnected = false;
+      if (!emp.isInvited) {
+        emp.status = state.employeeCustomStatuses?.[emp.id] || "Zaposlen";
+      }
+    } else {
+      emp.isDisconnected = true;
+      if (emp.isResigned) {
+        emp.status = "Delavec je dal odpoved";
+      } else if (emp.isDismissed) {
+        emp.status = "Zaposleni odpuščen";
+      } else if (!emp.isInvited) {
+        emp.status = "Prekinjena povezava";
       }
     }
   });
@@ -2529,7 +2575,8 @@ function syncEmployeesAndLogs(approvedReqs, sources, logs) {
         isProject: matchedSectorInfo.isProject || false,
         netSalary: matchedSectorInfo.netSalary || 0,
         jobName: matchedSectorInfo.jobName || matchedSectorInfo.sectorName,
-        isDisconnected: emp.isDisconnected || false,
+        isAssigned: false,
+        isDisconnected: true,
         joinedMonth: matchedSectorInfo.joinedMonth || null,
         hours: {},
         travelExpenses: {},
@@ -3533,7 +3580,7 @@ function getEmployeePaymentSetupStatus(employee) {
     };
   }
 
-  const sectors = Object.values(employee.sectors || {});
+  const sectors = getEmployeeAssignedSectors(employee);
   if (sectors.length === 0) {
     return {
       allConfigured: false,
@@ -3636,7 +3683,7 @@ function renderPaymentStatusIndicator(employee) {
 
 function employeeRow(employee) {
   const month = employeeMonth(employee);
-  const employeeSectors = Object.values(employee.sectors || {});
+  const employeeSectors = getEmployeeAssignedSectors(employee);
   const initialsText = initials(employee.name);
   const travelDisplay = month.travelExpenses > 0 ? currency.format(month.travelExpenses) : `<span style="color: var(--muted);">-</span>`;
   const payIndicatorHTML = renderPaymentStatusIndicator(employee);
@@ -3840,7 +3887,7 @@ function renderEmployees() {
       return false;
     }
     const matchesSearch = employee.name.toLowerCase().includes(search);
-    const matchesSector = sectorFilterVal === "all" || Boolean(employee.sectors?.[sectorFilterVal]);
+    const matchesSector = sectorFilterVal === "all" || Boolean(employee.sectors?.[sectorFilterVal]?.isAssigned && !employee.sectors?.[sectorFilterVal]?.isDisconnected);
     return matchesSearch && matchesSector;
   });
 
@@ -3851,7 +3898,7 @@ function renderEmployees() {
   } else {
     $("#employeesTable").innerHTML = filtered
       .map((employee) => {
-        const employeeSectors = Object.values(employee.sectors || {});
+        const employeeSectors = getEmployeeAssignedSectors(employee);
         const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
         const status = employee.status || "Zaposlen";
         const payIndicatorHTML = renderPaymentStatusIndicator(employee);
@@ -4153,8 +4200,19 @@ function renderEmployeeDetail(employeeId) {
   }
   if ($("#empDetailMonthPill")) $("#empDetailMonthPill").textContent = monthLabel;
 
-  const employeeSectors = Object.values(employee.sectors || {});
-  const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
+  const assignedSectors = getEmployeeAssignedSectors(employee);
+  const sectorBadgesHTML = renderEmployeeSectorsList(assignedSectors, false);
+
+  const assignSectorBtnHTML = !isDisconnected
+    ? `<button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 4px;" title="Dodeli ali spremeni sektorje za tega zaposlenega">⚙️ Dodeli sektor</button>`
+    : "";
+
+  if ($("#empDetailSectorBadges")) {
+    $("#empDetailSectorBadges").innerHTML = `
+      ${sectorBadgesHTML}
+      ${assignSectorBtnHTML}
+    `;
+  }
 
   const availableStatuses = state.customStatuses && state.customStatuses.length > 0
     ? state.customStatuses
@@ -4261,17 +4319,11 @@ function renderEmployeeDetail(employeeId) {
        <button type="button" class="ghost-button" onclick="handleDeleteManualEmployee('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fecaca; color: #ef4444; background: #fff;">🗑️ Izbriši profil</button>`
     : "";
 
-  const editSectorsBtnHTML = !isDisconnected
-    ? `<button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 4px;" title="Dodaj ali odstrani sektorje za tega zaposlenega">⚙️ Uredi sektorje</button>`
-    : "";
-
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusBadgeHTML}
       ${isDisconnected ? "" : workTypeDropdownHTML}
       ${manualBadgeHTML}
-      ${sectorBadgesHTML}
-      ${editSectorsBtnHTML}
       ${disconnectedBannerHTML}
       ${invitedBannerHTML}
     `;
@@ -4294,6 +4346,7 @@ function renderEmployeeDetail(employeeId) {
   let totalEarnings = 0;
   let unpaidAmount = 0;
 
+  const employeeSectors = Object.values(employee.sectors || {});
   if (employeeSectors.length > 0) {
     employeeSectors.forEach((sec) => {
       const secJoined = sec.joinedMonth || employee.joinedMonth || "2000-01";
