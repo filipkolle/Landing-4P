@@ -4,9 +4,13 @@
 -- Zaženite ta SQL v Supabase SQL Editorju.
 -- ============================================================================
 
--- 1. Predogled podjetja po kodi: preveri tudi, ali je prijavljeni uporabnik že povezan
-DROP FUNCTION IF EXISTS public.lookup_employer_by_code(TEXT);
+-- Najprej odstranimo stare funkcije, da se izognemo napaki 42P13 (cannot change return type)
+DROP FUNCTION IF EXISTS public.lookup_employer_by_code(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.request_employer_by_code(TEXT, BOOLEAN) CASCADE;
+DROP FUNCTION IF EXISTS public.lookup_employee_by_code(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.invite_employee_by_code(TEXT, UUID[]) CASCADE;
 
+-- 1. Predogled podjetja po kodi: preveri tudi, ali je prijavljeni uporabnik že povezan
 CREATE OR REPLACE FUNCTION public.lookup_employer_by_code(p_code TEXT)
 RETURNS TABLE (company_name TEXT, is_already_connected BOOLEAN, connection_status TEXT)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
