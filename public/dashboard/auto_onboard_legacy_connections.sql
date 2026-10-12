@@ -100,31 +100,21 @@ BEGIN
           AND wr.status = 'approved';
 
         -- Sinhroniziraj vire dohodka v aplikaciji (income_sources)
-        -- A) Po točnem workplace_id
+        -- SAMO in IZKLJUČNO tiste vire, ki imajo potrjeno aktivno delovno mesto pri tem delodajalcu
         UPDATE public.income_sources s
         SET connection_id = v_conn_id,
             employer_name = v_company_name,
             company_name = v_company_name,
             workplace_status = 'approved',
             is_active = true
-        FROM public.workplaces w
+        FROM public.workplaces w, public.workplace_requests wr
         WHERE s.workplace_id = w.id
           AND w.employer_id = r.employer_id
-          AND s.user_id = r.user_id;
-
-        -- B) Po ujemajočem imenu podjetja ali delodajalca
-        UPDATE public.income_sources s
-        SET connection_id = v_conn_id,
-            employer_name = v_company_name,
-            company_name = v_company_name,
-            workplace_status = 'approved',
-            is_active = true
-        WHERE s.user_id = r.user_id
-          AND (
-            LOWER(TRIM(s.name)) = LOWER(TRIM(v_company_name))
-            OR LOWER(TRIM(COALESCE(s.company_name, ''))) = LOWER(TRIM(v_company_name))
-            OR LOWER(TRIM(COALESCE(s.employer_name, ''))) = LOWER(TRIM(v_company_name))
-          );
+          AND s.user_id = r.user_id
+          AND wr.workplace_id = w.id
+          AND wr.user_id = r.user_id
+          AND wr.status = 'approved'
+          AND wr.is_active = true;
     END LOOP;
 END $$;
 
