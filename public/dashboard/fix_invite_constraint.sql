@@ -416,8 +416,16 @@ RETURNS TABLE (
   connection_id UUID,
   status TEXT
 ) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_employer_id UUID;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
+
+  IF p_connection_id IS NOT NULL THEN
+    SELECT employer_id INTO v_employer_id
+    FROM public.employer_connections
+    WHERE id = p_connection_id;
+  END IF;
 
   RETURN QUERY
   SELECT
@@ -430,9 +438,13 @@ BEGIN
   FROM public.workplace_requests wr
   JOIN public.workplaces w ON w.id = wr.workplace_id
   WHERE wr.user_id = auth.uid()
-    AND (p_connection_id IS NULL OR wr.connection_id = p_connection_id OR wr.connection_id IS NULL)
     AND wr.status IN ('invited', 'approved')
-    AND COALESCE(wr.is_active, true) = true;
+    AND COALESCE(wr.is_active, true) = true
+    AND (
+      (p_connection_id IS NOT NULL AND (wr.connection_id = p_connection_id OR (v_employer_id IS NOT NULL AND w.employer_id = v_employer_id)))
+      OR
+      (p_connection_id IS NULL)
+    );
 END $$;
 
 GRANT EXECUTE ON FUNCTION public.get_assigned_workplaces_for_user(UUID) TO authenticated;
