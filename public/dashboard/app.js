@@ -5786,6 +5786,15 @@ function formatSloDateString(dateStr) {
   return `${dayName}, ${d}. ${SLO_MONTH_NAMES[m].toLowerCase()} ${y}`;
 }
 
+function formatEuDateShort(dateStr) {
+  if (!dateStr) return "";
+  const parts = String(dateStr).split("T")[0].split("-");
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parseInt(parts[2], 10)}. ${parseInt(parts[1], 10)}. ${parts[0]}`;
+  }
+  return dateStr;
+}
+
 function getWeekBoundaries(dateObj) {
   const d = new Date(dateObj);
   const day = (d.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
@@ -7449,7 +7458,7 @@ window.renderExistingAbsencesForEmployee = function (userId) {
                 ${typeLabel} (${ab.payRatePercent} %)
               </div>
               <div style="font-size: 11px; color: var(--muted); margin-top: 1px;">
-                ${ab.startDate} do ${ab.endDate} · ${workDays} dni (${number.format(totalHours)} h)
+                ${formatEuDateShort(ab.startDate)} do ${formatEuDateShort(ab.endDate)} · ${workDays} dni (${number.format(totalHours)} h)
                 ${ab.note ? ` · <span style="font-style: italic;">${ab.note}</span>` : ""}
               </div>
             </div>
