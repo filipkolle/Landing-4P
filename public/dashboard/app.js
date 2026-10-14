@@ -4675,7 +4675,7 @@ function renderEmployeeDetail(employeeId) {
           const color = log.color || "#56829d";
           const timeInterval = log.startTime && log.endTime ? `${log.startTime} – ${log.endTime}` : "Čas ni specificiran";
           const parts = log.date.split("-");
-          const formattedDate = parts.length === 3 ? `${parseInt(parts[2], 10)}. ${SLO_MONTH_NAMES[parseInt(parts[1], 10) - 1].toLowerCase()} ${parts[0]}` : log.date;
+          const formattedDate = parts.length === 3 ? `${parseInt(parts[2], 10)}. ${parseInt(parts[1], 10)}. ${parts[0]}` : log.date;
           const travelDisplay = (log.travelExpenses || 0) > 0 ? currency.format(log.travelExpenses) : `<span style="color: var(--muted);">-</span>`;
           const paidControl = `
             <label class="paid-toggle" onclick="event.stopPropagation();">
@@ -5783,7 +5783,7 @@ function formatSloDateString(dateStr) {
   const d = parseInt(parts[2], 10);
   const dateObj = new Date(y, m, d);
   const dayName = SLO_DAY_NAMES[dateObj.getDay()];
-  return `${dayName}, ${d}. ${SLO_MONTH_NAMES[m].toLowerCase()} ${y}`;
+  return `${dayName}, ${d}. ${m + 1}. ${y}`;
 }
 
 function formatEuDateShort(dateStr) {
