@@ -6100,17 +6100,18 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     }
 
     const dayAbsences = getAbsencesForDate(dateStr);
+    const hasAbsence = dayAbsences.length > 0;
     let absencesHtml = "";
-    if (dayAbsences.length > 0) {
+    if (hasAbsence) {
       absencesHtml = `
         <div class="schedule-cell-absences-wrap">
           ${dayAbsences.map((ab) => `
             <div class="schedule-absence-chip ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
               <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
                 <span style="font-size: 10px;">${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
-                <span style="font-size: 10px; font-weight: 700; color: #b91c1c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Odsoten: ${ab.userName}</span>
+                <span style="font-size: 10px; font-weight: 700; color: #047857; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Odsoten: ${ab.userName}</span>
               </div>
-              <span style="font-size: 9px; font-weight: 800; flex-shrink: 0; padding: 1px 4px; border-radius: 3px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;">${getAbsenceTypeShortLabel(ab.type)}</span>
+              <span style="font-size: 9px; font-weight: 800; flex-shrink: 0; padding: 1px 4px; border-radius: 3px; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;">${getAbsenceTypeShortLabel(ab.type)}</span>
             </div>
           `).join("")}
         </div>
@@ -6118,7 +6119,7 @@ function renderScheduleMonthView(container, dateObj, shifts) {
     }
 
     html += `
-      <div class="schedule-month-cell ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
+      <div class="schedule-month-cell ${hasAbsence ? "has-absence" : ""} ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
         <div class="schedule-cell-top">
           <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden;">
             <span class="cal-day-num ${isToday ? "is-today-badge" : ""}">${d}</span>
@@ -6257,22 +6258,23 @@ function renderScheduleWeekView(container, days, shifts) {
     }
 
     const dayAbsences = getAbsencesForDate(dateStr);
+    const hasAbsence = dayAbsences.length > 0;
     let absencesWeekHtml = "";
-    if (dayAbsences.length > 0) {
+    if (hasAbsence) {
       absencesWeekHtml = `
         <div class="schedule-week-absences-section">
           ${dayAbsences.map((ab) => `
             <div class="schedule-week-absence-card ${ab.type}" onclick="event.stopPropagation(); openAbsenceModal('${ab.userId}', '${dateStr}')" title="Odsoten: ${ab.userName} (${getAbsenceTypeLabel(ab.type)}, ${ab.hoursPerDay}h). Kliknite za podrobnosti.">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <span style="font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b91c1c;">
+                <span style="font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #047857;">
                   <span>${ab.type === 'vacation' ? '🌴' : (ab.type === 'sick_leave' ? '🩺' : '📋')}</span>
                   <span>Odsoten: <strong>${ab.userName}</strong></span>
                 </span>
-                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;">
+                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;">
                   ${getAbsenceTypeLabel(ab.type)}
                 </span>
               </div>
-              ${ab.note ? `<div style="font-size: 10px; opacity: 0.85; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ab.note}</div>` : ""}
+              ${ab.note ? `<div style="font-size: 10px; color: #065f46; opacity: 0.9; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ab.note}</div>` : ""}
             </div>
           `).join("")}
         </div>
@@ -6316,7 +6318,7 @@ function renderScheduleWeekView(container, days, shifts) {
 
     const holidayName = getSlovenianHolidayName(dateStr);
     html += `
-      <div class="cal-week-col ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
+      <div class="cal-week-col ${hasAbsence ? "has-absence" : ""} ${isToday ? "is-today" : ""} ${holidayName ? "is-holiday" : ""}" onclick="openDayDetailsModal('${dateStr}')">
         <div class="cal-week-header ${isToday ? "is-today-header" : ""}">
           <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <span class="cal-week-day-name">${SLO_DAY_HEADERS[idx]}</span>

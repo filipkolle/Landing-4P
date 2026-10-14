@@ -34,11 +34,33 @@ CREATE POLICY "Employer full access to employee absences"
   USING (employer_id = auth.uid())
   WITH CHECK (employer_id = auth.uid());
 
--- 5. Varnostna politika za zaposlenega (branje lastnih odsotnosti)
+-- 5. Varnostne politike za zaposlenega (branje in vnos lastnih odsotnosti)
 DROP POLICY IF EXISTS "Employee view own absences" ON public.employee_absences;
 CREATE POLICY "Employee view own absences"
   ON public.employee_absences
   FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Employee insert own absences" ON public.employee_absences;
+CREATE POLICY "Employee insert own absences"
+  ON public.employee_absences
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Employee update own absences" ON public.employee_absences;
+CREATE POLICY "Employee update own absences"
+  ON public.employee_absences
+  FOR UPDATE
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Employee delete own absences" ON public.employee_absences;
+CREATE POLICY "Employee delete own absences"
+  ON public.employee_absences
+  FOR DELETE
   TO authenticated
   USING (user_id = auth.uid());
 

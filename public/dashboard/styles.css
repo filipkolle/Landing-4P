@@ -5393,6 +5393,36 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   border-top: 1px dashed rgba(148, 163, 184, 0.35);
 }
 
+/* Absence calendar styling - Green as requested */
+.schedule-month-cell.has-absence {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+
+.schedule-month-cell.has-absence:hover {
+  background: #ecfdf5 !important;
+  border-color: #4ade80 !important;
+}
+
+.schedule-month-cell.has-absence .cal-day-num {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.cal-week-col.has-absence {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+
+.cal-week-col.has-absence .cal-week-header {
+  background: #dcfce7 !important;
+  border-bottom: 1px solid #86efac !important;
+}
+
+.cal-week-col.has-absence .cal-week-date-num {
+  color: #15803d;
+}
+
 .schedule-absence-chip {
   display: flex;
   align-items: center;
@@ -5404,26 +5434,26 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   font-weight: 600;
   cursor: pointer;
   transition: all 140ms ease;
-  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.05);
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
   overflow: hidden;
-  background: #fef2f2 !important;
-  border: 1px solid #fecaca !important;
-  color: #b91c1c !important;
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #065f46 !important;
 }
 
 .schedule-absence-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.15);
-  background: #fee2e2 !important;
-  border-color: #fca5a5 !important;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2);
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
 }
 
 .schedule-absence-chip.vacation,
 .schedule-absence-chip.sick_leave,
 .schedule-absence-chip.other {
-  background: #fef2f2 !important;
-  border: 1px solid #fecaca !important;
-  color: #b91c1c !important;
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #065f46 !important;
 }
 
 .schedule-week-absences-section {
@@ -5433,7 +5463,7 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   margin-top: auto !important;
   margin-bottom: 0px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(239, 68, 68, 0.35);
+  border-top: 1px dashed rgba(16, 185, 129, 0.45);
 }
 
 .schedule-week-absences-section + .schedule-week-add-btn {
@@ -5446,25 +5476,25 @@ dialog.modal::-webkit-scrollbar-thumb:hover {
   font-size: 11.5px;
   cursor: pointer;
   transition: all 140ms ease;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.06);
-  background: #fef2f2 !important;
-  border: 1px solid #fecaca !important;
-  color: #b91c1c !important;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.08);
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #065f46 !important;
 }
 
 .schedule-week-absence-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.18);
-  background: #fee2e2 !important;
-  border-color: #fca5a5 !important;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
 }
 
 .schedule-week-absence-card.vacation,
 .schedule-week-absence-card.sick_leave,
 .schedule-week-absence-card.other {
-  background: #fef2f2 !important;
-  border: 1px solid #fecaca !important;
-  color: #b91c1c !important;
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #065f46 !important;
 }
 
 .absence-type-option {
