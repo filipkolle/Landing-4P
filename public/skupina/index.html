@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Finance 4P | Skupna poraba</title>
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0b132b;
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(56, 189, 248, 0.18) 0px, transparent 50%),
+        radial-gradient(at 90% 80%, rgba(124, 58, 237, 0.22) 0px, transparent 50%);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justifyContent: center;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 30px;
+      padding: 38px 24px 30px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .icon-badge {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px auto;
+      font-size: 32px;
+      box-shadow: 0 10px 24px rgba(56, 189, 248, 0.35);
+    }
+    .tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      color: #ffffff;
+      word-break: break-word;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14.5px;
+      line-height: 1.5;
+      margin-bottom: 26px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 9999px;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(56, 189, 248, 0.32);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      margin-bottom: 12px;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+      color: #e2e8f0;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+    .status-text {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="icon-badge">👥</div>
+      <div class="tag">Skupna poraba</div>
+      <h1 id="groupTitle">Skupna poraba</h1>
+      <p id="inviterText">Nekdo vas vabi, da se pridružite skupini v aplikaciji Finance 4P.</p>
+
+      <a id="openAppBtn" href="#" class="btn">Odpri v aplikaciji</a>
+      <a id="storeBtn" href="https://apps.apple.com/app/id6745018980" class="btn btn-secondary">Prenesi v App Store</a>
+
+      <div class="status-text" id="statusBox">
+        <span class="pulse-dot"></span>
+        <span id="statusLabel">Preusmerjanje v aplikacijo ...</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var groupId = params.get('join_group') || '';
+      var groupName = params.get('group_name') || 'Skupna poraba';
+      var inviter = params.get('inviter') || 'Uporabnik';
+
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      var isAndroid = /Android/.test(navigator.userAgent);
+
+      // Povezava do trgovine
+      var storeUrl = isIOS 
+        ? 'https://apps.apple.com/app/id6745018980' 
+        : 'https://play.google.com/store/apps/details?id=com.finance4p.app';
+
+      // Shema za zagon nameščene aplikacije
+      var appUrl = 'com.finance4p.app://?' + params.toString();
+
+      // Posodobi besedila na kartici
+      var cleanTitle = groupName;
+      try { cleanTitle = decodeURIComponent(String(groupName).replace(/\+/g, ' ')); } catch (_) {}
+      var cleanInviter = inviter;
+      try { cleanInviter = decodeURIComponent(String(inviter).replace(/\+/g, ' ')); } catch (_) {}
+      document.getElementById('groupTitle').textContent = cleanTitle;
+      document.getElementById('inviterText').innerHTML = '<strong>' + cleanInviter + '</strong> vas vabi, da se pridružite skupini.';
+      document.getElementById('openAppBtn').href = appUrl;
+      document.getElementById('storeBtn').href = storeUrl;
+      document.getElementById('storeBtn').textContent = isAndroid ? 'Prenesi v Google Play' : 'Prenesi v App Store';
+
+      // 1. Takoj poskusi odpreti nameščeno aplikacijo
+      window.location.href = appUrl;
+
+      // 2. Če uporabnik po 1.8 sekunde še ni zapustil strani (aplikacija ni nameščena), ga preusmeri v trgovino
+      var clickedAt = Date.now();
+      setTimeout(function() {
+        var elapsed = Date.now() - clickedAt;
+        if (elapsed < 2600) {
+          // Stran je bila še aktivna -> aplikacija ni nameščena
+          document.getElementById('statusLabel').textContent = 'Aplikacija ni nameščena. Preusmerjanje v trgovino ...';
+          window.location.href = storeUrl;
+        }
+      }, 1800);
+    })();
+  </script>
+</body>
+</html>

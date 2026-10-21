@@ -1384,7 +1384,7 @@ async function fetchPendingRequests() {
             isConnection: true,
             connection_id: c.id,
             user_id: c.user_id,
-            user_name: c.user_name || state.userProfiles.get(c.user_id) || "Uporabnik",
+            user_name: (state.userProfiles.get(c.user_id) && state.userProfiles.get(c.user_id) !== "Neznan uporabnik") ? state.userProfiles.get(c.user_id) : (c.user_name || "Uporabnik"),
             company_name: c.company_name,
             created_at: c.created_at,
           });
@@ -1413,7 +1413,7 @@ async function fetchPendingRequests() {
                 workplace_request_id: req.id,
                 connection_id: req.connection_id,
                 user_id: req.user_id,
-                user_name: req.user_name || state.userProfiles.get(req.user_id) || "Uporabnik",
+                user_name: (state.userProfiles.get(req.user_id) && state.userProfiles.get(req.user_id) !== "Neznan uporabnik") ? state.userProfiles.get(req.user_id) : (req.user_name || "Uporabnik"),
                 workplaces: req.workplaces,
                 created_at: req.created_at,
               });
