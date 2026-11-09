@@ -675,12 +675,18 @@ async function loadAllData() {
 async function fetchWorkplaces() {
   if (!supabaseClient || !state.currentUser) return;
   try {
-    const { data, error } = await supabaseClient.from("workplaces").select("*");
+    const currentUserId = state.currentUser.id;
+    let query = supabaseClient.from("workplaces").select("*");
+    if (currentUserId === "e469c8c8-0678-49fd-917d-0f60b031d006") {
+      query = query.or(`employer_id.eq.${currentUserId},sector_notes.ilike.%[emp:${currentUserId}]%,employer_id.is.null`);
+    } else {
+      query = query.or(`employer_id.eq.${currentUserId},sector_notes.ilike.%[emp:${currentUserId}]%`);
+    }
+    const { data, error } = await query;
     if (!error && Array.isArray(data)) {
       state.sectors = [];
       state.jobs = [];
       const sectorMap = new Map();
-      const currentUserId = state.currentUser.id;
 
       // Filter: Only keep workplaces belonging to this employer
       const myWorkplaces = data.filter((wp) => {
@@ -752,11 +758,11 @@ async function fetchEmployerConnections() {
 async function fetchUserProfiles() {
   if (!supabaseClient) return;
   try {
-    const { data, error } = await supabaseClient.from("user_profiles").select("*");
+    const { data, error } = await supabaseClient.from("user_profiles").select("id, name");
     if (!error && Array.isArray(data)) {
       state.userProfiles.clear();
       data.forEach((p) => {
-        state.userProfiles.set(p.id, p.name || p.full_name || "Neznan uporabnik");
+        state.userProfiles.set(p.id, p.name || "Neznan uporabnik");
       });
     }
   } catch (e) {
@@ -831,7 +837,19 @@ async function fetchApprovedRequests() {
 async function fetchIncomeSources() {
   if (!supabaseClient) return [];
   try {
-    const { data, error } = await supabaseClient.from("income_sources").select("*");
+    const myWpIds = (state.sectors || []).map((s) => s.id).filter(Boolean);
+    const myCodes = (state.sectors || []).map((s) => s.code).filter(Boolean);
+
+    let query = supabaseClient.from("income_sources").select("*");
+    if (myWpIds.length > 0 && myCodes.length > 0) {
+      query = query.or(`workplace_id.in.(${myWpIds.join(",")}),join_code.in.(${myCodes.join(",")})`);
+    } else if (myWpIds.length > 0) {
+      query = query.in("workplace_id", myWpIds);
+    } else if (myCodes.length > 0) {
+      query = query.in("join_code", myCodes);
+    }
+
+    const { data, error } = await query;
     if (!error && Array.isArray(data)) {
       state.incomeSources = data;
       return data;
@@ -904,10 +922,19 @@ async function fetchWorkLogs() {
   let dbLogs = [];
   if (supabaseClient) {
     try {
-      const { data: logs, error } = await supabaseClient
-        .from("work_logs")
-        .select("*")
-        .order("date", { ascending: false });
+      const myWpIds = (state.sectors || []).map((s) => s.id).filter(Boolean);
+      const mySourceIds = (state.incomeSources || []).map((s) => s.id).filter(Boolean);
+
+      let query = supabaseClient.from("work_logs").select("*").order("date", { ascending: false });
+      if (myWpIds.length > 0 && mySourceIds.length > 0) {
+        query = query.or(`workplace_id.in.(${myWpIds.join(",")}),source_id.in.(${mySourceIds.join(",")})`);
+      } else if (myWpIds.length > 0) {
+        query = query.in("workplace_id", myWpIds);
+      } else if (mySourceIds.length > 0) {
+        query = query.in("source_id", mySourceIds);
+      }
+
+      const { data: logs, error } = await query;
 
       if (!error && Array.isArray(logs)) {
         dbLogs = logs;
@@ -972,16 +999,31 @@ async function fetchScheduleShifts() {
 async function fetchOpenShifts() {
   if (!supabaseClient || !state.currentUser) return [];
   try {
-    const { data, error } = await supabaseClient
+    let rawData = null;
+    const resWithDeclines = await supabaseClient
       .from("open_shifts")
-      .select("*, open_shift_signups(*)")
+      .select("*, open_shift_signups(*), open_shift_declines(*)")
       .eq("employer_id", state.currentUser.id)
       .order("date", { ascending: true });
 
-    if (!error && Array.isArray(data)) {
-      state.openShifts = data.map((d) => {
+    if (!resWithDeclines.error && Array.isArray(resWithDeclines.data)) {
+      rawData = resWithDeclines.data;
+    } else {
+      const resFallback = await supabaseClient
+        .from("open_shifts")
+        .select("*, open_shift_signups(*)")
+        .eq("employer_id", state.currentUser.id)
+        .order("date", { ascending: true });
+      if (!resFallback.error && Array.isArray(resFallback.data)) {
+        rawData = resFallback.data;
+      }
+    }
+
+    if (Array.isArray(rawData)) {
+      state.openShifts = rawData.map((d) => {
         const sec = state.sectors.find((s) => s.id === d.workplace_id);
         const signups = d.open_shift_signups || [];
+        const declines = d.open_shift_declines || [];
         return {
           id: d.id,
           isOpenShift: true,
@@ -1004,6 +1046,17 @@ async function fetchOpenShifts() {
                 ? state.userProfiles.get(su.user_id)
                 : (su.user_name || emp?.name || "Zaposleni"),
               createdAt: su.created_at,
+            };
+          }),
+          declines: declines.map((dec) => {
+            const emp = state.employees.find((e) => e.id === dec.user_id);
+            return {
+              id: dec.id,
+              userId: dec.user_id,
+              userName: (state.userProfiles.get(dec.user_id) && state.userProfiles.get(dec.user_id) !== "Neznan uporabnik")
+                ? state.userProfiles.get(dec.user_id)
+                : (dec.user_name || emp?.name || "Zaposleni"),
+              createdAt: dec.created_at,
             };
           }),
         };
@@ -1247,49 +1300,51 @@ function countWorkingDaysInMonth(absence, monthKey) {
   return countWorkingDaysBetween(effectiveStart, effectiveEnd);
 }
 
-// 2. Real-time Listener & Polling for workplace_requests, work_logs, schedule_shifts, open_shifts, employee_absences
+let realtimeDebounceTimer = null;
+function debouncedLoadAllData() {
+  if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
+  realtimeDebounceTimer = setTimeout(() => {
+    if (state.currentUser) loadAllData();
+  }, 400);
+}
+
+// 2. Real-time Listener for workplace_requests, work_logs, schedule_shifts, open_shifts, employee_absences
 function setupRealtimeListeners() {
-  if (!supabaseClient) return;
+  if (!supabaseClient || !state.currentUser) return;
 
   if (realtimeChannel) {
     try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
     realtimeChannel = null;
   }
 
+  const empId = state.currentUser.id;
+
   try {
     realtimeChannel = supabaseClient
-      .channel("workplace_requests_realtime")
+      .channel("employer_dashboard_realtime_" + empId)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "employer_connections" },
-        async () => {
-          if (state.currentUser) await loadAllData();
-        }
+        { event: "*", schema: "public", table: "employer_connections", filter: "employer_id=eq." + empId },
+        () => debouncedLoadAllData()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "workplace_requests" },
-        async () => {
-          if (state.currentUser) await loadAllData();
-        }
+        () => debouncedLoadAllData()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "income_sources" },
-        async () => {
-          if (state.currentUser) await loadAllData();
-        }
+        () => debouncedLoadAllData()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "work_logs" },
-        async () => {
-          if (state.currentUser) await loadAllData();
-        }
+        () => debouncedLoadAllData()
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "schedule_shifts" },
+        { event: "*", schema: "public", table: "schedule_shifts", filter: "employer_id=eq." + empId },
         async () => {
           if (state.currentUser) {
             await fetchScheduleShifts();
@@ -1299,7 +1354,7 @@ function setupRealtimeListeners() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "open_shifts" },
+        { event: "*", schema: "public", table: "open_shifts", filter: "employer_id=eq." + empId },
         async () => {
           if (state.currentUser) {
             await fetchOpenShifts();
@@ -1319,7 +1374,17 @@ function setupRealtimeListeners() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shift_presets" },
+        { event: "*", schema: "public", table: "open_shift_declines" },
+        async () => {
+          if (state.currentUser) {
+            await fetchOpenShifts();
+            renderSchedule();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shift_presets", filter: "employer_id=eq." + empId },
         async () => {
           if (state.currentUser) {
             await fetchShiftPresets();
@@ -1330,7 +1395,7 @@ function setupRealtimeListeners() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "employer_tasks" },
+        { event: "*", schema: "public", table: "employer_tasks", filter: "employer_id=eq." + empId },
         async () => {
           if (state.currentUser) {
             await fetchEmployerTasks();
@@ -1340,7 +1405,7 @@ function setupRealtimeListeners() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "employee_absences" },
+        { event: "*", schema: "public", table: "employee_absences", filter: "employer_id=eq." + empId },
         async () => {
           if (state.currentUser) {
             await fetchEmployeeAbsences();
@@ -1354,12 +1419,10 @@ function setupRealtimeListeners() {
     console.warn("Realtime subscription error:", err);
   }
 
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = setInterval(async () => {
-    if (state.currentUser) {
-      await loadAllData();
-    }
-  }, 5000);
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
 }
 
 // 3. Fetch and Display Pending Requests (employer_connections + legacy workplace_requests)
@@ -6747,9 +6810,19 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (startInput) startInput.value = openShift.startTime || "08:00";
     if (endInput) endInput.value = openShift.endTime || "16:00";
     if (spotsInput) spotsInput.value = openShift.requiredSpots || 1;
-    const parsedOpenNote = parseShiftNoteAndTasks(openShift.note || "");
-    if (noteInput) noteInput.value = parsedOpenNote.textNote;
-    window.currentShiftTasks = parsedOpenNote.tasks || [];
+    const existingOpenTasks = (state.tasks || []).filter(t => t.shift_id === openShift.id);
+    if (existingOpenTasks.length > 0) {
+      window.currentShiftTasks = existingOpenTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        completed: !!(t.is_completed || t.completed)
+      }));
+      if (noteInput) noteInput.value = openShift.note || "";
+    } else {
+      const parsedOpenNote = parseShiftNoteAndTasks(openShift.note || "");
+      if (noteInput) noteInput.value = parsedOpenNote.textNote || openShift.note || "";
+      window.currentShiftTasks = parsedOpenNote.tasks || [];
+    }
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
 
     // Show signups
@@ -6786,9 +6859,19 @@ window.openShiftModal = function (shiftId = null, defaultDate = null, defaultSec
     if (dateInput) dateInput.value = shift.date;
     if (startInput) startInput.value = shift.startTime || "08:00";
     if (endInput) endInput.value = shift.endTime || "16:00";
-    const parsedShiftNote = parseShiftNoteAndTasks(shift.note || "");
-    if (noteInput) noteInput.value = parsedShiftNote.textNote;
-    window.currentShiftTasks = parsedShiftNote.tasks || [];
+    const existingTasks = (state.tasks || []).filter(t => t.shift_id === shift.id);
+    if (existingTasks.length > 0) {
+      window.currentShiftTasks = existingTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        completed: !!(t.is_completed || t.completed)
+      }));
+      if (noteInput) noteInput.value = shift.note || "";
+    } else {
+      const parsedShiftNote = parseShiftNoteAndTasks(shift.note || "");
+      if (noteInput) noteInput.value = parsedShiftNote.textNote || shift.note || "";
+      window.currentShiftTasks = parsedShiftNote.tasks || [];
+    }
     if (deleteBtn) deleteBtn.style.display = "inline-flex";
   } else {
     // Add Mode
@@ -6961,6 +7044,30 @@ window.openOpenShiftDetailsModal = function (openShiftId) {
           </div>
         `}
       </div>
+
+      <!-- Seznam zaposlenih, ki so sporočili "Ne morem" -->
+      ${(openShift.declines || []).length > 0 ? `
+        <div style="margin-top: 10px;">
+          <div style="font-size: 12px; font-weight: 800; color: var(--ink); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span>Sporočili, da ne morejo (${(openShift.declines || []).length}):</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${(openShift.declines || []).map((dec) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: #fff1f2; padding: 8px 12px; border-radius: 8px; border: 1px solid #fecdd3;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="avatar" style="width: 26px; height: 26px; font-size: 10px; font-weight: 700; background: rgba(225, 29, 72, 0.15); color: #e11d48;">${initials(dec.userName)}</span>
+                  <div>
+                    <strong style="font-size: 13px; color: #9f1239; display: block;">${dec.userName}</strong>
+                  </div>
+                </div>
+                <div>
+                  <span style="font-size: 10.5px; font-weight: 700; color: #be123c; background: #ffe4e6; padding: 2px 8px; border-radius: 4px;">Ne more</span>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
 
       <!-- Opomba / Zadolžitve za zaposlene -->
       ${renderShiftNoteAndTasksHtml(openShift.note, color)}
@@ -7788,6 +7895,13 @@ window.handleDeleteShiftModal = async function () {
           console.warn("Supabase open_shift delete error:", e);
         }
       }
+
+      state.tasks = (state.tasks || []).filter((t) => t.shift_id !== id);
+      try { localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks)); } catch (e) {}
+      renderTasks();
+      if (supabaseClient && state.currentUser) {
+        supabaseClient.from("employer_tasks").delete().eq("shift_id", id).then(() => {});
+      }
       syncCalendarFeedToSupabase();
     } else {
       state.scheduleShifts = (state.scheduleShifts || []).filter((s) => s.id !== id);
@@ -7801,6 +7915,13 @@ window.handleDeleteShiftModal = async function () {
         } catch (e) {
           console.warn("Supabase shift delete error:", e);
         }
+      }
+
+      state.tasks = (state.tasks || []).filter((t) => t.shift_id !== id);
+      try { localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks)); } catch (e) {}
+      renderTasks();
+      if (supabaseClient && state.currentUser) {
+        supabaseClient.from("employer_tasks").delete().eq("shift_id", id).then(() => {});
       }
       syncCalendarFeedToSupabase();
     }
@@ -8664,6 +8785,69 @@ async function fetchEmployerTasks() {
   return state.tasks || [];
 }
 
+async function syncShiftTasksToEmployerTasks(shiftId, shiftDate, shiftStartTime, sectorName, userId, tasksList) {
+  if (!shiftId || !state.currentUser) return;
+  if (!state.tasks) state.tasks = [];
+
+  const existingForShift = state.tasks.filter(t => t.shift_id === shiftId);
+  const existingIds = existingForShift.map(t => t.id);
+
+  // Odstrani obstoječe naloge te izmene iz lokalnega stanja
+  state.tasks = state.tasks.filter(t => t.shift_id !== shiftId);
+
+  const newTasksToInsert = [];
+  if (Array.isArray(tasksList) && tasksList.length > 0) {
+    for (const t of tasksList) {
+      if (!t.title || !t.title.trim()) continue;
+      const taskId = (t.id && !String(t.id).startsWith("temp_")) 
+        ? t.id 
+        : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "task_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+      const isDone = !!t.completed;
+      const taskObj = {
+        id: taskId,
+        employer_id: state.currentUser.id,
+        user_id: userId || null,
+        assigned_user_id: userId || null,
+        shift_id: shiftId,
+        title: t.title.trim(),
+        description: null,
+        location: sectorName || null,
+        due_date: shiftDate || null,
+        due_time: shiftStartTime || null,
+        is_recurring: false,
+        recurrence_type: "none",
+        completed: isDone,
+        is_completed: isDone,
+        status: isDone ? "completed" : "pending",
+        completed_at: isDone ? new Date().toISOString() : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      state.tasks.push(taskObj);
+      newTasksToInsert.push(taskObj);
+    }
+  }
+
+  try {
+    localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks));
+  } catch (e) {}
+
+  renderTasks();
+
+  if (supabaseClient && state.currentUser) {
+    try {
+      if (existingIds.length > 0) {
+        await supabaseClient.from("employer_tasks").delete().in("id", existingIds);
+      }
+      if (newTasksToInsert.length > 0) {
+        await supabaseClient.from("employer_tasks").insert(newTasksToInsert);
+      }
+    } catch (e) {
+      console.warn("syncShiftTasksToEmployerTasks error:", e);
+    }
+  }
+}
+
 async function saveEmployerTask(taskData) {
   if (!state.tasks) state.tasks = [];
 
@@ -8733,8 +8917,11 @@ async function toggleEmployerTask(taskId) {
   const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return;
 
-  task.is_completed = !task.is_completed;
-  task.completed_at = task.is_completed ? new Date().toISOString() : null;
+  const newStatus = !(task.is_completed || task.completed);
+  task.is_completed = newStatus;
+  task.completed = newStatus;
+  task.status = newStatus ? "completed" : "pending";
+  task.completed_at = newStatus ? new Date().toISOString() : null;
   task.updated_at = new Date().toISOString();
 
   try {
@@ -8746,7 +8933,9 @@ async function toggleEmployerTask(taskId) {
   if (supabaseClient && state.currentUser) {
     try {
       await supabaseClient.from("employer_tasks").update({
-        is_completed: task.is_completed,
+        is_completed: newStatus,
+        completed: newStatus,
+        status: newStatus ? "completed" : "pending",
         completed_at: task.completed_at,
         updated_at: task.updated_at
       }).eq("id", taskId);
@@ -8864,9 +9053,10 @@ function renderTasks() {
   const todayIso = formatLocalDate(new Date());
 
   container.innerHTML = filteredTasks.map(task => {
-    const isCompleted = !!task.is_completed;
+    const isCompleted = !!(task.is_completed || task.completed);
     const isRecurring = !!task.is_recurring;
-    const workerName = task.assigned_user_id ? empMap.get(task.assigned_user_id) || "Neznan delavec" : null;
+    const workerId = task.assigned_user_id || task.user_id;
+    const workerName = workerId ? empMap.get(workerId) || "Dodeljen delavec" : null;
 
     let isOverdue = false;
     if (!isCompleted && task.due_date && task.due_date < todayIso) {
@@ -8893,17 +9083,26 @@ function renderTasks() {
         </button>
 
         <div class="task-card-body">
-          <div class="task-title-row">
-            <h4 class="task-title">${escapeHtml(task.title)}</h4>
+          <div class="task-title-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+            <h4 class="task-title" style="margin: 0; font-size: 15px; font-weight: 700; ${isCompleted ? 'text-decoration: line-through; opacity: 0.75;' : ''}">${escapeHtml(task.title)}</h4>
+            ${isCompleted ? `
+              <span class="task-badge" style="background: #dcfce7; color: #15803d; font-weight: 700; border: 1px solid #bbf7d0; font-size: 11px;">
+                ✓ Opravljeno
+              </span>
+            ` : `
+              <span class="task-badge" style="background: #fef3c7; color: #b45309; font-weight: 700; border: 1px solid #fde68a; font-size: 11px;">
+                ⏳ Neopravljeno
+              </span>
+            `}
           </div>
-          ${task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : ""}
+          ${task.description ? `<p class="task-desc" style="margin: 4px 0 6px;">${escapeHtml(task.description)}</p>` : ""}
 
-          <div class="task-meta-row">
+          <div class="task-meta-row" style="margin-top: 6px;">
             ${isRecurring ? `<span class="task-badge badge-recurring">🔁 Redna predloga</span>` : ""}
             
             ${workerName ? `
-              <span class="task-badge badge-worker">
-                👤 ${escapeHtml(workerName)}
+              <span class="task-badge badge-worker" style="font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
+                👤 Zadolžen: ${escapeHtml(workerName)}
               </span>
             ` : `
               <span class="task-badge badge-worker" style="background: #f8fafc; color: #64748b;">
@@ -8920,6 +9119,12 @@ function renderTasks() {
             ${dueDateStr ? `
               <span class="task-badge badge-date ${isOverdue ? "overdue" : ""}">
                 📅 ${isOverdue ? "Zamujeno: " : "Rok: "}${escapeHtml(dueDateStr)}
+              </span>
+            ` : ""}
+
+            ${task.shift_id ? `
+              <span class="task-badge" style="background: #eff6ff; color: #1d4ed8; font-weight: 600; border: 1px solid #bfdbfe;">
+                🗓️ Z izmene
               </span>
             ` : ""}
           </div>
@@ -9771,7 +9976,7 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   const startTime = startInput?.value;
   const endTime = endInput?.value;
   const rawNoteText = (noteInput?.value || "").trim();
-  const note = serializeShiftNoteAndTasks(rawNoteText, window.currentShiftTasks);
+  const note = rawNoteText; // Samo ročno vpisana opomba - zadolžitve se shranjujejo ločeno v employer_tasks!
 
   const typeInput = $("#modalShiftType");
   const isTypeOpen = typeInput?.value === "open";
@@ -9860,6 +10065,13 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
       closeShiftModal();
       renderSchedule();
 
+      // Sinhroniziraj dodeljene naloge za vsako ustvarjeno odprto izmeno v sekcijo nalog
+      if (window.currentShiftTasks && window.currentShiftTasks.length > 0) {
+        for (const nos of newOpenShifts) {
+          syncShiftTasksToEmployerTasks(nos.id, nos.date, nos.start_time, sectorName, null, window.currentShiftTasks);
+        }
+      }
+
       if (supabaseClient && state.currentUser && newOpenShifts.length > 0) {
         try {
           await supabaseClient.from("open_shifts").upsert(newOpenShifts);
@@ -9922,6 +10134,13 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
       closeShiftModal();
       renderSchedule();
 
+      // Sinhroniziraj dodeljene naloge za vsako ustvarjeno izmeno v sekcijo nalog
+      if (window.currentShiftTasks && window.currentShiftTasks.length > 0) {
+        for (const nss of newScheduleShifts) {
+          syncShiftTasksToEmployerTasks(nss.id, nss.date, nss.start_time, sectorName, userId, window.currentShiftTasks);
+        }
+      }
+
       if (supabaseClient && state.currentUser && newScheduleShifts.length > 0) {
         try {
           await supabaseClient.from("schedule_shifts").upsert(newScheduleShifts);
@@ -9976,6 +10195,9 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
     localStorage.setItem(getUserStorageKey("open_shifts"), JSON.stringify(state.openShifts));
     closeShiftModal();
     renderSchedule();
+
+    // Sinhroniziraj dodeljene naloge te izmene v sekcijo nalog
+    syncShiftTasksToEmployerTasks(openShiftId, date, startTime, sectorName, null, window.currentShiftTasks);
 
     if (supabaseClient && state.currentUser) {
       try {
@@ -10050,6 +10272,9 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
   localStorage.setItem(getUserStorageKey("schedule_shifts"), JSON.stringify(state.scheduleShifts));
   closeShiftModal();
   renderSchedule();
+
+  // Sinhroniziraj dodeljene naloge te izmene v sekcijo nalog
+  syncShiftTasksToEmployerTasks(shiftId, date, startTime, sectorName, userId, window.currentShiftTasks);
 
   if (supabaseClient && state.currentUser) {
     try {
