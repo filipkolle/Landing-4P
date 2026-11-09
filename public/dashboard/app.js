@@ -8873,10 +8873,12 @@ async function saveEmployerTask(taskData) {
 
   if (supabaseClient && state.currentUser) {
     try {
+      const assignedId = taskData.assigned_user_id || taskData.user_id || null;
       const { error } = await supabaseClient.from("employer_tasks").upsert({
         id: taskData.id,
         employer_id: state.currentUser.id,
-        assigned_user_id: taskData.assigned_user_id || null,
+        user_id: assignedId,
+        assigned_user_id: assignedId,
         title: taskData.title,
         description: taskData.description || null,
         location: taskData.location || null,
