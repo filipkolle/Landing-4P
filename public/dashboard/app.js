@@ -1974,13 +1974,9 @@ window.onConnectEmployeeCodeInput = async function (val) {
         // Preveri: ali je ta zaposleni že AKTIVNO povezan z našim podjetjem ali že čaka na odobritev?
         const isAlreadyApproved = Boolean(
           item.is_already_connected ||
-          item.connection_status === 'approved' ||
-          state.employees.some(e =>
-            !e.isDisconnected && !e.isResigned && !e.isDismissed && !e.isInvited &&
-            e.name?.trim().toLowerCase() === userName.trim().toLowerCase()
-          )
+          item.connection_status === 'approved'
         );
-        const isAlreadyInvited = Boolean(item.connection_status === 'invited' || (state.pendingInvitations || []).some(inv => (state.userProfiles.get(inv.user_id) || inv.user_name || '').trim().toLowerCase() === userName.trim().toLowerCase()));
+        const isAlreadyInvited = Boolean(item.connection_status === 'invited');
 
         if (isAlreadyApproved) {
           if (alreadyConnectedDiv) {
