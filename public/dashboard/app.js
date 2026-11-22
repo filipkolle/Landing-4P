@@ -2220,13 +2220,17 @@ window.handleSaveEmployeeSectors = async function (event) {
           .maybeSingle();
 
         if (isSelected) {
-          // SEKTOR JE DODELJEN (aktiven ali povabilo ob ponovni povezavi)
+          // SEKTOR JE DODELJEN: že odobreni sektorji ostanejo aktivni, na novo dodani pa zahtevajo potrditev delavca ('invited')
+          const isAlreadyApprovedSector = !wasDisconnected && existing && existing.status === "approved" && existing.is_active !== false;
+          const sectorReqStatus = isAlreadyApprovedSector ? "approved" : "invited";
+          const sectorIsActive = isAlreadyApprovedSector;
+
           if (existing) {
             const { error: updErr } = await supabaseClient
               .from("workplace_requests")
               .update({
-                status: targetReqStatus,
-                is_active: targetIsActive,
+                status: sectorReqStatus,
+                is_active: sectorIsActive,
                 connection_id: connId || undefined,
                 disconnected_at: null,
                 updated_at: new Date().toISOString()
@@ -2242,20 +2246,14 @@ window.handleSaveEmployeeSectors = async function (event) {
                 workplace_id: secId,
                 user_id: employeeId,
                 user_name: emp.name,
-                status: targetReqStatus,
+                status: sectorReqStatus,
                 connection_id: connId || null,
-                is_active: targetIsActive,
+                is_active: sectorIsActive,
                 disconnected_at: null,
                 updated_at: new Date().toISOString()
               });
             if (insErr) {
               throw new Error(`Dodajanje sektorja "${sector.name}" ni uspelo: ${insErr.message}`);
-            }
-            if (!wasDisconnected && connId) {
-              await supabaseClient
-                .from("employer_connections")
-                .update({ is_setup_completed: false, updated_at: new Date().toISOString() })
-                .eq("id", connId);
             }
           }
         } else {
