@@ -3897,6 +3897,9 @@ function employeeRow(employee) {
 }
 
 function renderOverview() {
+  if (typeof renderResignationNotifications === "function") {
+    renderResignationNotifications();
+  }
   const annualTotals = getAnnualTotals(activeMonth().year);
 
   if ($("#activeYear")) $("#activeYear").textContent = annualTotals.year;
@@ -4064,11 +4067,15 @@ window.dismissRejectedInviteNotice = function (ackKey) {
     localStorage.setItem(ackKey, "true");
   } catch (e) {}
   renderResignationNotifications();
+  if (state.selectedEmployeeId) {
+    renderEmployeeDetail(state.selectedEmployeeId);
+  }
 };
 
 function renderResignationNotifications() {
   const section = $("#resignationNotificationsSection");
-  if (!section) return;
+  const overviewSection = $("#overviewAlertsSection");
+  if (!section && !overviewSection) return;
   const employerId = state.currentUser?.id || "anon";
   const resignedEmps = state.employees.filter((emp) => {
     if (!emp.isResigned) return false;
@@ -4089,12 +4096,10 @@ function renderResignationNotifications() {
   });
 
   if (resignedEmps.length === 0 && rejectedInvs.length === 0) {
-    section.hidden = true;
-    section.innerHTML = "";
+    if (section) { section.hidden = true; section.innerHTML = ""; }
+    if (overviewSection) { overviewSection.hidden = true; overviewSection.innerHTML = ""; }
     return;
   }
-
-  section.hidden = false;
   const resignationHTML = resignedEmps
     .map((emp) => {
       const sectorNames = Object.values(emp.sectors || {})
@@ -4155,7 +4160,15 @@ function renderResignationNotifications() {
     })
     .join("");
 
-  section.innerHTML = resignationHTML + rejectedHTML;
+  const combinedHTML = resignationHTML + rejectedHTML;
+  if (section) {
+    section.hidden = false;
+    section.innerHTML = combinedHTML;
+  }
+  if (overviewSection) {
+    overviewSection.hidden = false;
+    overviewSection.innerHTML = combinedHTML;
+  }
 }
 
 function getEmployeePendingSectorInvites(employeeId) {
@@ -4691,6 +4704,33 @@ window.hideEmployeeDetailBanner = function (employeeId) {
        <button type="button" class="ghost-button" onclick="handleDeleteManualEmployee('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fecaca; color: #ef4444; background: #fff;">🗑️ Izbriši profil</button>`
     : "";
 
+  const empRejectedInvs = (state.rejectedInvitations || []).filter((inv) => {
+    if (inv.userId !== employee.id) return false;
+    const ackKey = `ack_rejected_inv_${employerIdForBanner}_${inv.id}_${inv.updatedAt || ""}`;
+    try {
+      return localStorage.getItem(ackKey) !== "true";
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const rejectedInviteBannerHTML = empRejectedInvs
+    .map((inv) => {
+      const ackKey = `ack_rejected_inv_${employerIdForBanner}_${inv.id}_${inv.updatedAt || ""}`;
+      return `
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-top: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 15px;">❌</span>
+            <span>${inv.sectorName ? `Zaposleni je zavrnil povabilo za sektor <strong>${escapeHtml(inv.sectorName)}</strong>.` : "Zaposleni je zavrnil povabilo za povezavo s podjetjem."}</span>
+          </div>
+          <button type="button" class="ghost-button" onclick="dismissRejectedInviteNotice('${ackKey}')" style="padding: 3px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fcd34d; background: #fff; color: #92400e; flex-shrink: 0;">
+            ✕ Skrij
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
       ${statusBadgeHTML}
@@ -4698,6 +4738,7 @@ window.hideEmployeeDetailBanner = function (employeeId) {
       ${manualBadgeHTML}
       ${disconnectedBannerHTML}
       ${invitedBannerHTML}
+      ${rejectedInviteBannerHTML}
     `;
   }
 
