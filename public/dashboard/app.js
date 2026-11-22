@@ -313,6 +313,16 @@ function setupAuthListeners() {
   });
 }
 
+// Analitika uporabe za admin portal: en dogodek na nalaganje strani, brez vsebine in osebnih podatkov.
+let dashboardOpenTracked = false;
+async function trackDashboardOpen(user) {
+  if (dashboardOpenTracked || !supabaseClient || !user) return;
+  dashboardOpenTracked = true;
+  try {
+    await supabaseClient.from("analytics_events").insert({ user_id: user.id, source: "dashboard", event: "dashboard_open", platform: "web" });
+  } catch (e) {}
+}
+
 async function syncEmployerProfile(user, companyNameOverride = null) {
   if (!supabaseClient || !user) return;
   try {
@@ -339,6 +349,7 @@ async function syncEmployerProfile(user, companyNameOverride = null) {
       console.log("employer_profiles sync note:", error.message);
     } else {
       console.log("employer_profiles successfully updated for:", user.email);
+      trackDashboardOpen(user);
     }
   } catch (e) {
     console.log("employer_profiles exception:", e);
@@ -668,6 +679,7 @@ async function loadAllData() {
   await fetchOpenShifts();
   await fetchShiftPresets();
   await fetchEmployerTasks();
+  await carryOverUncompletedShiftTasks();
   await fetchEmployeeAbsences();
   renderAll();
 }
@@ -9202,6 +9214,123 @@ async function syncShiftTasksToEmployerTasks(shiftId, shiftDate, shiftStartTime,
   }
 }
 
+function getShiftEndTimestamp(shift) {
+  if (!shift || !shift.date) return null;
+  const parts = String(shift.date).split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+  const [y, m, d] = parts;
+
+  const parseHm = (str, fallbackH, fallbackM) => {
+    if (!str || typeof str !== "string") return [fallbackH, fallbackM];
+    const [hh, mm] = str.split(":").map(Number);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return [fallbackH, fallbackM];
+    return [hh, mm];
+  };
+
+  const startStr = shift.startTime || shift.start_time || "00:00";
+  const endStr = shift.endTime || shift.end_time || "23:59";
+  const [sh, sm] = parseHm(startStr, 0, 0);
+  const [eh, em] = parseHm(endStr, 23, 59);
+
+  const endDate = new Date(y, m - 1, d, eh, em, 0, 0);
+  if (eh * 60 + em <= sh * 60 + sm) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+  return endDate.getTime();
+}
+
+async function carryOverUncompletedShiftTasks() {
+  if (!Array.isArray(state.tasks) || state.tasks.length === 0) return;
+  if (!Array.isArray(state.scheduleShifts) || state.scheduleShifts.length === 0) return;
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const nowIso = now.toISOString();
+
+  const shiftById = new Map(state.scheduleShifts.map((s) => [s.id, s]));
+  const upcomingShifts = state.scheduleShifts
+    .filter((s) => {
+      const endTs = getShiftEndTimestamp(s);
+      return endTs !== null && endTs > nowMs && s.userId;
+    })
+    .sort((a, b) => {
+      const cmp = String(a.date || "").localeCompare(String(b.date || ""));
+      if (cmp !== 0) return cmp;
+      return String(a.startTime || "").localeCompare(String(b.startTime || ""));
+    });
+
+  if (upcomingShifts.length === 0) return;
+
+  const updates = [];
+  for (const t of state.tasks) {
+    if (!t.shift_id || t.is_completed || t.completed) continue;
+    const taskUserId = t.assigned_user_id || t.user_id;
+    if (!taskUserId) continue;
+
+    const srcShift = shiftById.get(t.shift_id);
+    if (srcShift) {
+      const srcEnd = getShiftEndTimestamp(srcShift);
+      if (!srcEnd || srcEnd > nowMs) continue;
+    } else if (!t.due_date || String(t.due_date) >= todayStr) {
+      continue;
+    }
+
+    const sameUserUpcoming = upcomingShifts.filter((s) => s.userId === taskUserId);
+    if (sameUserUpcoming.length === 0) continue;
+
+    const preferredSector = t.location || srcShift?.sectorName || "";
+    const nextShift = (preferredSector
+      ? sameUserUpcoming.find((s) => s.sectorName === preferredSector)
+      : null) || sameUserUpcoming[0];
+
+    if (!nextShift || nextShift.id === t.shift_id) continue;
+
+    t.shift_id = nextShift.id;
+    t.due_date = nextShift.date;
+    t.due_time = nextShift.startTime || nextShift.start_time || null;
+    t.location = nextShift.sectorName || t.location || null;
+    t.updated_at = nowIso;
+
+    updates.push({
+      id: t.id,
+      shift_id: t.shift_id,
+      due_date: t.due_date,
+      due_time: t.due_time,
+      location: t.location,
+      updated_at: nowIso,
+    });
+  }
+
+  if (updates.length === 0) return;
+
+  try {
+    localStorage.setItem(getUserStorageKey("employer_tasks"), JSON.stringify(state.tasks));
+  } catch (e) {}
+
+  renderTasks();
+  renderSchedule();
+
+  if (supabaseClient && state.currentUser) {
+    for (const u of updates) {
+      try {
+        await supabaseClient
+          .from("employer_tasks")
+          .update({
+            shift_id: u.shift_id,
+            due_date: u.due_date,
+            due_time: u.due_time,
+            location: u.location,
+            updated_at: u.updated_at,
+          })
+          .eq("id", u.id);
+      } catch (err) {
+        console.warn("carryOverUncompletedShiftTasks update error:", err);
+      }
+    }
+  }
+}
+
 async function saveEmployerTask(taskData) {
   if (!state.tasks) state.tasks = [];
 
@@ -10500,10 +10629,13 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
         try {
           await supabaseClient.from("schedule_shifts").upsert(newScheduleShifts);
           await fetchScheduleShifts();
+          await carryOverUncompletedShiftTasks();
           renderSchedule();
         } catch (err) {
           console.warn("Supabase multi schedule_shifts upsert error:", err);
         }
+      } else {
+        await carryOverUncompletedShiftTasks();
       }
       syncCalendarFeedToSupabase();
       return;
@@ -10652,6 +10784,7 @@ $("#shiftModalForm")?.addEventListener("submit", async (e) => {
       console.warn("Supabase schedule_shifts upsert error:", err);
     }
   }
+  await carryOverUncompletedShiftTasks();
   syncCalendarFeedToSupabase();
 });
 
