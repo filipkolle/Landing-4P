@@ -2222,7 +2222,7 @@ window.handleSaveEmployeeSectors = async function (event) {
         if (isSelected) {
           // SEKTOR JE DODELJEN (aktiven ali povabilo ob ponovni povezavi)
           if (existing) {
-            await supabaseClient
+            const { error: updErr } = await supabaseClient
               .from("workplace_requests")
               .update({
                 status: targetReqStatus,
@@ -2232,8 +2232,11 @@ window.handleSaveEmployeeSectors = async function (event) {
                 updated_at: new Date().toISOString()
               })
               .eq("id", existing.id);
+            if (updErr) {
+              throw new Error(`Posodobitev sektorja "${sector.name}" ni uspela: ${updErr.message}`);
+            }
           } else {
-            await supabaseClient
+            const { error: insErr } = await supabaseClient
               .from("workplace_requests")
               .insert({
                 workplace_id: secId,
@@ -2245,6 +2248,15 @@ window.handleSaveEmployeeSectors = async function (event) {
                 disconnected_at: null,
                 updated_at: new Date().toISOString()
               });
+            if (insErr) {
+              throw new Error(`Dodajanje sektorja "${sector.name}" ni uspelo: ${insErr.message}`);
+            }
+            if (!wasDisconnected && connId) {
+              await supabaseClient
+                .from("employer_connections")
+                .update({ is_setup_completed: false, updated_at: new Date().toISOString() })
+                .eq("id", connId);
+            }
           }
         } else {
           // SEKTOR JE ODSTRANJEN (onemogočen)
