@@ -274,3 +274,21 @@ BEGIN
 END $$;
 
 GRANT EXECUTE ON FUNCTION public.invite_employee_by_code(TEXT, UUID[]) TO authenticated;
+
+-- 5. Dovoli zaposlenemu, da pri odpovedi spremeni status v 'resigned' ali 'disconnected'
+-- (prejšnji trigger je dovolil le 'disconnected', zato je odpoved z 'resigned' tiho spodletela!)
+CREATE OR REPLACE FUNCTION public.workplace_requests_guard_status()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL
+     AND auth.uid() = OLD.user_id
+     AND NOT public.is_workplace_owner(OLD.workplace_id) THEN
+    IF NEW.status IS DISTINCT FROM OLD.status AND NEW.status NOT IN ('disconnected', 'resigned') THEN
+      RAISE EXCEPTION 'Statusa povezave ne morete spremeniti sami.';
+    END IF;
+    NEW.workplace_id := OLD.workplace_id;
+    NEW.user_id := OLD.user_id;
+    NEW.connection_id := OLD.connection_id;
+  END IF;
+  RETURN NEW;
+END $$;
