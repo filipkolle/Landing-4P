@@ -2091,6 +2091,11 @@ window.openManageEmployeeSectorsModal = function (employeeId) {
 
   const assignedSectors = getEmployeeAssignedSectors(emp);
   const currentSectorIds = new Set(assignedSectors.map((s) => s.sectorId));
+  const pendingInviteSectorIds = new Set(
+    (state.pendingInvitations || [])
+      .filter((inv) => inv.user_id === emp.id && inv.status === "invited" && inv.workplace_id)
+      .map((inv) => inv.workplace_id)
+  );
 
   const list = $("#manageEmpSectorsList");
   if (list) {
@@ -2099,13 +2104,15 @@ window.openManageEmployeeSectorsModal = function (employeeId) {
     } else {
       list.innerHTML = state.sectors
         .map((s) => {
-          const isChecked = currentSectorIds.has(s.id);
+          const isAssigned = currentSectorIds.has(s.id);
+          const isPending = !isAssigned && pendingInviteSectorIds.has(s.id);
+          const isChecked = isAssigned || isPending;
           return `
             <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;">
               <input type="checkbox" name="empSectorCheck" value="${s.id}" ${isChecked ? "checked" : ""} style="width: 17px; height: 17px; accent-color: var(--primary);" />
               <span class="sector-color-dot" style="background-color: ${s.color || '#56829d'};"></span>
               <strong style="font-size: 13.5px; flex: 1;">${s.name}</strong>
-              ${isChecked ? '<span style="font-size: 11px; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px;">Dodeljeno</span>' : ''}
+              ${isAssigned ? '<span style="font-size: 11px; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px;">Dodeljeno</span>' : (isPending ? '<span style="font-size: 11px; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px;">⏳ Čaka potrditev</span>' : '')}
             </label>
           `;
         })
@@ -4070,9 +4077,44 @@ function renderResignationNotifications() {
     .join("");
 }
 
+function getEmployeePendingSectorInvites(employeeId) {
+  const seen = new Set();
+  return (state.pendingInvitations || [])
+    .filter((inv) => inv.user_id === employeeId && inv.status === "invited" && inv.workplace_id)
+    .filter((inv) => {
+      if (seen.has(inv.workplace_id)) return false;
+      seen.add(inv.workplace_id);
+      return true;
+    })
+    .map((inv) => {
+      const sec = (state.sectors || []).find((s) => s.id === inv.workplace_id);
+      return {
+        sectorId: inv.workplace_id,
+        name: sec?.name || inv.workplaces?.sector_name || inv.workplaces?.name || "Sektor",
+        color: sec?.color || "#d97706"
+      };
+    });
+}
+
+function renderPendingSectorInvitesHTML(employeeId) {
+  const pendingSectors = getEmployeePendingSectorInvites(employeeId);
+  if (pendingSectors.length === 0) return "";
+  return pendingSectors
+    .map(
+      (s) => `
+      <span class="sector-code-badge" style="background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;" title="Sektor čaka na potrditev zaposlenega v aplikaciji">
+        <span>⏳</span>
+        ${s.name} · čaka potrditev
+      </span>
+    `
+    )
+    .join("");
+}
+
 function renderEmployeeRowHTML(employee, monthKey) {
   const employeeSectors = getEmployeeAssignedSectors(employee);
   const sectorBadgesHTML = renderEmployeeSectorsList(employeeSectors, false);
+  const pendingSectorBadgesHTML = renderPendingSectorInvitesHTML(employee.id);
   const status = employee.status || "Zaposlen";
   const payIndicatorHTML = renderPaymentStatusIndicator(employee);
 
@@ -4164,8 +4206,9 @@ function renderEmployeeRowHTML(employee, monthKey) {
         `}
       </td>
       <td style="text-align: right; padding-right: 24px; vertical-align: middle;">
-        <div style="display: inline-flex; align-items: center; gap: 10px;">
+        <div style="display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
           ${sectorBadgesHTML}
+          ${pendingSectorBadgesHTML}
           <span style="color: ${isDisconnected ? redColor : 'var(--muted)'}; font-size: 18px; line-height: 1; margin-left: 4px;">›</span>
         </div>
       </td>
@@ -4414,6 +4457,7 @@ function renderEmployeeDetail(employeeId) {
 
   const assignedSectors = getEmployeeAssignedSectors(employee);
   const sectorBadgesHTML = renderEmployeeSectorsList(assignedSectors, false);
+  const pendingSectorBadgesHTML = !employee.isManual ? renderPendingSectorInvitesHTML(employee.id) : "";
 
   const assignSectorBtnHTML = !isDisconnected
     ? `<button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 4px;" title="Dodeli ali spremeni sektorje za tega zaposlenega">⚙️ Dodeli sektor</button>`
@@ -4424,6 +4468,7 @@ function renderEmployeeDetail(employeeId) {
   if ($("#empDetailSectorBadges")) {
     $("#empDetailSectorBadges").innerHTML = `
       ${sectorBadgesHTML}
+      ${pendingSectorBadgesHTML}
       ${assignSectorBtnHTML}
     `;
   }
