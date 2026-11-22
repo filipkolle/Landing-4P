@@ -4718,18 +4718,29 @@ window.hideEmployeeDetailBanner = function (employeeId) {
     .map((inv) => {
       const ackKey = `ack_rejected_inv_${employerIdForBanner}_${inv.id}_${inv.updatedAt || ""}`;
       return `
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-top: 6px;">
+        <div class="panel" style="padding: 12px 16px; border-left: 4px solid #f59e0b; background: #fffbeb; border-color: #fde68a; color: #92400e; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 15px;">❌</span>
             <span>${inv.sectorName ? `Zaposleni je zavrnil povabilo za sektor <strong>${escapeHtml(inv.sectorName)}</strong>.` : "Zaposleni je zavrnil povabilo za povezavo s podjetjem."}</span>
           </div>
-          <button type="button" class="ghost-button" onclick="dismissRejectedInviteNotice('${ackKey}')" style="padding: 3px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fcd34d; background: #fff; color: #92400e; flex-shrink: 0;">
+          <button type="button" class="ghost-button" onclick="dismissRejectedInviteNotice('${ackKey}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fcd34d; background: #fff; color: #92400e; flex-shrink: 0;">
             ✕ Skrij
           </button>
         </div>
       `;
     })
     .join("");
+
+  const rejectedAlertsEl = $("#empDetailRejectedAlerts");
+  if (rejectedAlertsEl) {
+    if (rejectedInviteBannerHTML) {
+      rejectedAlertsEl.hidden = false;
+      rejectedAlertsEl.innerHTML = rejectedInviteBannerHTML;
+    } else {
+      rejectedAlertsEl.hidden = true;
+      rejectedAlertsEl.innerHTML = "";
+    }
+  }
 
   if ($("#empDetailBadges")) {
     $("#empDetailBadges").innerHTML = `
@@ -4738,7 +4749,6 @@ window.hideEmployeeDetailBanner = function (employeeId) {
       ${manualBadgeHTML}
       ${disconnectedBannerHTML}
       ${invitedBannerHTML}
-      ${rejectedInviteBannerHTML}
     `;
   }
 
