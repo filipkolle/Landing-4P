@@ -1936,8 +1936,15 @@ window.onConnectEmployeeCodeInput = async function (val) {
         const item = data[0];
         const userName = item.user_name;
         
-        // Preveri: ali je ta zaposleni že povezan z našim podjetjem ali že čaka na odobritev?
-        const isAlreadyApproved = Boolean(item.is_already_connected || item.connection_status === 'approved' || state.employees.some(e => e.name?.trim().toLowerCase() === userName.trim().toLowerCase()));
+        // Preveri: ali je ta zaposleni že AKTIVNO povezan z našim podjetjem ali že čaka na odobritev?
+        const isAlreadyApproved = Boolean(
+          item.is_already_connected ||
+          item.connection_status === 'approved' ||
+          state.employees.some(e =>
+            !e.isDisconnected && !e.isResigned && !e.isDismissed && !e.isInvited &&
+            e.name?.trim().toLowerCase() === userName.trim().toLowerCase()
+          )
+        );
         const isAlreadyInvited = Boolean(item.connection_status === 'invited' || (state.pendingInvitations || []).some(inv => (state.userProfiles.get(inv.user_id) || inv.user_name || '').trim().toLowerCase() === userName.trim().toLowerCase()));
 
         if (isAlreadyApproved) {
@@ -2147,9 +2154,57 @@ window.handleSaveEmployeeSectors = async function (event) {
 
     // 2. Če gre za povezanega Supabase uporabnika
     if (supabaseClient && !emp.isManual) {
+      const wasDisconnected = Boolean(emp.isDisconnected || emp.isResigned || emp.isDismissed);
+      const targetReqStatus = wasDisconnected ? "invited" : "approved";
+      const targetIsActive = !wasDisconnected;
+
       const conn = (state.approvedRequests || []).find((r) => r.user_id === employeeId) ||
                    (state.connectionsByUserId ? state.connectionsByUserId.get(employeeId) : null);
-      const connId = conn ? (conn.connection_id || conn.id) : null;
+      let connId = conn ? (conn.connection_id || conn.id) : null;
+
+      if (wasDisconnected) {
+        const employerId = state.currentUser?.id;
+        if (employerId) {
+          const { data: existingConn } = await supabaseClient
+            .from("employer_connections")
+            .select("id")
+            .eq("employer_id", employerId)
+            .eq("user_id", employeeId)
+            .maybeSingle();
+
+          if (existingConn?.id) {
+            connId = existingConn.id;
+            await supabaseClient
+              .from("employer_connections")
+              .update({
+                status: "invited",
+                initiated_by: "employer",
+                consent_at: null,
+                responded_at: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", connId);
+          } else {
+            const { data: insertedConn } = await supabaseClient
+              .from("employer_connections")
+              .insert({
+                employer_id: employerId,
+                user_id: employeeId,
+                user_name: emp.name,
+                status: "invited",
+                initiated_by: "employer",
+                updated_at: new Date().toISOString()
+              })
+              .select("id")
+              .single();
+            if (insertedConn?.id) connId = insertedConn.id;
+          }
+          try {
+            localStorage.removeItem(`hide_emp_detail_banner_${employerId}_${employeeId}`);
+            localStorage.removeItem(`ack_resignation_${employerId}_${employeeId}`);
+          } catch (e) {}
+        }
+      }
 
       const allCompanySectors = state.sectors || [];
 
@@ -2165,13 +2220,13 @@ window.handleSaveEmployeeSectors = async function (event) {
           .maybeSingle();
 
         if (isSelected) {
-          // SEKTOR JE DODELJEN (aktiven)
+          // SEKTOR JE DODELJEN (aktiven ali povabilo ob ponovni povezavi)
           if (existing) {
             await supabaseClient
               .from("workplace_requests")
               .update({
-                status: "approved",
-                is_active: true,
+                status: targetReqStatus,
+                is_active: targetIsActive,
                 connection_id: connId || undefined,
                 disconnected_at: null,
                 updated_at: new Date().toISOString()
@@ -2184,9 +2239,9 @@ window.handleSaveEmployeeSectors = async function (event) {
                 workplace_id: secId,
                 user_id: employeeId,
                 user_name: emp.name,
-                status: "approved",
+                status: targetReqStatus,
                 connection_id: connId || null,
-                is_active: true,
+                is_active: targetIsActive,
                 disconnected_at: null,
                 updated_at: new Date().toISOString()
               });
@@ -4352,7 +4407,9 @@ function renderEmployeeDetail(employeeId) {
 
   const assignSectorBtnHTML = !isDisconnected
     ? `<button type="button" class="ghost-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 4px;" title="Dodeli ali spremeni sektorje za tega zaposlenega">⚙️ Dodeli sektor</button>`
-    : "";
+    : (!employee.isManual
+      ? `<button type="button" class="primary-button" onclick="openManageEmployeeSectorsModal('${employee.id}')" style="padding: 5px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;" title="Ponovno poveži tega zaposlenega in mu dodeli sektorje">🔄 Ponovno poveži</button>`
+      : "");
 
   if ($("#empDetailSectorBadges")) {
     $("#empDetailSectorBadges").innerHTML = `
@@ -4408,13 +4465,35 @@ function renderEmployeeDetail(employeeId) {
           ? `<span class="chip" style="background: #fef2f2; color: ${redColor}; border: 1px solid #fca5a5; font-weight: 700; font-size: 12px; padding: 4px 10px;">● Prekinjena povezava</span>`
           : statusDropdownHTML)));
 
+window.hideEmployeeDetailBanner = function (employeeId) {
+  const employerId = state.currentUser?.id || "anon";
+  try {
+    localStorage.setItem(`hide_emp_detail_banner_${employerId}_${employeeId}`, "true");
+    localStorage.setItem(`ack_resignation_${employerId}_${employeeId}`, "true");
+  } catch (e) {}
+  renderEmployeeDetail(employeeId);
+  if (typeof renderResignationNotifications === "function") {
+    renderResignationNotifications();
+  }
+};
+  const employerIdForBanner = state.currentUser?.id || "anon";
+  let isBannerHidden = false;
+  try {
+    isBannerHidden = localStorage.getItem(`hide_emp_detail_banner_${employerIdForBanner}_${employee.id}`) === "true";
+  } catch (e) {}
+
   let disconnectedBannerHTML = "";
-  if (isResigned) {
+  if (isResigned && !isBannerHidden) {
     disconnectedBannerHTML = `
       <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 14px 16px; color: #9f1239; font-size: 13px; line-height: 1.5; width: 100%; margin-top: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; margin-bottom: 6px;">
-          <span>⚠️</span>
-          <span>Delavec je podal odpoved</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px;">
+            <span>⚠️</span>
+            <span>Delavec je podal odpoved</span>
+          </div>
+          <button type="button" class="ghost-button" onclick="hideEmployeeDetailBanner('${employee.id}')" style="padding: 3px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fecdd3; background: #fff; color: #9f1239;">
+            ✕ Skrij opozorilo
+          </button>
         </div>
         <p style="margin: 0 0 8px 0;">Zaposleni <strong>${escapeHtml(employee.name)}</strong> je v svoji mobilni aplikaciji 4P podal odpoved in zaključil sodelovanje.</p>
         <div style="background: rgba(255,255,255,0.75); border-radius: 8px; padding: 10px 12px; border: 1px solid #fbcfe8;">
@@ -4427,12 +4506,17 @@ function renderEmployeeDetail(employeeId) {
         </div>
       </div>
     `;
-  } else if (isDismissed) {
+  } else if (isDismissed && !isBannerHidden) {
     disconnectedBannerHTML = `
       <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 14px 16px; color: #991b1b; font-size: 13px; line-height: 1.5; width: 100%; margin-top: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; margin-bottom: 6px;">
-          <span>🚫</span>
-          <span>Zaposleni je bil odpuščen</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px;">
+            <span>🚫</span>
+            <span>Zaposleni je bil odpuščen</span>
+          </div>
+          <button type="button" class="ghost-button" onclick="hideEmployeeDetailBanner('${employee.id}')" style="padding: 3px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fca5a5; background: #fff; color: #991b1b;">
+            ✕ Skrij opozorilo
+          </button>
         </div>
         <p style="margin: 0 0 8px 0;">Sodelovanje s tem zaposlenim je bilo prekinjeno v dashboardu podjetja.</p>
         <div style="background: rgba(255,255,255,0.75); border-radius: 8px; padding: 10px 12px; border: 1px solid #fca5a5;">
@@ -4444,11 +4528,16 @@ function renderEmployeeDetail(employeeId) {
         </div>
       </div>
     `;
-  } else if (isDisconnected) {
+  } else if (isDisconnected && !isBannerHidden) {
     disconnectedBannerHTML = `
-      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        <span>Povezava s tem zaposlenim je prekinjena. Vsi podatki spodaj so arhivirani zgodovinski zapisi.</span>
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; color: #991b1b; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-top: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>Povezava s tem zaposlenim je prekinjena. Vsi podatki spodaj so arhivirani zgodovinski zapisi.</span>
+        </div>
+        <button type="button" class="ghost-button" onclick="hideEmployeeDetailBanner('${employee.id}')" style="padding: 3px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #fca5a5; background: #fff; color: #991b1b; flex-shrink: 0;">
+          ✕ Skrij
+        </button>
       </div>
     `;
   }
