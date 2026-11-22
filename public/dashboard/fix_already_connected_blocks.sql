@@ -18,6 +18,7 @@ DECLARE
   v_clean TEXT;
   v_employer UUID;
   v_conn public.employer_connections%ROWTYPE;
+  v_has_active_sector BOOLEAN := false;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
   v_clean := replace(upper(trim(p_code)), ' ', '');
@@ -27,11 +28,25 @@ BEGIN
 
   SELECT * INTO v_conn FROM public.employer_connections c WHERE c.employer_id = v_employer AND c.user_id = auth.uid();
 
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.workplace_requests wr
+    JOIN public.workplaces wp ON wp.id = wr.workplace_id
+    WHERE wp.employer_id = v_employer
+      AND wr.user_id = auth.uid()
+      AND wr.status = 'approved'
+      AND wr.is_active IS TRUE
+      AND wr.disconnected_at IS NULL
+  ) INTO v_has_active_sector;
+
   RETURN QUERY
     SELECT 
       COALESCE(ep.company_name, 'Podjetje'),
-      (v_conn.id IS NOT NULL AND v_conn.status = 'approved'),
-      COALESCE(v_conn.status, 'none')
+      (v_conn.id IS NOT NULL AND v_conn.status = 'approved' AND v_has_active_sector),
+      CASE
+        WHEN v_conn.id IS NOT NULL AND v_conn.status = 'approved' AND NOT v_has_active_sector THEN 'disconnected'::TEXT
+        ELSE COALESCE(v_conn.status, 'none')
+      END
     FROM public.employer_profiles ep
     WHERE ep.id = v_employer;
 END $$;
@@ -62,8 +77,17 @@ BEGIN
 
   SELECT * INTO v_existing FROM public.employer_connections c WHERE c.employer_id = v_employer AND c.user_id = auth.uid();
 
-  -- Če je že povezan, zavrni
-  IF v_existing.id IS NOT NULL AND v_existing.status = 'approved' THEN
+  -- Če je že aktivno povezan (ima vsaj en aktiven sektor), zavrni
+  IF v_existing.id IS NOT NULL AND v_existing.status = 'approved' AND EXISTS (
+    SELECT 1
+    FROM public.workplace_requests wr
+    JOIN public.workplaces wp ON wp.id = wr.workplace_id
+    WHERE wp.employer_id = v_employer
+      AND wr.user_id = auth.uid()
+      AND wr.status = 'approved'
+      AND wr.is_active IS TRUE
+      AND wr.disconnected_at IS NULL
+  ) THEN
     RAISE EXCEPTION 'S tem podjetjem ste že povezani.';
   END IF;
 
@@ -110,6 +134,7 @@ DECLARE
   v_user UUID;
   v_clean TEXT;
   v_conn public.employer_connections%ROWTYPE;
+  v_has_active_sector BOOLEAN := false;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Niste prijavljeni.'; END IF;
   v_clean := replace(upper(trim(p_code)), ' ', '');
@@ -118,10 +143,24 @@ BEGIN
 
   SELECT * INTO v_conn FROM public.employer_connections c WHERE c.employer_id = auth.uid() AND c.user_id = v_user;
 
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.workplace_requests wr
+    JOIN public.workplaces wp ON wp.id = wr.workplace_id
+    WHERE wp.employer_id = auth.uid()
+      AND wr.user_id = v_user
+      AND wr.status = 'approved'
+      AND wr.is_active IS TRUE
+      AND wr.disconnected_at IS NULL
+  ) INTO v_has_active_sector;
+
   RETURN QUERY SELECT 
     public.resolve_user_display_name(v_user),
-    (v_conn.id IS NOT NULL AND v_conn.status = 'approved'),
-    COALESCE(v_conn.status, 'none');
+    (v_conn.id IS NOT NULL AND v_conn.status = 'approved' AND v_has_active_sector),
+    CASE
+      WHEN v_conn.id IS NOT NULL AND v_conn.status = 'approved' AND NOT v_has_active_sector THEN 'disconnected'::TEXT
+      ELSE COALESCE(v_conn.status, 'none')
+    END;
 END $$;
 
 GRANT EXECUTE ON FUNCTION public.lookup_employee_by_code(TEXT) TO authenticated;
@@ -161,8 +200,17 @@ BEGIN
 
   SELECT * INTO v_conn FROM public.employer_connections c WHERE c.employer_id = auth.uid() AND c.user_id = v_user;
 
-  -- BLOKADA: če je zaposleni že povezan, NE SME ponovno prejeti povabila!
-  IF v_conn.id IS NOT NULL AND v_conn.status = 'approved' THEN
+  -- BLOKADA: če je zaposleni že aktivno povezan (ima vsaj en aktiven sektor), NE SME ponovno prejeti povabila!
+  IF v_conn.id IS NOT NULL AND v_conn.status = 'approved' AND EXISTS (
+    SELECT 1
+    FROM public.workplace_requests wr
+    JOIN public.workplaces wp ON wp.id = wr.workplace_id
+    WHERE wp.employer_id = auth.uid()
+      AND wr.user_id = v_user
+      AND wr.status = 'approved'
+      AND wr.is_active IS TRUE
+      AND wr.disconnected_at IS NULL
+  ) THEN
     RAISE EXCEPTION 'Ta zaposleni je že povezan z vašim podjetjem.';
   END IF;
 
