@@ -782,6 +782,7 @@ async function fetchApprovedRequests() {
 
       const approved = [];
       const pendingInvites = [];
+      const rejectedInvites = [];
 
       data.forEach((req) => {
         const belongsToMe =
@@ -793,6 +794,20 @@ async function fetchApprovedRequests() {
         const isConnInvited = conn && conn.status === "invited";
         const isConnPending = conn && conn.status === "pending";
         const isConnApproved = conn && conn.status === "approved";
+
+        if (req.status === "rejected") {
+          const secObj = state.sectors.find((s) => s.id === req.workplace_id);
+          rejectedInvites.push({
+            id: req.id,
+            userId: req.user_id,
+            userName: state.userProfiles.get(req.user_id) || req.user_name || "Delavec",
+            sectorId: req.workplace_id,
+            sectorName: secObj?.name || req.workplaces?.sector_name || req.workplaces?.name || "Sektor",
+            updatedAt: req.updated_at || req.created_at || "",
+            type: "sector"
+          });
+          return;
+        }
 
         // ČE JE POVEZAVA V STANJU 'invited' ALI JE ZAHTEVA 'invited',
         // UPORABNIK NIKOLI IN NIKAKOR NE SME BITI V 'approved'!
@@ -819,11 +834,22 @@ async function fetchApprovedRequests() {
             status: "invited",
             created_at: c.created_at,
           });
+        } else if (c.status === "rejected" && c.initiated_by === "employer" && !rejectedInvites.some((r) => r.userId === c.user_id)) {
+          rejectedInvites.push({
+            id: c.id,
+            userId: c.user_id,
+            userName: state.userProfiles.get(c.user_id) || c.user_name || "Delavec",
+            sectorId: null,
+            sectorName: null,
+            updatedAt: c.updated_at || c.created_at || "",
+            type: "connection"
+          });
         }
       });
 
       state.approvedRequests = approved;
       state.pendingInvitations = pendingInvites;
+      state.rejectedInvitations = rejectedInvites;
       return approved;
     }
   } catch (e) {
@@ -1323,7 +1349,13 @@ function setupRealtimeListeners() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "employer_connections", filter: "employer_id=eq." + empId },
-        () => debouncedLoadAllData()
+        (payload) => {
+          if (payload?.new?.status === "rejected" && payload?.old?.status !== "rejected" && payload?.new?.initiated_by === "employer") {
+            const empName = payload.new.user_name || "Delavec";
+            showToast(`${empName} je zavrnil/a povabilo za povezavo.`, "warning");
+          }
+          debouncedLoadAllData();
+        }
       )
       .on(
         "postgres_changes",
@@ -1332,6 +1364,9 @@ function setupRealtimeListeners() {
           if (payload?.new?.status === "resigned" && payload?.old?.status !== "resigned") {
             const empName = payload.new.user_name || "Delavec";
             showToast(`${empName} je podal/a odpoved.`, "warning");
+          } else if (payload?.new?.status === "rejected" && payload?.old?.status !== "rejected") {
+            const empName = payload.new.user_name || "Delavec";
+            showToast(`${empName} je zavrnil/a povabilo v sektor.`, "warning");
           }
           debouncedLoadAllData();
         }
@@ -4024,6 +4059,13 @@ window.dismissResignationNotice = function (empId) {
   renderResignationNotifications();
 };
 
+window.dismissRejectedInviteNotice = function (ackKey) {
+  try {
+    localStorage.setItem(ackKey, "true");
+  } catch (e) {}
+  renderResignationNotifications();
+};
+
 function renderResignationNotifications() {
   const section = $("#resignationNotificationsSection");
   if (!section) return;
@@ -4037,14 +4079,23 @@ function renderResignationNotifications() {
     }
   });
 
-  if (resignedEmps.length === 0) {
+  const rejectedInvs = (state.rejectedInvitations || []).filter((inv) => {
+    const ackKey = `ack_rejected_inv_${employerId}_${inv.id}_${inv.updatedAt || ""}`;
+    try {
+      return localStorage.getItem(ackKey) !== "true";
+    } catch (e) {
+      return true;
+    }
+  });
+
+  if (resignedEmps.length === 0 && rejectedInvs.length === 0) {
     section.hidden = true;
     section.innerHTML = "";
     return;
   }
 
   section.hidden = false;
-  section.innerHTML = resignedEmps
+  const resignationHTML = resignedEmps
     .map((emp) => {
       const sectorNames = Object.values(emp.sectors || {})
         .map((s) => s.sectorName || s.name)
@@ -4075,6 +4126,36 @@ function renderResignationNotifications() {
       `;
     })
     .join("");
+
+  const rejectedHTML = rejectedInvs
+    .map((inv) => {
+      const ackKey = `ack_rejected_inv_${employerId}_${inv.id}_${inv.updatedAt || ""}`;
+      const hasProfile = state.employees.some((e) => e.id === inv.userId);
+      return `
+        <div class="panel" style="margin-bottom: 14px; padding: 14px 18px; border-left: 4px solid #f59e0b; background: #fffbeb; border-color: #fde68a; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span style="width: 36px; height: 36px; border-radius: 50%; background: #fef3c7; color: #b45309; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">❌</span>
+            <div>
+              <div style="font-weight: 800; font-size: 14px; color: #92400e;">
+                ${escapeHtml(inv.userName)} je zavrnil/a povabilo
+              </div>
+              <div style="font-size: 12px; color: #b45309; margin-top: 2px;">
+                ${inv.sectorName ? `Delavec je zavrnil vabilo za sektor <strong>${escapeHtml(inv.sectorName)}</strong>.` : "Delavec je zavrnil povabilo za povezavo s podjetjem."}
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            ${hasProfile ? `<button type="button" class="ghost-button" onclick="openEmployeeDetail('${inv.userId}')" style="font-size: 12px; padding: 7px 12px; border-color: #fcd34d; color: #92400e; background: #fff;">Odpri profil</button>` : ""}
+            <button type="button" class="primary-button" onclick="dismissRejectedInviteNotice('${ackKey}')" style="font-size: 12px; padding: 7px 14px; background: #d97706; border-color: #d97706;">
+              V redu
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  section.innerHTML = resignationHTML + rejectedHTML;
 }
 
 function getEmployeePendingSectorInvites(employeeId) {
