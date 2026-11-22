@@ -461,14 +461,12 @@
               <div class="filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <input id="employeeSearch" type="search" placeholder="Išči zaposlenega" aria-label="Išči zaposlenega" />
                 <select id="sectorFilter" aria-label="Filtriraj po sektorju"></select>
-                <button type="button" class="ghost-button" id="openConnectEmployeeBtn" onclick="openConnectEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; white-space: nowrap; background: #fff;">
+                <button type="button" class="primary-button" id="openConnectEmployeeBtn" onclick="openConnectEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px; white-space: nowrap;">
                   <span>🔗</span> Poveži s kodo
-                </button>
-                <button type="button" class="primary-button" id="openNewEmployeeModalBtn" onclick="openCreateEmployeeModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 9px 18px; white-space: nowrap;">
-                  <span>+</span> Ustvari profil
                 </button>
               </div>
             </div>
+            <div id="resignationNotificationsSection" hidden></div>
             <div id="pendingInvitationsSection" hidden></div>
             <section class="panel table-panel">
               <div class="table-wrap">
@@ -484,6 +482,26 @@
                 </table>
               </div>
             </section>
+            <div id="pastEmployeesSection" hidden style="margin-top: 24px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--ink);">Pretekli delavci</h3>
+                <span id="pastEmployeesCount" class="chip neutral">0</span>
+              </div>
+              <section class="panel table-panel">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Zaposleni</th>
+                        <th style="width: 240px;">Izplačano</th>
+                        <th style="text-align: right; padding-right: 24px;">Sektorji</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pastEmployeesTable"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
           </div>
 
           <!-- Podrobnosti posameznega zaposlenega (Profil z razčlenitvijo po sektorjih) -->
